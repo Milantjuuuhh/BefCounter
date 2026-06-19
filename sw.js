@@ -6,7 +6,6 @@ self.addEventListener('activate', event => {
     event.waitUntil(clients.claim());
 });
 
-// Luister naar het push-signaal van de server (zelfs als het scherm uit staat)
 self.addEventListener('push', event => {
     let data = { title: "BefCounter", body: "Er is een nieuwe actie gelogd!" };
     
@@ -23,7 +22,7 @@ self.addEventListener('push', event => {
         icon: "icon-192.png",
         badge: "icon-192.png",
         vibrate: [200, 100, 200],
-        sound: "default", // Dit triggert het standaard push-geluid van iOS/Android
+        sound: "default",
         data: {
             url: "/"
         }
@@ -34,7 +33,6 @@ self.addEventListener('push', event => {
     );
 });
 
-// Wat gebeurt er als je op de melding klikt
 self.addEventListener('notificationclick', event => {
     event.notification.close();
     event.waitUntil(

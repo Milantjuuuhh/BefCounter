@@ -12,10 +12,14 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore();
 
-// Activeer Firebase Messaging
+// Activeer Firebase Messaging (met crash-beveiliging)
 let messaging = null;
-if (firebase.messaging.isSupported()) {
-    messaging = firebase.messaging();
+try {
+    if (typeof firebase.messaging === "function" && firebase.messaging.isSupported()) {
+        messaging = firebase.messaging();
+    }
+} catch (error) {
+    console.log("Push notificaties worden momenteel niet ondersteund door deze browser.");
 }
 
 if ('serviceWorker' in navigator) { 
@@ -136,6 +140,7 @@ function bepaalScherm() {
     }
 }
 
+// Fixed line-spacing behavior via navigation updates
 function wisselPagina(paginaId, navItemElement) {
     document.querySelectorAll('.page').forEach(page => page.classList.remove('active'));
     document.getElementById(paginaId).classList.add('active');
@@ -155,6 +160,7 @@ function registreer() {
     });
 }
 
+// Fixed multi-line structure for authentication layout
 function login() {
     const naam = document.getElementById('auth-naam').value.trim().toLowerCase();
     const ww = document.getElementById('auth-wachtwoord').value;
@@ -206,7 +212,7 @@ function luisterNaarCoopMissie() {
         }
 
         actieveCoopMissie = doc.data();
-        let percentage = Math.min(100, (actieveCoopMissie.score / actieveCoopMissie.doel) * 100);
+        let percentage = Math.min(100.0, (actieveCoopMissie.score / actieveCoopMissie.doel) * 100.0);
 
         document.querySelectorAll('.coop-titel-text').forEach(el => el.innerText = actieveCoopMissie.titel);
         document.querySelectorAll('.coop-bar-fill').forEach(el => el.style.width = percentage + '%');
@@ -232,7 +238,7 @@ setInterval(() => {
 }, 1000);
 
 // ==========================================
-// SCOREBORD & DATA SYNC
+// SCOREBORD & DATA SYNC (WEBHOOK TRIGGER)
 // ==========================================
 function pasScoreAan(categorie, bedrag, emojiNaam) {
     if ("vibrate" in navigator) navigator.vibrate(50);
@@ -270,7 +276,7 @@ function pasScoreAan(categorie, bedrag, emojiNaam) {
     if (vakantieModus && "geolocation" in navigator) {
         navigator.geolocation.getCurrentPosition((pos) => {
             db.collection('groepen').doc(currentGroup).collection('locaties').add({ naam: currentUser, actie: emojiNaam, lat: pos.coords.latitude, lng: pos.coords.longitude, tijd: new Date().toISOString() });
-            stuurNaarFeed(`${startBericht} Maps: http://maps.google.com/?q=${pos.coords.latitude},${pos.coords.longitude}`);
+            stuurNaarFeed(`${startBericht} Maps: https://maps.google.com/?q=${pos.coords.latitude},${pos.coords.longitude}`);
         }, () => stuurNaarFeed(`${startBericht}!`));
     } else stuurNaarFeed(`${startBericht}!`);
 }
@@ -279,7 +285,7 @@ function bouwLiveScorebord() {
     if(unsubscribeScores) unsubscribeScores();
     
     unsubscribeScores = db.collection('groepen').doc(currentGroup).collection('scores').onSnapshot((snapshot) => {
-        let html = `<tr><th style="text-align:left; padding-left:10px;">Wie</th><th>🍺</th><th>🍹</th><th>😘</th><th>💔</th><th>👑</th><th>🥙</th><th class="totaal-kolom">Tot</th><th></th></tr>`;
+        let html = `<tr><th style="text-align:left; padding-left:10px;">Wie</th><th>🍺</th><th>🍹</th><th>😘</th><th>💔</th><th>👑</th><th>%;">🥙</th><th class="totaal-kolom">Tot</th><th></th></tr>`;
         let somBier=0, somMix=0, somKiss=0, somReject=0, somMvp=0, somDoner=0, somAlles=0;
         let statMaxBier=0, statMaxBierNaam="-", statMaxMVP=0, statMaxMVPNaam="-", statMaxSjaak=0, statMaxSjaakNaam="-", statMaxDoner=0, statMaxDonerNaam="-";
         let grafiekNamen = [], grafiekBierEnMix = [];

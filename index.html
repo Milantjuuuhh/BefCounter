@@ -3,247 +3,165 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <link rel="apple-touch-icon" href="icon-192.png">
-    <link rel="manifest" href="manifest.json">
     <title>BefCounter</title>
-    
-    <!-- Externe Software -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    
-    <!-- Styling & Firebase -->
     <link rel="stylesheet" href="style.css">
-    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
 </head>
 <body>
 
-    <audio id="notificatie-geluid" src="https://www.soundjay.com/buttons/sounds/button-09.mp3" preload="auto"></audio>
-    <div id="live-ticker" onclick="this.style.display='none'"></div>
+    <div id="live-ticker" class="ticker-wrap" style="display: none;"></div>
 
-    <!-- FULLSCREEN SWASI OVERLAY (Geüpdatet) -->
-    <div id="swasi-overlay">
-        <h2 id="swasi-instructie" style="color: white; position: absolute; top: 15%; width: 100%; text-align: center; pointer-events: none; opacity: 0.8; font-size: 22px;">Plaats allemaal 1 vinger...</h2>
-        <div id="swasi-countdown" style="display: none;">3</div>
-        <button id="swasi-sluit-btn" class="btn-primair" onclick="stopSwasi()">Sluiten</button>
+    <audio id="notificatie-geluid" src="https://assets.mixkit.co/active_storage/sfx/2869/2869-500.wav" preload="auto"></audio>
+
+    <div id="header-controls" class="header" style="display: none;">
+        <div class="header-info">
+            <span id="ingelogde-naam"></span> @ <span id="display-groepscode"></span>
+        </div>
+        <div class="coin-box">
+            🪙 <span id="coin-weergave">0</span> Coins
+        </div>
+        <button onclick="uitloggen()" class="btn-logout">Uitloggen</button>
     </div>
 
-    <div class="header">
-        <h1>BefCounter</h1>
-        <div id="header-controls" class="header-controls">
-            <span class="groep-badge">Groep: <span id="display-groepscode"></span></span>
-            <button class="btn-gevaar" style="background-color: #8e8e93;" onclick="uitloggen()">Log Uit</button>
-        </div>
-    </div>
-
-    <!-- Authenticatie en Lobby -->
-    <div class="container" id="auth-container">
-        <div id="auth-scherm" class="card">
-            <h2>Login of Registreer</h2>
-            <input type="text" id="auth-naam" placeholder="Jouw Naam (bijv. Milan)">
-            <input type="password" id="auth-wachtwoord" placeholder="Kies of vul wachtwoord in">
-            <button class="btn-primair" onclick="login()">Inloggen</button>
-            <button class="btn-secundair" onclick="registreer()">Nieuw Account</button>
+    <div id="auth-container">
+        <div id="auth-scherm" class="auth-card">
+            <h2>BefCounter Login</h2>
+            <input type="text" id="auth-naam" placeholder="Gebruikersnaam">
+            <input type="password" id="auth-wachtwoord" placeholder="Wachtwoord">
+            <div class="auth-buttons">
+                <button onclick="login()" class="btn-primary">Inloggen</button>
+                <button onclick="registreer()" class="btn-secondary">Registreren</button>
+            </div>
         </div>
 
-        <div id="lobby-scherm" class="card">
-            <h2>Welkom <span id="lobby-gebruikersnaam" style="color:#007aff; text-transform:capitalize;"></span>!</h2>
-            <input type="text" id="lobby-code" placeholder="Vul Groepscode in (bijv. X8R2P)" style="text-transform: uppercase;">
-            <button class="btn-primair" onclick="joinGroep()">Groep Joinen</button>
-            <hr style="margin: 30px 0; border: none; border-top: 1px solid #eee;">
-            <button class="btn-secundair" style="background-color: #ff9500;" onclick="maakNieuweGroep()">Genereer Nieuwe Groep</button>
-            <button class="btn-gevaar" style="width: 100%; margin-top: 20px; padding: 15px;" onclick="uitloggen()">Uitloggen</button>
+        <div id="lobby-scherm" class="auth-card" style="display: none;">
+            <h2>Welkom, <span id="lobby-gebruikersnaam"></span>!</h2>
+            <p>Maak een nieuwe groep aan of join een bestaande code.</p>
+            <button onclick="maakNieuweGroep()" class="btn-primary">Groep Aanmaken</button>
+            <div class="divider">of join met code</div>
+            <input type="text" id="lobby-code" placeholder="GROEPSCODE" style="text-transform: uppercase;">
+            <button onclick="joinGroep()" class="btn-secondary">Join Groep</button>
         </div>
     </div>
 
-    <!-- Hoofd Applicatie Schermen -->
-    <div id="app-scherm" class="container">
-
-        <!-- ============================== -->
-        <!-- PAGINA 1: SCOREBORD -->
-        <!-- ============================== -->
-        <div id="page-scorebord" class="page active">
-            
-            <!-- CO-OP MISSIE WIDGET -->
-            <div class="card" style="background: linear-gradient(135deg, #007aff, #0056b3); color: white;">
-                <h2 style="color: white; border-bottom: 1px solid rgba(255,255,255,0.2); margin-top: 0;">🛡️ Daily Co-op Missie</h2>
-                <p class="coop-titel-text" style="margin-top: 0; font-size: 15px; font-weight: bold;">Nieuwe missie laden...</p>
-                <p class="coop-timer-text" style="margin-top: -10px; font-size: 12px; color: rgba(255,255,255,0.7); margin-bottom: 12px;">Nog 00:00:00 geldig</p>
-                <div style="background: rgba(0,0,0,0.3); height: 22px; border-radius: 11px; overflow: hidden; position: relative;">
-                    <div class="coop-bar-fill" style="background: #34c759; width: 0%; height: 100%; transition: width 0.5s;"></div>
-                    <span class="coop-progress-text" style="position: absolute; width: 100%; text-align: center; top: 3px; left: 0; font-size: 13px; font-weight: bold; color: white;">0 / 0</span>
+    <div id="app-scherm" style="display: none;" class="app-container">
+        
+        <div id="page-scores" class="page active">
+            <div class="coop-card">
+                <div class="coop-header">
+                    <span class="coop-titel-text">Laden van missie...</span>
+                    <span class="coop-timer-text">Nog 00:00:00 geldig</span>
+                </div>
+                <div class="coop-progress-bg">
+                    <div class="coop-bar-fill" style="width: 0%;"></div>
+                </div>
+                <div class="coop-footer">
+                    <span>Groepsdoel voortgang:</span>
+                    <span class="coop-progress-text">0 / 0</span>
                 </div>
             </div>
 
-            <div class="card" style="padding: 15px 5px;">
-                <h2 style="margin-left: 10px;">Leaderboard</h2>
-                <div style="overflow-x: auto;">
-                    <table id="score-tabel"></table>
-                </div>
+            <div class="score-input-grid">
+                <button onclick="pasScoreAan('bier', 1, '🍺 Bier')" class="btn-action pils">🍺 +1 Pils</button>
+                <button onclick="pasScoreAan('mix', 1, '🍹 Mixje')" class="btn-action mix">🍹 +1 Mix</button>
+                <button onclick="pasScoreAan('kiss', 1, '😘 Kiss')" class="btn-action kiss">😘 +1 Kiss</button>
+                <button onclick="pasScoreAan('rejection', 1, '💔 Reject')" class="btn-action reject">💔 +1 Reject</button>
+                <button onclick="pasScoreAan('mvp', 1, '👑 MVP')" class="btn-action mvp">👑 +1 MVP</button>
+                <button onclick="pasScoreAan('doner', 1, '🥙 Döner')" class="btn-action doner">🥙 +1 Döner</button>
             </div>
 
-            <div class="card">
-                <button onclick="stuurBierAlarm()" style="width:100%; padding:20px; background:#ff9500; border:none; border-radius:15px; color:white; font-weight:bold; font-size:16px;">
-                    📢 RONDJE BIER VOOR IEDEREEN!
-                </button>
+            <div class="table-responsive">
+                <table id="score-tabel" class="score-table"></table>
             </div>
 
-            <div class="card">
-                <h2>Punten voor: <span id="ingelogde-naam" style="color: #007aff; text-transform: capitalize;"></span></h2>
-                <div class="actie-grid">
-                    <div class="actie-kaart bg-bier"><span class="emoji">🍺</span><span class="titel">Bier</span><div class="knoppen-groep"><button class="btn-actie btn-min" onclick="pasScoreAan('bier', -1, '🍺 Bier')">-1</button><button class="btn-actie btn-plus" onclick="pasScoreAan('bier', 1, '🍺 Bier')">+1</button></div></div>
-                    <div class="actie-kaart bg-mix"><span class="emoji">🍹</span><span class="titel">Mix</span><div class="knoppen-groep"><button class="btn-actie btn-min" onclick="pasScoreAan('mix', -1, '🍹 Mix')">-1</button><button class="btn-actie btn-plus" onclick="pasScoreAan('mix', 1, '🍹 Mix')">+1</button></div></div>
-                    <div class="actie-kaart bg-kiss"><span class="emoji">😘</span><span class="titel">Kiss</span><div class="knoppen-groep"><button class="btn-actie btn-min" onclick="pasScoreAan('kiss', -1, '😘 Kiss')">-1</button><button class="btn-actie btn-plus" onclick="pasScoreAan('kiss', 1, '😘 Kiss')">+1</button></div></div>
-                    <div class="actie-kaart bg-reject"><span class="emoji">💔</span><span class="titel">Reject</span><div class="knoppen-groep"><button class="btn-actie btn-min" onclick="pasScoreAan('rejection', -1, '💔 Reject')">-1</button><button class="btn-actie btn-plus" onclick="pasScoreAan('rejection', 1, '💔 Reject')">+1</button></div></div>
-                    <div class="actie-kaart bg-mvp"><span class="emoji">👑</span><span class="titel">MVP</span><div class="knoppen-groep"><button class="btn-actie btn-min" onclick="pasScoreAan('mvp', -1, '👑 MVP')">-1</button><button class="btn-actie btn-plus" onclick="pasScoreAan('mvp', 1, '👑 MVP')">+1</button></div></div>
-                    <div class="actie-kaart bg-doner"><span class="emoji">🥙</span><span class="titel">Döner</span><div class="knoppen-groep"><button class="btn-actie btn-min" onclick="pasScoreAan('doner', -1, '🥙 Döner')">-1</button><button class="btn-actie btn-plus" onclick="pasScoreAan('doner', 1, '🥙 Döner')">+1</button></div></div>
-                </div>
-            </div>
+            <button onclick="stuurBierAlarm()" class="btn-alarm">⚠️ GEF BIER ALARM</button>
         </div>
 
-        <!-- ============================== -->
-        <!-- PAGINA 2: GAMES (Swasi, Rad, Bom) -->
-        <!-- ============================== -->
         <div id="page-games" class="page">
-            
-            <!-- SWASI FINGER ROULETTE -->
-            <div class="card" style="background: linear-gradient(135deg, #af52de, #5856d6); color: white;">
-                <h2 style="color: white; border-bottom: 1px solid rgba(255,255,255,0.2);">👆 Swasi (Touch Roulette)</h2>
-                <p style="font-size: 14px; color: rgba(255,255,255,0.8); margin-top: 0;">Iedereen legt een vinger op het scherm. Na 3 seconden kiest de app een willekeurig slachtoffer.</p>
-                <button class="btn-primair" style="background-color: white; color: #5856d6; font-size: 18px; padding: 20px; font-weight: 900;" onclick="startSwasi()">
-                    Start Swasi
-                </button>
+            <div class="game-row">
+                <div class="game-card">
+                    <h3>🥷 Je Geheime Moordenaarsmissie</h3>
+                    <p id="geheime-missie-tekst">Laden...</p>
+                    <button onclick="voltooiGeheimeMissie()" class="btn-game-clear">Missie Voltooid (+3 Coins)</button>
+                </div>
             </div>
 
-            <!-- TIJDBOM -->
-            <div class="card" id="bom-card" style="background: #1c1c1e; color: white;">
-                <h2 style="color: #ff3b30; border-bottom: 1px solid #333;">💣 De Tijdbom</h2>
+            <div class="game-card">
+                <h3>🌴 Vakantie Bingo</h3>
+                <div id="bingo-grid" class="bingo-container"></div>
+            </div>
+
+            <div id="bom-card" class="game-card bom-card">
+                <h3>💣 De Tijdbom Roulette</h3>
                 <div id="bom-idle-ui">
-                    <p style="font-size: 14px; color: #a1a1aa; margin-top: 0;">Start de bom. Zodra hij bij jou knippert, gooi hem z.s.m. door! Degene die hem vasthoudt als de timer afgaat verliest 3 coins.</p>
-                    <button class="btn-primair" style="background-color: #ff3b30;" onclick="startTijdbom()">💥 Start de Bom!</button>
+                    <p>De bom ligt momenteel stil.</p>
+                    <button onclick="startTijdbom()" class="btn-primary">Bom Starten!</button>
                 </div>
-                <div id="bom-active-ui" style="display: none; text-align: center; padding: 20px 0;">
-                    <span style="font-size: 50px;">🧨</span>
-                    <h3 id="bom-status-tekst" style="margin: 10px 0;">Bom is bij ...</h3>
-                    <button id="btn-gooi-door" class="btn-primair" style="background-color: #ff9500; display: none; padding: 20px; font-size: 20px;" onclick="gooiBomDoor()">GOOI DOOR!!</button>
+                <div id="bom-active-ui" style="display: none;">
+                    <p id="bom-status-tekst">Bom tikken...</p>
+                    <button id="btn-gooi-door" onclick="gooiBomDoor()" class="btn-bom-throw" style="display: none;">👉 GOOI DOOR!</button>
                 </div>
             </div>
 
-            <!-- RAD VAN FORTUIN -->
-            <div class="card">
-                <h2><span>Rad van Fortuin</span><span class="coin-badge">🪙 <span id="coin-weergave">0</span></span></h2>
-                <p style="font-size: 14px; color: #666; margin-top: 0;">1 punt gescoord = 1 coin om te draaien!</p>
-                <div id="rad-box">
-                    <span id="rad-uitkomst">Druk op Draai!</span>
+            <div class="game-card">
+                <h3>🎡 Rad van Fortuin</h3>
+                <p>Kost 1 coin van je totaalscore om te draaien!</p>
+                <div id="rad-box" class="rad-visual">
+                    <span id="rad-uitkomst">Draai het rad!</span>
                 </div>
-                <button class="btn-primair" style="background-color: #34c759; font-size: 18px; padding: 20px;" onclick="draaiRad()">
-                    🎰 DRAAI (Kosten: 1 Coin)
-                </button>
+                <button onclick="draaiRad()" class="btn-primary">Draai het Rad</button>
+            </div>
+
+            <div class="game-card">
+                <h3>☝️ Swasi Finger Roulette</h3>
+                <p>Wie moet het volgende rondje halen? Bepaal het live!</p>
+                <button onclick="startSwasi()" class="btn-primary">Start Vinger Roulette</button>
             </div>
         </div>
 
-        <!-- ============================== -->
-        <!-- PAGINA 3: MISSIES (Co-op, Bingo, Assassin) -->
-        <!-- ============================== -->
-        <div id="page-missies" class="page">
-            
-            <!-- VAKANTIE BINGO -->
-            <div class="card">
-                <h2>🌴 Ibiza Bingo</h2>
-                <p style="font-size: 14px; color: #666; margin-top: 0;">Jouw persoonlijke 3x3 kaart. Klik op een vakje als je hem voltooid hebt. Volle kaart = 10 MVP Coins!</p>
-                <div id="bingo-grid" class="bingo-grid">
-                    <!-- Wordt via JS geladen -->
-                </div>
-            </div>
-
-            <!-- CO-OP MISSIE -->
-            <div class="card" style="background: linear-gradient(135deg, #007aff, #0056b3); color: white;">
-                <h2 style="color: white; border-bottom: 1px solid rgba(255,255,255,0.2); margin-top: 0;">🛡️ Daily Co-op Missie</h2>
-                <p class="coop-titel-text" style="margin-top: 0; font-size: 15px; font-weight: bold;">Missie laden...</p>
-                <p class="coop-timer-text" style="margin-top: -10px; font-size: 12px; color: rgba(255,255,255,0.7); margin-bottom: 12px;">Nog 00:00:00 geldig</p>
-                <div style="background: rgba(0,0,0,0.3); height: 22px; border-radius: 11px; overflow: hidden; position: relative;">
-                    <div class="coop-bar-fill" style="background: #34c759; width: 0%; height: 100%; transition: width 0.5s;"></div>
-                    <span class="coop-progress-text" style="position: absolute; width: 100%; text-align: center; top: 3px; left: 0; font-size: 13px; font-weight: bold; color: white;">0 / 0</span>
-                </div>
-            </div>
-
-            <!-- SECRET ASSASSIN -->
-            <div class="card" style="background: #1c1c1e; color: white;">
-                <h2 style="color: white; border-bottom: 1px solid #333; margin-top: 0;">🥷 Secret Assassin</h2>
-                <p style="font-size: 14px; color: #a1a1aa; margin-top: 0;">Laat dit aan niemand zien!</p>
-                <div style="background: #2c2c2e; padding: 15px; border-radius: 10px; margin-bottom: 15px; text-align: center;">
-                    <strong id="geheime-missie-tekst" style="font-size: 16px; color: #ff9500;">Missie laden...</strong>
-                </div>
-                <button class="btn-secundair" style="background-color: #ff3b30; width: 100%; border: none; padding: 15px; border-radius: 10px; color: white; font-weight: bold; cursor: pointer;" onclick="voltooiGeheimeMissie()">
-                    Missie Voltooid (+3 MVP Coins!)
-                </button>
-            </div>
-        </div>
-
-        <!-- ============================== -->
-        <!-- PAGINA 4: WERELDKAART -->
-        <!-- ============================== -->
-        <div id="page-kaart" class="page">
-            <div class="card" style="padding: 15px 10px;">
-                <h2>Interactieve Kaart 📍</h2>
-                <p style="font-size: 14px; color: #666; margin-top: 0; margin-bottom: 15px;">Locaties per persoon worden automatisch opgeteld tot grotere iconen.</p>
-                <div id="map"></div>
-            </div>
-            <div class="card">
-                <h2>Vakantiemodus 🌴</h2>
-                <p style="font-size: 14px; color: #666;">Zet dit aan om bij elke score je GPS-locatie op de kaart te zetten.</p>
-                <button id="btn-gps" class="btn-secundair" onclick="toggleVakantiemodus()">GPS Tracker Aanzetten</button>
-            </div>
-        </div>
-
-        <!-- ============================== -->
-        <!-- PAGINA 5: STATISTIEKEN -->
-        <!-- ============================== -->
         <div id="page-stats" class="page">
-            <div class="card">
-                <h2>Kater-Voorspeller 🤮</h2>
-                <p style="font-size: 14px; color: #666; margin-top: 0;">Analyse op basis van mixdrank, bier en vettig eten.</p>
+            <div class="game-card">
+                <h3>📊 Live Groepstatistieken</h3>
+                <div id="stats-container"></div>
+            </div>
+            <div class="chart-container-box">
+                <div class="chart-wrapper"><canvas id="groepPieChart"></canvas></div>
+                <div class="chart-wrapper"><canvas id="spelerBarChart"></canvas></div>
+            </div>
+            <div class="game-card">
+                <h3>🤢 Kater Kans Berekening</h3>
                 <div id="kater-container"></div>
             </div>
-            <div class="card">
-                <h2>Wat drinkt de groep? 🍕</h2>
-                <div class="chart-container"><canvas id="groepPieChart"></canvas></div>
-            </div>
-            <div class="card">
-                <h2>Wie drinkt er het meest? 📊</h2>
-                <div class="chart-container"><canvas id="spelerBarChart"></canvas></div>
-            </div>
-            <div class="card">
-                <h2>Leaderboard Stats 🏆</h2>
-                <div id="stats-container">
-                    <p style="color: #666; text-align: center;">Gegevens worden geladen...</p>
-                </div>
+        </div>
+
+        <div id="page-kaart" class="page">
+            <div class="game-card map-card">
+                <h3>📍 Live Speler Locaties (Vakantiemodus)</h3>
+                <div id="map" style="height: 400px; width: 100%; border-radius: 12px;"></div>
             </div>
         </div>
 
     </div>
 
-    <!-- Navigatiebalk Onderkant -->
-    <div class="bottom-nav" id="bottom-nav">
-        <div class="nav-item active" onclick="wisselPagina('page-scorebord', this)">
-            <span class="nav-icon">📝</span>Scores
-        </div>
-        <div class="nav-item" onclick="wisselPagina('page-games', this)">
-            <span class="nav-icon">🕹️</span>Games
-        </div>
-        <div class="nav-item" onclick="wisselPagina('page-missies', this)">
-            <span class="nav-icon">🎯</span>Missies
-        </div>
-        <div class="nav-item" onclick="wisselPagina('page-kaart', this)">
-            <span class="nav-icon">🗺️</span>Kaart
-        </div>
-        <div class="nav-item" onclick="wisselPagina('page-stats', this)">
-            <span class="nav-icon">📊</span>Stats
-        </div>
+    <div id="bottom-nav" class="bottom-nav" style="display: none;">
+        <div class="nav-item active" onclick="wisselPagina('page-scores', this)">📊 Scores</div>
+        <div class="nav-item" onclick="wisselPagina('page-games', this)">🎮 Games</div>
+        <div class="nav-item" onclick="wisselPagina('page-stats', this)">📈 Stats</div>
+        <div class="nav-item" onclick="wisselPagina('page-kaart', this)">📍 Kaart</div>
     </div>
+
+    <div id="swasi-overlay" class="swasi-fullscreen" style="display: none;">
+        <div id="swasi-instructie" class="swasi-text">Plaats allemaal 1 vinger op het scherm...</div>
+        <div id="swasi-countdown" class="swasi-countdown" style="display: none;">3</div>
+        <button id="swasi-sluit-btn" onclick="stopSwasi()" class="btn-swasi-close" style="display: none;">Sluiten</button>
+    </div>
+
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-messaging.js"></script>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
     <script src="app.js"></script>
 </body>
