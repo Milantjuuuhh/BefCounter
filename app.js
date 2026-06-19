@@ -252,7 +252,7 @@ function pasScoreAan(categorie, bedrag, emojiNaam) {
     let startBericht = `${currentUser.charAt(0).toUpperCase() + currentUser.slice(1)} ${bedrag > 0 ? `scoort +${actueelBedrag} bij` : "deed een correctie bij"} ${emojiNaam}${isHappyHour && bedrag > 0 ? " (HAPPY HOUR x2!)" : ""}`;
 
     // --- DE WEBHOOK NAAR MAKE.COM ---
-    const MAKE_WEBHOOK_URL = "https://hook.eu1.make.com/x5392a4m2kc3ixqy4sbna33m8kuk9m4g";
+    const MAKE_WEBHOOK_URL = "https://hook.eu1.make.com/iydcsfjwnlx3147b29w38texvyhgrr62";
 
     db.collection('groepen').doc(currentGroup).collection('scores').get().then(snap => {
         snap.forEach(doc => {
