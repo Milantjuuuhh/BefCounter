@@ -9,22 +9,20 @@
     <link rel="manifest" href="manifest.json">
     <title>BefCounter</title>
     
-    <!-- Externe Software -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     
-    <!-- Styling & Firebase -->
     <link rel="stylesheet" href="style.css">
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-messaging.js"></script>
 </head>
 <body>
 
     <audio id="notificatie-geluid" src="https://www.soundjay.com/buttons/sounds/button-09.mp3" preload="auto"></audio>
     <div id="live-ticker" onclick="this.style.display='none'"></div>
 
-    <!-- FULLSCREEN SWASI OVERLAY (Geüpdatet) -->
     <div id="swasi-overlay">
         <h2 id="swasi-instructie" style="color: white; position: absolute; top: 15%; width: 100%; text-align: center; pointer-events: none; opacity: 0.8; font-size: 22px;">Plaats allemaal 1 vinger...</h2>
         <div id="swasi-countdown" style="display: none;">3</div>
@@ -39,7 +37,6 @@
         </div>
     </div>
 
-    <!-- Authenticatie en Lobby -->
     <div class="container" id="auth-container">
         <div id="auth-scherm" class="card">
             <h2>Login of Registreer</h2>
@@ -59,15 +56,10 @@
         </div>
     </div>
 
-    <!-- Hoofd Applicatie Schermen -->
     <div id="app-scherm" class="container">
 
-        <!-- ============================== -->
-        <!-- PAGINA 1: SCOREBORD -->
-        <!-- ============================== -->
         <div id="page-scorebord" class="page active">
             
-            <!-- CO-OP MISSIE WIDGET -->
             <div class="card" style="background: linear-gradient(135deg, #007aff, #0056b3); color: white;">
                 <h2 style="color: white; border-bottom: 1px solid rgba(255,255,255,0.2); margin-top: 0;">🛡️ Daily Co-op Missie</h2>
                 <p class="coop-titel-text" style="margin-top: 0; font-size: 15px; font-weight: bold;">Nieuwe missie laden...</p>
@@ -104,12 +96,8 @@
             </div>
         </div>
 
-        <!-- ============================== -->
-        <!-- PAGINA 2: GAMES (Swasi, Rad, Bom) -->
-        <!-- ============================== -->
         <div id="page-games" class="page">
             
-            <!-- SWASI FINGER ROULETTE -->
             <div class="card" style="background: linear-gradient(135deg, #af52de, #5856d6); color: white;">
                 <h2 style="color: white; border-bottom: 1px solid rgba(255,255,255,0.2);">👆 Swasi (Touch Roulette)</h2>
                 <p style="font-size: 14px; color: rgba(255,255,255,0.8); margin-top: 0;">Iedereen legt een vinger op het scherm. Na 3 seconden kiest de app een willekeurig slachtoffer.</p>
@@ -118,7 +106,6 @@
                 </button>
             </div>
 
-            <!-- TIJDBOM -->
             <div class="card" id="bom-card" style="background: #1c1c1e; color: white;">
                 <h2 style="color: #ff3b30; border-bottom: 1px solid #333;">💣 De Tijdbom</h2>
                 <div id="bom-idle-ui">
@@ -132,7 +119,6 @@
                 </div>
             </div>
 
-            <!-- RAD VAN FORTUIN -->
             <div class="card">
                 <h2><span>Rad van Fortuin</span><span class="coin-badge">🪙 <span id="coin-weergave">0</span></span></h2>
                 <p style="font-size: 14px; color: #666; margin-top: 0;">1 punt gescoord = 1 coin om te draaien!</p>
@@ -145,21 +131,15 @@
             </div>
         </div>
 
-        <!-- ============================== -->
-        <!-- PAGINA 3: MISSIES (Co-op, Bingo, Assassin) -->
-        <!-- ============================== -->
         <div id="page-missies" class="page">
             
-            <!-- VAKANTIE BINGO -->
             <div class="card">
                 <h2>🌴 Ibiza Bingo</h2>
                 <p style="font-size: 14px; color: #666; margin-top: 0;">Jouw persoonlijke 3x3 kaart. Klik op een vakje als je hem voltooid hebt. Volle kaart = 10 MVP Coins!</p>
                 <div id="bingo-grid" class="bingo-grid">
-                    <!-- Wordt via JS geladen -->
-                </div>
+                    </div>
             </div>
 
-            <!-- CO-OP MISSIE -->
             <div class="card" style="background: linear-gradient(135deg, #007aff, #0056b3); color: white;">
                 <h2 style="color: white; border-bottom: 1px solid rgba(255,255,255,0.2); margin-top: 0;">🛡️ Daily Co-op Missie</h2>
                 <p class="coop-titel-text" style="margin-top: 0; font-size: 15px; font-weight: bold;">Missie laden...</p>
@@ -170,7 +150,6 @@
                 </div>
             </div>
 
-            <!-- SECRET ASSASSIN -->
             <div class="card" style="background: #1c1c1e; color: white;">
                 <h2 style="color: white; border-bottom: 1px solid #333; margin-top: 0;">🥷 Secret Assassin</h2>
                 <p style="font-size: 14px; color: #a1a1aa; margin-top: 0;">Laat dit aan niemand zien!</p>
@@ -183,9 +162,6 @@
             </div>
         </div>
 
-        <!-- ============================== -->
-        <!-- PAGINA 4: WERELDKAART -->
-        <!-- ============================== -->
         <div id="page-kaart" class="page">
             <div class="card" style="padding: 15px 10px;">
                 <h2>Interactieve Kaart 📍</h2>
@@ -199,9 +175,6 @@
             </div>
         </div>
 
-        <!-- ============================== -->
-        <!-- PAGINA 5: STATISTIEKEN -->
-        <!-- ============================== -->
         <div id="page-stats" class="page">
             <div class="card">
                 <h2>Kater-Voorspeller 🤮</h2>
@@ -226,7 +199,6 @@
 
     </div>
 
-    <!-- Navigatiebalk Onderkant -->
     <div class="bottom-nav" id="bottom-nav">
         <div class="nav-item active" onclick="wisselPagina('page-scorebord', this)">
             <span class="nav-icon">📝</span>Scores

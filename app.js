@@ -9,7 +9,41 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore();
 
-if ('serviceWorker' in navigator) { navigator.serviceWorker.register('sw.js'); }
+// PUSH NOTIFICATIES SETUP
+let messaging = null;
+try {
+    if (typeof firebase.messaging === "function" && firebase.messaging.isSupported()) {
+        messaging = firebase.messaging();
+    }
+} catch (error) {
+    console.log("Push notificaties worden momenteel niet ondersteund door deze browser.");
+}
+
+if ('serviceWorker' in navigator) { 
+    navigator.serviceWorker.register('sw.js').then((reg) => {
+        if (messaging) {
+            messaging.useServiceWorker(reg);
+        }
+    }); 
+}
+
+function setupPushNotificaties() {
+    if (!messaging) return;
+    messaging.requestPermission()
+        .then(() => {
+            return messaging.getToken({ vapidKey: "BMfkVb0XKUWAPQ8HnB_79f1bvyB05Q-DSnkgzSvzfSN9n_ADzgW1FpAFJim8ftNfTeHA5BkUTJ1B-YhKIOyDL9k" });
+        })
+        .then((token) => {
+            if (token && currentUser) {
+                db.collection('groepen').doc(currentGroup).collection('scores').doc(currentUser).set({
+                    push_token: token
+                }, { merge: true });
+            }
+        })
+        .catch((err) => {
+            console.log("Notificatie setup mislukt of geweigerd:", err);
+        });
+}
 
 let currentUser = localStorage.getItem('bef_user');
 let currentGroup = localStorage.getItem('bef_group');
@@ -145,6 +179,8 @@ function startApp() {
     document.getElementById('ingelogde-naam').innerText = currentUser;
     document.getElementById('display-groepscode').innerText = currentGroup;
 
+    setupPushNotificaties(); // Roept push rechten op
+
     bouwLiveScorebord();
     luisterNaarLiveFeed();
     luisterNaarTijdbom();
@@ -209,6 +245,21 @@ function pasScoreAan(categorie, bedrag, emojiNaam) {
     }
 
     let startBericht = `${currentUser.charAt(0).toUpperCase() + currentUser.slice(1)} ${bedrag > 0 ? `scoort +${actueelBedrag} bij` : "deed een correctie bij"} ${emojiNaam}${isHappyHour && bedrag > 0 ? " (HAPPY HOUR x2!)" : ""}`;
+
+    // --- DE WEBHOOK NAAR MAKE.COM ---
+    const MAKE_WEBHOOK_URL = "https://hook.eu1.make.com/iydcsfjwnlx3147b29w38texvyhgrr62";
+    db.collection('groepen').doc(currentGroup).collection('scores').get().then(snap => {
+        snap.forEach(doc => {
+            if (doc.data().push_token) { // Stuurt nu notificatie naar alle telefoons!
+                fetch(MAKE_WEBHOOK_URL, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ token: doc.data().push_token, titel: "BefCounter 🍻", bericht: startBericht })
+                }).catch(e => console.log(e));
+            }
+        });
+    });
+    // --------------------------------
 
     if (vakantieModus && "geolocation" in navigator) {
         navigator.geolocation.getCurrentPosition((pos) => {
@@ -578,7 +629,27 @@ function haalRandomOptie() {
 function updateCoinWeergave() { document.getElementById('coin-weergave').innerText = Math.max(0, mijnTotalePunten - mijnGedraaideSpins); }
 function verwijderSpeler(naam) { if (confirm(`Verwijder ${naam}?`)) db.collection('groepen').doc(currentGroup).collection('scores').doc(naam).delete(); }
 
-function stuurBierAlarm() { if ("vibrate" in navigator) navigator.vibrate([200, 100, 200]); stuurNaarFeed(`⚠️ RONDJE BIER VOOR IEDEREEN DOOR ${currentUser.toUpperCase()}!`); }
+// --- HIER IS DE WEBHOOK VOOR DE GELE BIERKNOP TOEGEVOEGD ---
+function stuurBierAlarm() { 
+    if ("vibrate" in navigator) navigator.vibrate([200, 100, 200]); 
+    let bericht = `⚠️ RONDJE BIER VOOR IEDEREEN DOOR ${currentUser.toUpperCase()}!`;
+    stuurNaarFeed(bericht); 
+
+    const MAKE_WEBHOOK_URL = "https://hook.eu1.make.com/iydcsfjwnlx3147b29w38texvyhgrr62";
+    db.collection('groepen').doc(currentGroup).collection('scores').get().then(snap => {
+        snap.forEach(doc => {
+            if (doc.data().push_token) {
+                fetch(MAKE_WEBHOOK_URL, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ token: doc.data().push_token, titel: "BefCounter Alarm 🚨", bericht: bericht })
+                }).catch(e => console.log(e));
+            }
+        });
+    });
+}
+// ------------------------------------------------------------
+
 function stuurNaarFeed(bericht) { db.collection('groepen').doc(currentGroup).collection('feed').doc('laatste').set({ bericht: bericht, tijd: firebase.firestore.FieldValue.serverTimestamp() }); }
 
 function luisterNaarLiveFeed() {
