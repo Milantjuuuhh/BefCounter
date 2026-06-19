@@ -7,29 +7,36 @@ self.addEventListener('activate', event => {
 });
 
 self.addEventListener('push', event => {
-    let data = { title: "BefCounter", body: "Er is een nieuwe actie gelogd!" };
+    // Standaard teksten voor als er iets mis gaat
+    let title = "BefCounter 🍻";
+    let body = "Er is een nieuwe actie gelogd!";
     
+    // Probeer de Make.com data uit te pakken
     if (event.data) {
         try {
-            data = event.data.json();
+            let payload = event.data.json();
+            // Make.com stopt de data in het mapje 'notification', dus we halen het daar uit!
+            title = payload.notification?.title || payload.title || title;
+            body = payload.notification?.body || payload.body || body;
         } catch (e) {
-            data.body = event.data.text();
+            body = event.data.text();
         }
     }
 
     const options = {
-        body: data.body,
+        body: body,
         icon: "icon-192.png",
         badge: "icon-192.png",
-        vibrate: [200, 100, 200],
-        sound: "default",
+        vibrate: [200, 100, 300, 100, 200], // Extra hard trillen!
+        sound: "default", // Forceert het systeemgeluid
+        requireInteraction: false, // Melding verdwijnt na een paar seconden
         data: {
             url: "/"
         }
     };
 
     event.waitUntil(
-        self.registration.showNotification(data.title, options)
+        self.registration.showNotification(title, options)
     );
 });
 
