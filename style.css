@@ -17,33 +17,38 @@ input { width: 100%; padding: 15px; margin-bottom: 15px; border: 1px solid #d1d1
 /* MODERNE TABEL STYLING */
 .table-wrapper { background: white; border-radius: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); overflow-x: auto; margin-bottom: 20px; }
 table { width: 100%; border-collapse: collapse; text-align: center; font-size: 13px; }
-th { background-color: #f8f8f8; padding: 14px 5px; color: #8e8e93; font-weight: bold; font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 1px solid #e5e5ea; white-space: nowrap; }
-td { padding: 14px 5px; border-bottom: 1px solid #f2f2f7; font-weight: bold; color: #333; }
+th { background-color: #f8f8f8; padding: 14px 4px; color: #8e8e93; font-weight: bold; font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 1px solid #e5e5ea; white-space: nowrap; }
+td { padding: 14px 4px; border-bottom: 1px solid #f2f2f7; font-weight: bold; color: #333; }
 tr:nth-child(even) td { background-color: #fafafa; }
-td.naam-kolom { text-align: left; text-transform: capitalize; color: #007aff; padding-left: 15px; font-size: 14px; }
-.totaal-kolom { background-color: rgba(0, 122, 255, 0.08); color: #007aff; border-radius: 8px; font-size: 14px; font-weight: 900; }
-tr.totaal-rij td { border-top: 2px solid #000; font-weight: 900; background-color: #fff; padding: 18px 5px; }
+td.naam-kolom { text-align: left; text-transform: capitalize; color: #007aff; padding-left: 10px; font-size: 14px; }
+.totaal-kolom { background-color: rgba(0, 122, 255, 0.08); color: #007aff; border-radius: 8px; font-size: 15px; font-weight: 900; }
+tr.totaal-rij td { border-top: 2px solid #000; font-weight: 900; background-color: #fff; padding: 18px 4px; }
 .btn-verwijder { background-color: #ff3b30; color: white; border: none; border-radius: 6px; padding: 6px 10px; font-weight: bold; cursor: pointer; }
 
 /* Knoppen Grid Scores */
-.actie-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
-.actie-kaart { border-radius: 14px; padding: 15px; display: flex; flex-direction: column; align-items: center; box-shadow: 0 4px 6px rgba(0,0,0,0.1); color: white; }
-.actie-kaart span.emoji { font-size: 32px; margin-bottom: 5px; }
-.actie-kaart span.titel { font-size: 16px; font-weight: bold; margin-bottom: 15px; text-shadow: 0 1px 2px rgba(0,0,0,0.2); }
+.actie-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.actie-kaart { border-radius: 14px; padding: 12px; display: flex; flex-direction: column; align-items: center; box-shadow: 0 4px 6px rgba(0,0,0,0.1); color: white; }
+.actie-kaart span.emoji { font-size: 28px; margin-bottom: 5px; }
+.actie-kaart span.titel { font-size: 14px; font-weight: bold; margin-bottom: 10px; text-shadow: 0 1px 2px rgba(0,0,0,0.2); text-align: center; }
 .knoppen-groep { display: flex; width: 100%; gap: 5px; }
-.btn-actie { border: none; border-radius: 8px; padding: 10px; font-size: 18px; font-weight: bold; cursor: pointer; transition: transform 0.1s; }
+.btn-actie { border: none; border-radius: 8px; padding: 8px; font-size: 16px; font-weight: bold; cursor: pointer; transition: transform 0.1s; }
 .btn-actie:active { transform: scale(0.90); }
 .btn-min { flex: 1; background-color: rgba(0,0,0,0.2); color: white; }
 .btn-plus { flex: 2; background-color: rgba(255,255,255,0.3); color: white; }
 
+/* Kleuren voor de Knoppen */
 .bg-bier { background: linear-gradient(135deg, #f1c40f, #f39c12); }
 .bg-mix { background: linear-gradient(135deg, #9b59b6, #8e44ad); }
+.bg-shotje { background: linear-gradient(135deg, #e17055, #d35400); }
 .bg-kiss { background: linear-gradient(135deg, #ff7675, #d63031); }
 .bg-reject { background: linear-gradient(135deg, #636e72, #2d3436); }
-.bg-mvp { background: linear-gradient(135deg, #ffeaa7, #fdcb6e); color: #2d3436; }
-.bg-mvp .btn-min { background-color: rgba(0,0,0,0.1); color: #333; }
-.bg-mvp .btn-plus { background-color: rgba(255,255,255,0.5); color: #000; }
-.bg-doner { background: linear-gradient(135deg, #e17055, #d35400); }
+.bg-raggen { background: linear-gradient(135deg, #ffeaa7, #fdcb6e); color: #2d3436; }
+.bg-raggen .btn-min { background-color: rgba(0,0,0,0.1); color: #333; }
+.bg-raggen .btn-plus { background-color: rgba(255,255,255,0.5); color: #000; }
+.bg-kotsen { background: linear-gradient(135deg, #a8e6cf, #16a085); color: #000; }
+.bg-kotsen .btn-min { background-color: rgba(0,0,0,0.1); color: #333; }
+.bg-kotsen .btn-plus { background-color: rgba(255,255,255,0.5); color: #000; }
+.bg-sleutel { background: linear-gradient(135deg, #bdc3c7, #2c3e50); }
 
 /* Navigatie Balk */
 .bottom-nav { position: fixed; bottom: 0; left: 0; width: 100%; background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(10px); display: none; justify-content: space-around; padding: 10px 0; padding-bottom: calc(10px + env(safe-area-inset-bottom)); border-top: 1px solid #e5e5ea; z-index: 1000; }

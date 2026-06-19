@@ -75,18 +75,17 @@ function sluitGame(gameId) {
 const coopMissies = [
     { titel: "Drink 100 Pils met de groep", doel: 100, types: ['bier'] },
     { titel: "Verzamel samen 30 Kiss acties", doel: 30, types: ['kiss'] },
-    { titel: "Deel 50 Shotjes/Mixjes uit", doel: 50, types: ['mix'] },
+    { titel: "Deel 50 Shotjes/Mixjes uit", doel: 50, types: ['mix', 'shotje'] },
     { titel: "Incasseer 20 Rejects", doel: 20, types: ['rejection'] },
-    { titel: "Kroon 15 MVP's", doel: 15, types: ['mvp'] },
-    { titel: "Eet 10 Broodjes Döner", doel: 10, types: ['doner'] },
-    { titel: "150 Drankjes Totaal", doel: 150, types: ['bier', 'mix'] }
+    { titel: "Wordt 5x vol Geragd", doel: 5, types: ['raggen'] },
+    { titel: "150 Drankjes Totaal", doel: 150, types: ['bier', 'mix', 'shotje'] }
 ];
 
 let actieveCoopMissie = null;
 
 const bingoOpdrachten = [
     "Neem een shot met de barman", "Regel gratis pils", "Zeg 10 min helemaal niks", 
-    "Wijs iemand af", "Trek een Atje", "Eet Döner na 03:00", 
+    "Wijs iemand af", "Trek een Atje", "Eet laat nog iets vets", 
     "Raak iets kwijt", "Krijg een Reject", "Steel een aansteker", 
     "Deel 3 slokken uit", "Drink een uur water", "Klim ergens op",
     "Laat je trakteren", "Dans battle", "Neem een dubbel shot"
@@ -175,7 +174,7 @@ function joinGroep() { const code = document.getElementById('lobby-code').value.
 
 function joinSpecifiekeGroep(code) {
     db.collection('groepen').doc(code).collection('scores').doc(currentUser).set({
-        bier: 0, mix: 0, kiss: 0, rejection: 0, mvp: 0, doner: 0, spins: 0
+        bier: 0, mix: 0, kiss: 0, rejection: 0, raggen: 0, kotsen: 0, sleutel: 0, shotje: 0, spins: 0
     }, { merge: true }).then(() => {
         localStorage.setItem('bef_group', code); currentGroup = code; bepaalScherm();
     });
@@ -198,7 +197,7 @@ function startApp() {
 }
 
 // ==========================================
-// DRINK SESSIE (GPS AAN + RANDOM ATJES)
+// DRINK SESSIE (GPS AAN + RANDOM ATJES MET TIMER)
 // ==========================================
 let sessieCheckInterval = null;
 let actieveDrinkSessieTijd = 0;
@@ -218,7 +217,6 @@ function toggleDrinkSessie() {
             });
             stuurNaarFeed(`🍻 DRINK SESSIE GESTART door ${currentUser.toUpperCase()}! Tracker is nu actief.`);
             
-            // Zet GPS en Vakantiemodus ook direct aan
             vakantieModus = true;
             if ("geolocation" in navigator) {
                 navigator.geolocation.getCurrentPosition(
@@ -232,7 +230,6 @@ function toggleDrinkSessie() {
                 volgende_atje: 0
             });
             stuurNaarFeed(`🛑 Drink Sessie is gestopt door ${currentUser.toUpperCase()}. Tracker uit.`);
-            // Zet GPS en Vakantiemodus weer uit
             vakantieModus = false;
         }
     });
@@ -241,13 +238,15 @@ function toggleDrinkSessie() {
 function luisterNaarDrinkSessie() {
     db.collection('groepen').doc(currentGroup).collection('sessie').doc('status').onSnapshot(doc => {
         const btn = document.getElementById('btn-drink-sessie');
+        const timerUI = document.getElementById('drink-sessie-timer-tekst');
         if (!btn) return;
         
         if (doc.exists && doc.data().actief) {
             actieveDrinkSessieTijd = doc.data().volgende_atje;
             btn.innerHTML = "🛑 Stop Drink Sessie & GPS";
             btn.style.backgroundColor = "#ff3b30";
-            vakantieModus = true; // Sync state
+            timerUI.style.display = "block";
+            vakantieModus = true;
             
             if (!sessieCheckInterval) {
                 sessieCheckInterval = setInterval(checkDrinkSessieTijd, 5000);
@@ -256,7 +255,8 @@ function luisterNaarDrinkSessie() {
             actieveDrinkSessieTijd = 0;
             btn.innerHTML = "🍻 Start Drink Sessie!";
             btn.style.backgroundColor = "#ff9500";
-            vakantieModus = false; // Sync state
+            timerUI.style.display = "none";
+            vakantieModus = false; 
             
             if (sessieCheckInterval) {
                 clearInterval(sessieCheckInterval);
@@ -265,6 +265,21 @@ function luisterNaarDrinkSessie() {
         }
     });
 }
+
+// LOKALE TIMER VOOR OP HET SCHERM (1x per sec)
+setInterval(() => {
+    if (actieveDrinkSessieTijd > 0) {
+        let diff = actieveDrinkSessieTijd - Date.now();
+        const timerUI = document.getElementById('drink-sessie-timer-tekst');
+        if (diff > 0) {
+            let m = Math.floor(diff / 60000).toString().padStart(2, '0');
+            let s = Math.floor((diff % 60000) / 1000).toString().padStart(2, '0');
+            timerUI.innerText = `⏰ Volgende Atje over: ${m}:${s}`;
+        } else {
+            timerUI.innerText = "🚨 ALARM! SLACHTOFFER WORDT GEKOZEN...";
+        }
+    }
+}, 1000);
 
 function checkDrinkSessieTijd() {
     if (!actieveDrinkSessieTijd || Date.now() < actieveDrinkSessieTijd) return;
@@ -322,8 +337,8 @@ function luisterNaarCoopMissie() {
 
         if (actieveCoopMissie.score >= actieveCoopMissie.doel && !actieveCoopMissie.behaald) {
             db.collection('groepen').doc(currentGroup).collection('coop').doc('status').update({ behaald: true });
-            pasScoreAan('mvp', 5, '🏆 CO-OP BEHAALD');
-            stuurNaarFeed("🎉 CO-OP MISSIE BEHAALD! Iedereen bedankt, +5 MVP Coins voor de finale tik!");
+            pasScoreAan('raggen', 5, '🏆 CO-OP BEHAALD');
+            stuurNaarFeed("🎉 CO-OP MISSIE BEHAALD! Iedereen bedankt, +5 Punten voor de finale tik!");
         }
     });
 }
@@ -340,27 +355,24 @@ setInterval(() => {
 }, 1000);
 
 // ==========================================
-// SCOREBORD & DATA SYNC
+// SCOREBORD & PUNTEN SYSTEEM
 // ==========================================
 function pasScoreAan(categorie, bedrag, emojiNaam) {
     if ("vibrate" in navigator) navigator.vibrate(50);
-    const isHappyHour = new Date().getHours() === 23;
-    const actueelBedrag = (isHappyHour && bedrag > 0) ? bedrag * 2 : bedrag;
     
-    db.collection('groepen').doc(currentGroup).collection('scores').doc(currentUser).set({ [categorie]: firebase.firestore.FieldValue.increment(actueelBedrag) }, { merge: true });
+    // We slaan op hoe VAAK je iets doet (bijv: 3 biertjes gedronken),
+    // de app berekent lokaal hoeveel punten dat totaal waard is!
+    db.collection('groepen').doc(currentGroup).collection('scores').doc(currentUser).set({ [categorie]: firebase.firestore.FieldValue.increment(bedrag) }, { merge: true });
 
     if (actieveCoopMissie && bedrag > 0 && actieveCoopMissie.types.includes(categorie) && !actieveCoopMissie.behaald) {
-        db.collection('groepen').doc(currentGroup).collection('coop').doc('status').update({ score: firebase.firestore.FieldValue.increment(actueelBedrag) });
+        db.collection('groepen').doc(currentGroup).collection('coop').doc('status').update({ score: firebase.firestore.FieldValue.increment(bedrag) });
     }
 
-    let startBericht = `${currentUser.charAt(0).toUpperCase() + currentUser.slice(1)} ${bedrag > 0 ? `scoort +${actueelBedrag} bij` : "deed een correctie bij"} ${emojiNaam}${isHappyHour && bedrag > 0 ? " (HAPPY HOUR x2!)" : ""}`;
-
-    // Geen webhook meer hier om data te besparen!
+    let startBericht = `${currentUser.charAt(0).toUpperCase() + currentUser.slice(1)} ${bedrag > 0 ? `scoort +1 bij` : "deed een correctie bij"} ${emojiNaam}`;
 
     if (vakantieModus && "geolocation" in navigator) {
         navigator.geolocation.getCurrentPosition((pos) => {
             db.collection('groepen').doc(currentGroup).collection('locaties').add({ naam: currentUser, actie: emojiNaam, lat: pos.coords.latitude, lng: pos.coords.longitude, tijd: new Date().toISOString() });
-            // Maps link weggehaald uit de live ticker!
             stuurNaarFeed(`${startBericht}`);
         }, () => stuurNaarFeed(`${startBericht}`));
     } else {
@@ -372,10 +384,10 @@ function bouwLiveScorebord() {
     if(unsubscribeScores) unsubscribeScores();
     
     unsubscribeScores = db.collection('groepen').doc(currentGroup).collection('scores').onSnapshot((snapshot) => {
-        let html = `<tr><th style="text-align:left; padding-left:15px;">Wie</th><th>🍺</th><th>🍹</th><th>😘</th><th>💔</th><th>👑</th><th>🥙</th><th class="totaal-kolom">Tot</th><th></th></tr>`;
-        let somBier=0, somMix=0, somKiss=0, somReject=0, somMvp=0, somDoner=0, somAlles=0;
-        let statMaxBier=0, statMaxBierNaam="-", statMaxMVP=0, statMaxMVPNaam="-", statMaxSjaak=0, statMaxSjaakNaam="-", statMaxDoner=0, statMaxDonerNaam="-";
-        let grafiekNamen = [], grafiekBierEnMix = [];
+        let html = `<tr><th style="text-align:left; padding-left:10px;">Wie</th><th>🍺</th><th>🍹</th><th>🥃</th><th>😘</th><th>💔</th><th>🚀</th><th>🤮</th><th>🔑</th><th class="totaal-kolom">Tot</th><th></th></tr>`;
+        let somBier=0, somMix=0, somShot=0, somKiss=0, somReject=0, somRaggen=0, somKotsen=0, somSleutel=0, somAlles=0;
+        let statMaxBier=0, statMaxBierNaam="-", statMaxRaggen=0, statMaxRaggenNaam="-", statMaxSjaak=0, statMaxSjaakNaam="-", statMaxKots=0, statMaxKotsNaam="-";
+        let grafiekNamen = [], grafiekData = [];
         let katerHtml = "";
         spelersLijst = []; 
 
@@ -383,10 +395,19 @@ function bouwLiveScorebord() {
             const data = doc.data(); const naam = doc.id;
             spelersLijst.push(naam);
 
-            const b = data.bier || 0; const m = data.mix || 0; const k = data.kiss || 0;
-            const r = data.rejection || 0; const mv = data.mvp || 0; const d = data.doner || 0;
-            const persoonTotaal = b + m + k + r + mv + d;
-            somBier += b; somMix += m; somKiss += k; somReject += r; somMvp += mv; somDoner += d; somAlles += persoonTotaal;
+            const b = data.bier || 0;
+            const m = data.mix || 0;
+            const sh = data.shotje || data.doner || 0;
+            const k = data.kiss || 0;
+            const r = data.rejection || 0;
+            const ra = data.raggen || data.mvp || 0;
+            const ko = data.kotsen || 0;
+            const sl = data.sleutel || 0;
+            
+            // HET GEWOGEN PUNTENSYSTEEM
+            const persoonTotaal = (b * 1) + (m * 2) + (sh * 2) + (k * 10) + (r * 5) + (ra * 15) + (ko * 5) + (sl * 5);
+            
+            somBier += b; somMix += m; somShot += sh; somKiss += k; somReject += r; somRaggen += ra; somKotsen += ko; somSleutel += sl; somAlles += persoonTotaal;
 
             if (naam === currentUser) { 
                 mijnTotalePunten = persoonTotaal; 
@@ -396,32 +417,32 @@ function bouwLiveScorebord() {
             }
 
             if(b > statMaxBier) { statMaxBier = b; statMaxBierNaam = naam; }
-            if(mv > statMaxMVP) { statMaxMVP = mv; statMaxMVPNaam = naam; }
+            if(ra > statMaxRaggen) { statMaxRaggen = ra; statMaxRaggenNaam = naam; }
             if(r > statMaxSjaak) { statMaxSjaak = r; statMaxSjaakNaam = naam; }
-            if(d > statMaxDoner) { statMaxDoner = d; statMaxDonerNaam = naam; }
+            if(ko > statMaxKots) { statMaxKots = ko; statMaxKotsNaam = naam; }
 
             grafiekNamen.push(naam.charAt(0).toUpperCase() + naam.slice(1));
-            grafiekBierEnMix.push(b + m);
+            grafiekData.push(b + m + sh);
 
-            let katerKans = Math.max(0, Math.min(99, 5 + (b * 4) + (m * 12) - (d * 15)));
+            let katerKans = Math.max(0, Math.min(99, 5 + (b * 4) + (m * 12) + (sh * 15) + (ko * 30)));
             let kleur = katerKans >= 75 ? "#ff3b30" : katerKans >= 40 ? "#ff9500" : "#34c759";
             katerHtml += `<div class="kater-regel"><div class="kater-header"><span>${naam}</span><span>${katerKans}%</span></div><div class="kater-bar-bg"><div class="kater-bar-fill" style="width: ${katerKans}%; background-color: ${kleur};"></div></div></div>`;
 
-            html += `<tr><td class="naam-kolom">${naam}</td><td>${b}</td><td>${m}</td><td>${k}</td><td>${r}</td><td>${mv}</td><td>${d}</td><td class="totaal-kolom">${persoonTotaal}</td><td><button class="btn-verwijder" onclick="verwijderSpeler('${naam}')">X</button></td></tr>`;
+            html += `<tr><td class="naam-kolom">${naam}</td><td>${b}</td><td>${m}</td><td>${sh}</td><td>${k}</td><td>${r}</td><td>${ra}</td><td>${ko}</td><td>${sl}</td><td class="totaal-kolom">${persoonTotaal}</td><td><button class="btn-verwijder" onclick="verwijderSpeler('${naam}')">X</button></td></tr>`;
         });
 
-        html += `<tr class="totaal-rij"><td style="text-align:left; padding-left:15px;">Totaal</td><td>${somBier}</td><td>${somMix}</td><td>${somKiss}</td><td>${somReject}</td><td>${somMvp}</td><td>${somDoner}</td><td class="totaal-kolom">${somAlles}</td><td></td></tr>`;
+        html += `<tr class="totaal-rij"><td style="text-align:left; padding-left:10px;">Totaal</td><td>${somBier}</td><td>${somMix}</td><td>${somShot}</td><td>${somKiss}</td><td>${somReject}</td><td>${somRaggen}</td><td>${somKotsen}</td><td>${somSleutel}</td><td class="totaal-kolom">${somAlles}</td><td></td></tr>`;
         document.getElementById('score-tabel').innerHTML = html;
         document.getElementById('kater-container').innerHTML = katerHtml;
 
         document.getElementById('stats-container').innerHTML = `
             <div class="stat-rij"><span>🍺 Koning Pils</span> <span class="stat-naam">${statMaxBierNaam} (${statMaxBier})</span></div>
-            <div class="stat-rij"><span>👑 Meeste MVP</span> <span class="stat-naam">${statMaxMVPNaam} (${statMaxMVP})</span></div>
+            <div class="stat-rij"><span>🚀 Meest Geragd</span> <span class="stat-naam">${statMaxRaggenNaam} (${statMaxRaggen})</span></div>
+            <div class="stat-rij"><span>🤮 Meeste Kots</span> <span class="stat-naam">${statMaxKotsNaam} (${statMaxKots})</span></div>
             <div class="stat-rij"><span>💔 Grootste Sjaak</span> <span class="stat-naam">${statMaxSjaakNaam} (${statMaxSjaak})</span></div>
-            <div class="stat-rij"><span>🥙 Döner Baas</span> <span class="stat-naam">${statMaxDonerNaam} (${statMaxDoner})</span></div>
         `;
 
-        tekenGrafieken(somBier, somMix, somKiss, somReject, somMvp, somDoner, grafiekNamen, grafiekBierEnMix);
+        tekenGrafieken(somBier, somMix, somShot, somKiss, somReject, somRaggen, somKotsen, somSleutel, grafiekNamen, grafiekData);
     });
 }
 
@@ -444,9 +465,9 @@ function beheerMissiesEnBingo(data) {
 
 function voltooiGeheimeMissie() {
     if (confirm("Echt uitgevoerd? Bij liegen moet je adten!")) {
-        pasScoreAan('mvp', 3, '🥷 Geheime Missie');
+        pasScoreAan('raggen', 3, '🥷 Geheime Missie');
         db.collection('groepen').doc(currentGroup).collection('scores').doc(currentUser).set({ geheime_missie: genereerNieuweMissie() }, { merge: true });
-        alert("+3 MVP Coins verdiend!");
+        alert("+3 Punten verdiend!");
     }
 }
 
@@ -474,8 +495,8 @@ function toggleBingoCel(index, isGehaald) {
     
     if (bingo) {
         db.collection('groepen').doc(currentGroup).collection('scores').doc(currentUser).set({ bingo_gehaald: true }, { merge: true });
-        pasScoreAan('mvp', 10, '🌴 BINGO');
-        alert("BINGO! 10 MVP Coins voor jou!");
+        pasScoreAan('raggen', 10, '🌴 BINGO');
+        alert("BINGO! 10 Punten voor jou!");
     }
 }
 
@@ -664,8 +685,8 @@ function luisterNaarTijdbom() {
                 btnGooi.style.display = 'inline-block';
                 if (Date.now() >= data.eindTijdUnix) {
                     db.collection('groepen').doc(currentGroup).collection('tijdbom').doc('status').set({ actief: false });
-                    pasScoreAan('mvp', -3, '💥 BOM ONTPLOFT');
-                    alert("KABOEM! -3 Coins!");
+                    pasScoreAan('raggen', -3, '💥 BOM ONTPLOFT');
+                    alert("KABOEM! -3 Punten!");
                 }
             } else {
                 card.classList.remove('bom-gevaar');
@@ -682,8 +703,8 @@ function luisterNaarTijdbom() {
         db.collection('groepen').doc(currentGroup).collection('tijdbom').doc('status').get().then(doc => {
             if (doc.exists && doc.data().actief && doc.data().houder === currentUser && Date.now() >= doc.data().eindTijdUnix) {
                 db.collection('groepen').doc(currentGroup).collection('tijdbom').doc('status').set({ actief: false });
-                pasScoreAan('mvp', -3, '💥 BOM ONTPLOFT');
-                alert("KABOEM! -3 Coins!");
+                pasScoreAan('raggen', -3, '💥 BOM ONTPLOFT');
+                alert("KABOEM! -3 Punten!");
             }
         });
     }, 1000);
@@ -716,7 +737,7 @@ function draaiRad() {
 }
 
 function haalRandomOptie() {
-    const basisRadOpties = ["🍻 Atje voor de sfeer!", "🥃 Neem een shotje!", "👉 Deel 2 slokken uit aan [SPELER]", "🎯 [SPELER] moet adten!", "💧 Drink water (Laf)", "🔄 Wissel drankje met [SPELER]", "👑 MVP punt!", "🍻 IEDEREEN ADTEN!"];
+    const basisRadOpties = ["🍻 Atje voor de sfeer!", "🥃 Neem een shotje!", "👉 Deel 2 slokken uit aan [SPELER]", "🎯 [SPELER] moet adten!", "💧 Drink water (Laf)", "🔄 Wissel drankje met [SPELER]", "🚀 Raggen punt!", "🍻 IEDEREEN ADTEN!"];
     let optie = basisRadOpties[Math.floor(Math.random() * basisRadOpties.length)];
     if (optie.includes("[SPELER]")) optie = optie.replace("[SPELER]", spelersLijst.filter(n=>n!==currentUser)[Math.floor(Math.random()*(spelersLijst.length-1))] || "iemand");
     return optie;
@@ -745,9 +766,9 @@ function luisterNaarLiveFeed() {
     });
 }
 
-function tekenGrafieken(b, m, k, r, mv, d, namen, drankjes) {
+function tekenGrafieken(b, m, sh, k, r, ra, ko, sl, namen, drankjes) {
     if (pieChartInstance) pieChartInstance.destroy();
-    pieChartInstance = new Chart(document.getElementById('groepPieChart'), { type: 'pie', data: { labels: ['Bier','Mix','Kiss','Reject','MVP','Döner'], datasets: [{ data: [b,m,k,r,mv,d], backgroundColor: ['#f1c40f','#9b59b6','#ff7675','#636e72','#ffeaa7','#e17055'] }] }, options: { responsive: true, maintainAspectRatio: false } });
+    pieChartInstance = new Chart(document.getElementById('groepPieChart'), { type: 'pie', data: { labels: ['Bier','Mix','Shotje','Kiss','Reject','Raggen', 'Kotsen', 'Sleutel'], datasets: [{ data: [b,m,sh,k,r,ra,ko,sl], backgroundColor: ['#f1c40f','#9b59b6','#e17055','#ff7675','#636e72','#ffeaa7','#16a085','#bdc3c7'] }] }, options: { responsive: true, maintainAspectRatio: false } });
     if (barChartInstance) barChartInstance.destroy();
     barChartInstance = new Chart(document.getElementById('spelerBarChart'), { type: 'bar', data: { labels: namen, datasets: [{ label: 'Drankjes', data: drankjes, backgroundColor: '#007aff' }] }, options: { responsive: true, maintainAspectRatio: false } });
 }

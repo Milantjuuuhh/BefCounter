@@ -13,7 +13,7 @@
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     
-    <link rel="stylesheet" href="style.css?v=6">
+    <link rel="stylesheet" href="style.css?v=7">
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
 </head>
@@ -70,12 +70,14 @@
             <div class="card">
                 <h2>Punten voor: <span id="ingelogde-naam" style="color: #007aff; text-transform: capitalize;"></span></h2>
                 <div class="actie-grid">
-                    <div class="actie-kaart bg-bier"><span class="emoji">🍺</span><span class="titel">Bier</span><div class="knoppen-groep"><button class="btn-actie btn-min" onclick="pasScoreAan('bier', -1, '🍺 Bier')">-1</button><button class="btn-actie btn-plus" onclick="pasScoreAan('bier', 1, '🍺 Bier')">+1</button></div></div>
-                    <div class="actie-kaart bg-mix"><span class="emoji">🍹</span><span class="titel">Mix</span><div class="knoppen-groep"><button class="btn-actie btn-min" onclick="pasScoreAan('mix', -1, '🍹 Mix')">-1</button><button class="btn-actie btn-plus" onclick="pasScoreAan('mix', 1, '🍹 Mix')">+1</button></div></div>
-                    <div class="actie-kaart bg-kiss"><span class="emoji">😘</span><span class="titel">Kiss</span><div class="knoppen-groep"><button class="btn-actie btn-min" onclick="pasScoreAan('kiss', -1, '😘 Kiss')">-1</button><button class="btn-actie btn-plus" onclick="pasScoreAan('kiss', 1, '😘 Kiss')">+1</button></div></div>
-                    <div class="actie-kaart bg-reject"><span class="emoji">💔</span><span class="titel">Reject</span><div class="knoppen-groep"><button class="btn-actie btn-min" onclick="pasScoreAan('rejection', -1, '💔 Reject')">-1</button><button class="btn-actie btn-plus" onclick="pasScoreAan('rejection', 1, '💔 Reject')">+1</button></div></div>
-                    <div class="actie-kaart bg-mvp"><span class="emoji">👑</span><span class="titel">MVP</span><div class="knoppen-groep"><button class="btn-actie btn-min" onclick="pasScoreAan('mvp', -1, '👑 MVP')">-1</button><button class="btn-actie btn-plus" onclick="pasScoreAan('mvp', 1, '👑 MVP')">+1</button></div></div>
-                    <div class="actie-kaart bg-doner"><span class="emoji">🥙</span><span class="titel">Döner</span><div class="knoppen-groep"><button class="btn-actie btn-min" onclick="pasScoreAan('doner', -1, '🥙 Döner')">-1</button><button class="btn-actie btn-plus" onclick="pasScoreAan('doner', 1, '🥙 Döner')">+1</button></div></div>
+                    <div class="actie-kaart bg-bier"><span class="emoji">🍺</span><span class="titel">Bier (1p)</span><div class="knoppen-groep"><button class="btn-actie btn-min" onclick="pasScoreAan('bier', -1, '🍺 Bier')">-1</button><button class="btn-actie btn-plus" onclick="pasScoreAan('bier', 1, '🍺 Bier')">+1</button></div></div>
+                    <div class="actie-kaart bg-mix"><span class="emoji">🍹</span><span class="titel">Mix (2p)</span><div class="knoppen-groep"><button class="btn-actie btn-min" onclick="pasScoreAan('mix', -1, '🍹 Mix')">-1</button><button class="btn-actie btn-plus" onclick="pasScoreAan('mix', 1, '🍹 Mix')">+1</button></div></div>
+                    <div class="actie-kaart bg-shotje"><span class="emoji">🥃</span><span class="titel">Shotje (2p)</span><div class="knoppen-groep"><button class="btn-actie btn-min" onclick="pasScoreAan('shotje', -1, '🥃 Shotje')">-1</button><button class="btn-actie btn-plus" onclick="pasScoreAan('shotje', 1, '🥃 Shotje')">+1</button></div></div>
+                    <div class="actie-kaart bg-kiss"><span class="emoji">😘</span><span class="titel">Kiss (10p)</span><div class="knoppen-groep"><button class="btn-actie btn-min" onclick="pasScoreAan('kiss', -1, '😘 Kiss')">-1</button><button class="btn-actie btn-plus" onclick="pasScoreAan('kiss', 1, '😘 Kiss')">+1</button></div></div>
+                    <div class="actie-kaart bg-reject"><span class="emoji">💔</span><span class="titel">Reject (5p)</span><div class="knoppen-groep"><button class="btn-actie btn-min" onclick="pasScoreAan('rejection', -1, '💔 Reject')">-1</button><button class="btn-actie btn-plus" onclick="pasScoreAan('rejection', 1, '💔 Reject')">+1</button></div></div>
+                    <div class="actie-kaart bg-raggen"><span class="emoji">🚀</span><span class="titel">Raggen (15p)</span><div class="knoppen-groep"><button class="btn-actie btn-min" onclick="pasScoreAan('raggen', -1, '🚀 Raggen')">-1</button><button class="btn-actie btn-plus" onclick="pasScoreAan('raggen', 1, '🚀 Raggen')">+1</button></div></div>
+                    <div class="actie-kaart bg-kotsen"><span class="emoji">🤮</span><span class="titel">Kotsen (5p)</span><div class="knoppen-groep"><button class="btn-actie btn-min" onclick="pasScoreAan('kotsen', -1, '🤮 Kotsen')">-1</button><button class="btn-actie btn-plus" onclick="pasScoreAan('kotsen', 1, '🤮 Kotsen')">+1</button></div></div>
+                    <div class="actie-kaart bg-sleutel"><span class="emoji">🔑</span><span class="titel">Sleutel (5p)</span><div class="knoppen-groep"><button class="btn-actie btn-min" onclick="pasScoreAan('sleutel', -1, '🔑 Sleutel')">-1</button><button class="btn-actie btn-plus" onclick="pasScoreAan('sleutel', 1, '🔑 Sleutel')">+1</button></div></div>
                 </div>
             </div>
         </div>
@@ -102,12 +104,15 @@
         <!-- PAGINA 3: MISSIES -->
         <div id="page-missies" class="page">
             
-            <!-- DRINK SESSIE & GPS KNOP -->
+            <!-- DRINK SESSIE & GPS KNOP MET ZICHTBARE TIMER -->
             <div class="card">
                 <button id="btn-drink-sessie" onclick="toggleDrinkSessie()" style="width:100%; padding:20px; background:#ff9500; border:none; border-radius:16px; color:white; font-weight:bold; font-size:18px; transition: background 0.3s; box-shadow: 0 4px 10px rgba(255,149,0,0.3);">
                     🍻 Start Drink Sessie!
                 </button>
-                <p style="font-size: 13px; color: #666; text-align: center; margin-top: 10px; margin-bottom: 0;">Wijst elke 5-20 min een atje aan én activeert de GPS tracker!</p>
+                <p id="drink-sessie-timer-tekst" style="font-size: 18px; font-weight: 900; color: #ff3b30; text-align: center; margin-top: 15px; display: none;">
+                    ⏰ Volgende Atje over: 00:00
+                </p>
+                <p style="font-size: 13px; color: #666; text-align: center; margin-top: 10px; margin-bottom: 0;">Wijst elke 5-20 min een slachtoffer aan voor een Atje én activeert direct de GPS tracker!</p>
             </div>
 
             <div class="card" style="background: linear-gradient(135deg, #007aff, #0056b3); color: white;">
@@ -127,7 +132,7 @@
                     <strong id="geheime-missie-tekst" style="font-size: 16px; color: #ff9500;">Missie laden...</strong>
                 </div>
                 <button class="btn-secundair" style="background-color: #ff3b30; width: 100%; border: none; padding: 15px; border-radius: 10px; color: white; font-weight: bold; cursor: pointer;" onclick="voltooiGeheimeMissie()">
-                    Missie Voltooid (+3 MVP Coins!)
+                    Missie Voltooid (+3 Punten!)
                 </button>
             </div>
         </div>
@@ -207,7 +212,7 @@
         <div class="container">
             <div class="card">
                 <h2>🌴 Ibiza Bingo</h2>
-                <p style="font-size: 14px; color: #666; margin-top: 0;">Jouw persoonlijke 3x3 kaart. Klik op een vakje als je hem voltooid hebt. Volle kaart = 10 MVP Coins!</p>
+                <p style="font-size: 14px; color: #666; margin-top: 0;">Jouw persoonlijke 3x3 kaart. Klik op een vakje als je hem voltooid hebt. Volle kaart = 10 Punten!</p>
                 <div id="bingo-grid" class="bingo-grid"></div>
             </div>
         </div>
@@ -222,6 +227,6 @@
         <div class="nav-item" onclick="wisselPagina('page-stats', this)"><span class="nav-icon">📊</span>Stats</div>
     </div>
 
-    <script src="app.js?v=6"></script>
+    <script src="app.js?v=7"></script>
 </body>
 </html>
