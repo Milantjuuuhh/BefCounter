@@ -62,12 +62,8 @@ let mijnBingoKaart = [], mijnBingoStatus = [];
 // ==========================================
 // FULLSCREEN GAME MODALS LOGICA
 // ==========================================
-function openGame(gameId) {
-    document.getElementById(gameId).classList.add('active');
-}
-function sluitGame(gameId) {
-    document.getElementById(gameId).classList.remove('active');
-}
+function openGame(gameId) { document.getElementById(gameId).classList.add('active'); }
+function sluitGame(gameId) { document.getElementById(gameId).classList.remove('active'); }
 
 // ==========================================
 // GAME DATA (CO-OP, BINGO & ASSASSIN)
@@ -194,6 +190,7 @@ function startApp() {
     luisterNaarTijdbom();
     luisterNaarCoopMissie();
     luisterNaarDrinkSessie();
+    luisterNaarReflex(); // Start luisteren naar de live reflex game!
 }
 
 // ==========================================
@@ -213,20 +210,19 @@ function toggleDrinkSessie() {
             
             db.collection('groepen').doc(currentGroup).collection('sessie').doc('status').set({
                 actief: true,
+                starter: currentUser,
                 volgende_atje: Date.now() + wachttijd
             });
             stuurNaarFeed(`🍻 DRINK SESSIE GESTART door ${currentUser.toUpperCase()}! Tracker is nu actief.`);
             
             vakantieModus = true;
             if ("geolocation" in navigator) {
-                navigator.geolocation.getCurrentPosition(
-                    () => console.log("GPS permissie gegeven"),
-                    (err) => alert("Zorg dat je locatievoorzieningen aan staan voor deze browser!")
-                );
+                navigator.geolocation.getCurrentPosition(() => {}, () => alert("Zorg dat locatievoorzieningen aan staan voor de GPS tracker!"));
             }
         } else {
             db.collection('groepen').doc(currentGroup).collection('sessie').doc('status').set({
                 actief: false,
+                starter: '',
                 volgende_atje: 0
             });
             stuurNaarFeed(`🛑 Drink Sessie is gestopt door ${currentUser.toUpperCase()}. Tracker uit.`);
@@ -235,10 +231,18 @@ function toggleDrinkSessie() {
     });
 }
 
+// FORCEER KNOP VOOR TESTEN
+function forceerSessieAtje() {
+    db.collection('groepen').doc(currentGroup).collection('sessie').doc('status').update({
+        volgende_atje: Date.now() - 1000 // Zet tijd direct in het verleden
+    });
+}
+
 function luisterNaarDrinkSessie() {
     db.collection('groepen').doc(currentGroup).collection('sessie').doc('status').onSnapshot(doc => {
         const btn = document.getElementById('btn-drink-sessie');
         const timerUI = document.getElementById('drink-sessie-timer-tekst');
+        const btnSkip = document.getElementById('btn-skip-timer');
         if (!btn) return;
         
         if (doc.exists && doc.data().actief) {
@@ -246,16 +250,22 @@ function luisterNaarDrinkSessie() {
             btn.innerHTML = "🛑 Stop Drink Sessie & GPS";
             btn.style.backgroundColor = "#ff3b30";
             timerUI.style.display = "block";
+            btnSkip.style.display = "block"; // Toon forceer knop
+            
+            // Controleer of iemand ANDERS dit heeft aangezet, en fix de GPS direct!
+            if (!vakantieModus && doc.data().starter !== currentUser) {
+                alert(`🍻 DRINK SESSIE GESTART door ${doc.data().starter.toUpperCase()}! Jouw locatie wordt nu automatisch meegestuurd.`);
+                if ("geolocation" in navigator) navigator.geolocation.getCurrentPosition(() => {}, () => {});
+            }
             vakantieModus = true;
             
-            if (!sessieCheckInterval) {
-                sessieCheckInterval = setInterval(checkDrinkSessieTijd, 5000);
-            }
+            if (!sessieCheckInterval) sessieCheckInterval = setInterval(checkDrinkSessieTijd, 5000);
         } else {
             actieveDrinkSessieTijd = 0;
             btn.innerHTML = "🍻 Start Drink Sessie!";
             btn.style.backgroundColor = "#ff9500";
             timerUI.style.display = "none";
+            btnSkip.style.display = "none";
             vakantieModus = false; 
             
             if (sessieCheckInterval) {
@@ -312,52 +322,10 @@ function checkDrinkSessieTijd() {
 }
 
 // ==========================================
-// CO-OP MISSIE (DAGELIJKSE RESET)
-// ==========================================
-function luisterNaarCoopMissie() {
-    db.collection('groepen').doc(currentGroup).collection('coop').doc('status').onSnapshot(doc => {
-        let vandaag = new Date().toISOString().split('T')[0];
-        
-        if (!doc.exists || doc.data().datum !== vandaag) {
-            let randomMissie = coopMissies[Math.floor(Math.random() * coopMissies.length)];
-            db.collection('groepen').doc(currentGroup).collection('coop').doc('status').set({
-                datum: vandaag, score: 0, doel: randomMissie.doel, titel: randomMissie.titel, types: randomMissie.types, behaald: false
-            });
-            return;
-        }
-
-        actieveCoopMissie = doc.data();
-        let percentage = Math.min(100, (actieveCoopMissie.score / actieveCoopMissie.doel) * 100);
-
-        document.querySelectorAll('.coop-titel-text').forEach(el => el.innerText = actieveCoopMissie.titel);
-        document.querySelectorAll('.coop-bar-fill').forEach(el => el.style.width = percentage + '%');
-        document.querySelectorAll('.coop-progress-text').forEach(el => el.innerText = actieveCoopMissie.score + ' / ' + actieveCoopMissie.doel);
-
-        if (actieveCoopMissie.score >= actieveCoopMissie.doel && !actieveCoopMissie.behaald) {
-            db.collection('groepen').doc(currentGroup).collection('coop').doc('status').update({ behaald: true });
-            pasScoreAan('raggen', 5, '🏆 CO-OP BEHAALD');
-            stuurNaarFeed("🎉 CO-OP MISSIE BEHAALD! Iedereen bedankt, +5 Punten voor de finale tik!");
-        }
-    });
-}
-
-setInterval(() => {
-    const nu = new Date();
-    const middernacht = new Date();
-    middernacht.setHours(24, 0, 0, 0);
-    let diff = middernacht - nu;
-    let h = Math.floor(diff / 3600000).toString().padStart(2, '0');
-    let m = Math.floor((diff % 3600000) / 60000).toString().padStart(2, '0');
-    let s = Math.floor((diff % 60000) / 1000).toString().padStart(2, '0');
-    document.querySelectorAll('.coop-timer-text').forEach(el => el.innerText = `Nog ${h}:${m}:${s} geldig vandaag`);
-}, 1000);
-
-// ==========================================
 // SCOREBORD & PUNTEN SYSTEEM
 // ==========================================
 function pasScoreAan(categorie, bedrag, emojiNaam) {
     if ("vibrate" in navigator) navigator.vibrate(50);
-    
     db.collection('groepen').doc(currentGroup).collection('scores').doc(currentUser).set({ [categorie]: firebase.firestore.FieldValue.increment(bedrag) }, { merge: true });
 
     if (actieveCoopMissie && bedrag > 0 && actieveCoopMissie.types.includes(categorie) && !actieveCoopMissie.behaald) {
@@ -499,7 +467,7 @@ function speelHogerLager(keuze) {
     let win = false;
     if (keuze === 'hoger' && nieuw > hlHuidig) win = true;
     if (keuze === 'lager' && nieuw < hlHuidig) win = true;
-    if (nieuw === hlHuidig) win = false; // Gelijk is altijd verliezen voor het casino!
+    if (nieuw === hlHuidig) win = false; 
 
     if (win) {
         let winst = inzet * 2;
@@ -514,51 +482,103 @@ function speelHogerLager(keuze) {
     hlHuidig = nieuw;
 }
 
-/* 3. REFLEX ROULETTE */
-let reflexStart = 0;
-let reflexTimeout = null;
+/* 3. REFLEX ROULETTE (MET LIVE LEADERBOARD) */
+let huidigeReflexRonde = 0;
+let reflexGroenTijd = 0;
+let reflexGeklikt = false;
+let reflexInterval = null;
 
-function startReflex() {
-    const btn = document.getElementById('reflex-btn');
-    btn.style.backgroundColor = '#ff3b30';
-    btn.innerText = 'Wacht...';
-    document.getElementById('reflex-result').innerText = '';
-    
-    // Voorkom valsspelen
-    btn.onmousedown = () => {
-        if (btn.style.backgroundColor === 'rgb(255, 59, 48)') {
-            clearTimeout(reflexTimeout);
-            alert("TE VROEG! Straf Atje voor jou! 🥃");
-            stuurNaarFeed(`⚡ Reflex: ${currentUser.toUpperCase()} klikte te vroeg en trekt een straf-atje!`);
-            resetReflexBtn(btn);
+function luisterNaarReflex() {
+    db.collection('groepen').doc(currentGroup).collection('games').doc('reflex').onSnapshot(doc => {
+        if (!doc.exists) return;
+        let data = doc.data();
+        let ronde = data.ronde || 0;
+        let groen = data.groen_tijd || 0;
+        let scores = data.scores || {};
+
+        const btn = document.getElementById('reflex-btn');
+        const lb = document.getElementById('reflex-leaderboard');
+
+        // Check of dit een totaal nieuwe ronde is
+        if (ronde !== huidigeReflexRonde) {
+            huidigeReflexRonde = ronde;
+            reflexGroenTijd = groen;
+            reflexGeklikt = false;
+            
+            btn.style.backgroundColor = '#ff3b30'; // Rode kleur
+            btn.innerText = 'Wacht...';
+            btn.disabled = false;
+            
+            // Loopje dat wacht tot het groen mag worden
+            clearInterval(reflexInterval);
+            reflexInterval = setInterval(() => {
+                if (Date.now() >= reflexGroenTijd && btn.style.backgroundColor !== 'rgb(52, 199, 89)' && !reflexGeklikt) {
+                    btn.style.backgroundColor = '#34c759'; // Groene kleur
+                    btn.innerText = 'KLIK NU!';
+                }
+            }, 50);
         }
-    };
-    btn.ontouchstart = btn.onmousedown; 
 
-    let delay = Math.floor(Math.random() * 4000) + 2000; // 2 tot 6 seconden
+        // Leaderboard tekenen
+        if (Object.keys(scores).length > 0) {
+            lb.style.display = 'block';
+            let arr = [];
+            for (let speler in scores) {
+                arr.push({ naam: speler, tijd: scores[speler] });
+            }
+            
+            // Sorteer: nummers eerst (laag naar hoog), "TE VROEG" als laatste
+            arr.sort((a, b) => {
+                if (a.tijd === 'TE VROEG') return 1;
+                if (b.tijd === 'TE VROEG') return -1;
+                return a.tijd - b.tijd;
+            });
+            
+            let html = '<h3 style="margin-top:0; border-bottom:1px solid #eee; padding-bottom:5px;">Leaderboard Deze Ronde</h3><ol style="padding-left: 20px; margin: 0; font-size:16px;">';
+            arr.forEach((s, idx) => {
+                let emoji = idx === 0 ? '🏆' : (s.tijd === 'TE VROEG' ? '❌' : '⏱️');
+                let tijdWeergave = s.tijd === 'TE VROEG' ? '<span style="color:#ff3b30; font-weight:bold;">TE VROEG</span>' : `${s.tijd} ms`;
+                html += `<li style="margin-bottom: 8px;">${emoji} <b>${s.naam.toUpperCase()}</b>: ${tijdWeergave}</li>`;
+            });
+            html += '</ol>';
+            lb.innerHTML = html;
+        } else {
+            lb.style.display = 'none';
+        }
+    });
+}
+
+function startReflexRonde() {
+    let delay = Math.floor(Math.random() * 4000) + 2000;
+    db.collection('groepen').doc(currentGroup).collection('games').doc('reflex').set({
+        ronde: Date.now(),
+        groen_tijd: Date.now() + delay,
+        scores: {}
+    });
+    stuurNaarFeed(`⚡ Reflex Roulette is GESTART door ${currentUser.toUpperCase()}! Open snel de game!`);
+}
+
+function klikReflex(e) {
+    if (e) e.preventDefault(); // Voorkom dubbele kliks op mobiel
+    if (reflexGeklikt || !huidigeReflexRonde) return;
     
-    reflexTimeout = setTimeout(() => {
-        btn.style.backgroundColor = '#34c759';
-        btn.innerText = 'KLIK NU!';
-        reflexStart = Date.now();
-        
-        btn.onmousedown = () => klikReflex(btn);
-        btn.ontouchstart = () => klikReflex(btn);
-    }, delay);
-}
+    reflexGeklikt = true;
+    let isTeVroeg = Date.now() < reflexGroenTijd;
+    let tijdScore = isTeVroeg ? 'TE VROEG' : Date.now() - reflexGroenTijd;
+    
+    if (isTeVroeg) {
+        stuurNaarFeed(`⚡ Reflex: ${currentUser.toUpperCase()} was TE VROEG en neemt een atje!`);
+        alert("TE VROEG! Straf Atje voor jou! 🥃");
+        if ("vibrate" in navigator) navigator.vibrate([200, 100, 200]);
+    }
 
-function klikReflex(btn) {
-    let reactie = Date.now() - reflexStart;
-    document.getElementById('reflex-result').innerText = `Jouw tijd: ${reactie} ms`;
-    stuurNaarFeed(`⚡ Reflex: ${currentUser.toUpperCase()} klikte in ${reactie}ms!`);
-    resetReflexBtn(btn);
-}
+    document.getElementById('reflex-btn').innerText = 'Geklikt!';
+    document.getElementById('reflex-btn').style.backgroundColor = '#8e8e93';
 
-function resetReflexBtn(btn) {
-    btn.style.backgroundColor = '#007aff';
-    btn.innerText = 'Start';
-    btn.onmousedown = null;
-    btn.ontouchstart = null;
+    // Voeg jouw score live toe aan Firebase
+    db.collection('groepen').doc(currentGroup).collection('games').doc('reflex').set({
+        scores: { [currentUser]: tijdScore }
+    }, { merge: true });
 }
 
 /* 4. VIRTUEEL MEXEN */
@@ -583,354 +603,33 @@ function gooiMexen() {
     stuurNaarFeed(`🎲 Mexen: ${currentUser.toUpperCase()} gooide ${score}${extraText}`);
 }
 
-
 // ==========================================
-// MISSIES & BINGO LOGICA
+// DE REST (CO-OP, BINGO, RAD, BOM, STATS)
 // ==========================================
-function beheerMissiesEnBingo(data) {
-    if (!data.geheime_missie) db.collection('groepen').doc(currentGroup).collection('scores').doc(currentUser).set({ geheime_missie: genereerNieuweMissie() }, { merge: true });
-    else { const mt = document.getElementById('geheime-missie-tekst'); if(mt) mt.innerText = data.geheime_missie; }
 
-    if (!data.bingo_kaart) {
-        let nieuweKaart = genereerBingoKaart();
-        db.collection('groepen').doc(currentGroup).collection('scores').doc(currentUser).set({ bingo_kaart: nieuweKaart, bingo_status: [false,false,false,false,false,false,false,false,false], bingo_gehaald: false }, { merge: true });
-    } else {
-        mijnBingoKaart = data.bingo_kaart;
-        mijnBingoStatus = data.bingo_status || [false,false,false,false,false,false,false,false,false];
-        renderBingoGrid(data.bingo_gehaald);
-    }
-}
-
-function voltooiGeheimeMissie() {
-    if (confirm("Echt uitgevoerd? Bij liegen moet je adten!")) {
-        pasScoreAan('raggen', 3, '🥷 Geheime Missie');
-        db.collection('groepen').doc(currentGroup).collection('scores').doc(currentUser).set({ geheime_missie: genereerNieuweMissie() }, { merge: true });
-        alert("+3 Punten verdiend!");
-    }
-}
-
-function renderBingoGrid(isGehaald) {
-    const grid = document.getElementById('bingo-grid');
-    if(!grid) return;
-    grid.innerHTML = "";
-    
-    mijnBingoKaart.forEach((taak, index) => {
-        let div = document.createElement('div');
-        div.className = "bingo-cel " + (mijnBingoStatus[index] ? "voltooid" : "");
-        div.innerText = taak;
-        div.onclick = () => toggleBingoCel(index, isGehaald);
-        grid.appendChild(div);
-    });
-}
-
-function toggleBingoCel(index, isGehaald) {
-    if (isGehaald) return alert("Je hebt al Bingo!");
-    mijnBingoStatus[index] = !mijnBingoStatus[index];
-    db.collection('groepen').doc(currentGroup).collection('scores').doc(currentUser).set({ bingo_status: mijnBingoStatus }, { merge: true });
-    
-    const winLijnen = [[0,1,2],[3,4,5],[6,7,8],[0,3,6],[1,4,7],[2,5,8],[0,4,8],[2,4,6]];
-    let bingo = winLijnen.some(lijn => lijn.every(i => mijnBingoStatus[i]));
-    
-    if (bingo) {
-        db.collection('groepen').doc(currentGroup).collection('scores').doc(currentUser).set({ bingo_gehaald: true }, { merge: true });
-        pasScoreAan('raggen', 10, '🌴 BINGO');
-        alert("BINGO! 10 Punten voor jou!");
-    }
-}
-
-// ==========================================
-// SWASI FINGER ROULETTE
-// ==========================================
-const swasiOverlay = document.getElementById('swasi-overlay');
-let actieveSwasiTouches = {};
-let swasiKleuren = ['#007aff', '#34c759', '#ff9500', '#af52de', '#5856d6', '#ff2d55', '#f1c40f', '#00c7be'];
-let swasiKleurIndex = 0;
-let swasiTimer = null;
-let swasiAfteller = null;
-let swasiBezig = false;
-
-function startSwasi() {
-    swasiOverlay.style.display = 'block';
-    document.getElementById('swasi-instructie').style.display = 'block';
-    document.getElementById('swasi-instructie').innerText = "Plaats allemaal 1 vinger op het scherm...";
-    document.getElementById('swasi-countdown').style.display = 'none';
-    document.getElementById('swasi-sluit-btn').style.display = 'none';
-    
-    actieveSwasiTouches = {};
-    swasiKleurIndex = 0;
-    swasiBezig = true;
-    document.body.style.overflow = 'hidden';
-    
-    swasiOverlay.addEventListener('touchstart', handleTouchStart, {passive: false});
-    swasiOverlay.addEventListener('touchmove', handleTouchMove, {passive: false});
-    swasiOverlay.addEventListener('touchend', handleTouchEnd);
-    swasiOverlay.addEventListener('touchcancel', handleTouchEnd);
-}
-
-function stopSwasi() {
-    swasiOverlay.style.display = 'none';
-    document.body.style.overflow = '';
-    clearTimeout(swasiTimer);
-    clearInterval(swasiAfteller);
-    swasiBezig = false;
-    
-    Object.values(actieveSwasiTouches).forEach(c => c.remove());
-    actieveSwasiTouches = {};
-    
-    swasiOverlay.removeEventListener('touchstart', handleTouchStart);
-    swasiOverlay.removeEventListener('touchmove', handleTouchMove);
-    swasiOverlay.removeEventListener('touchend', handleTouchEnd);
-    swasiOverlay.removeEventListener('touchcancel', handleTouchEnd);
-}
-
-function handleTouchStart(e) {
-    if (e.target.id === 'swasi-sluit-btn') return;
-    e.preventDefault();
-    if (!swasiBezig) return;
-    
-    for (let i = 0; i < e.changedTouches.length; i++) {
-        let t = e.changedTouches[i];
-        let color = swasiKleuren[swasiKleurIndex % swasiKleuren.length];
-        swasiKleurIndex++;
+function luisterNaarCoopMissie() {
+    db.collection('groepen').doc(currentGroup).collection('coop').doc('status').onSnapshot(doc => {
+        let vandaag = new Date().toISOString().split('T')[0];
         
-        let circle = document.createElement('div');
-        circle.className = 'swasi-circle';
-        circle.style.borderColor = color;
-        circle.style.left = t.clientX + 'px';
-        circle.style.top = t.clientY + 'px';
-        
-        swasiOverlay.appendChild(circle);
-        actieveSwasiTouches[t.identifier] = circle;
-    }
-    checkSwasiTimer();
-}
-
-function handleTouchMove(e) {
-    if (e.target.id === 'swasi-sluit-btn') return;
-    e.preventDefault();
-    if (!swasiBezig) return;
-    
-    for (let i = 0; i < e.changedTouches.length; i++) {
-        let t = e.changedTouches[i];
-        let circle = actieveSwasiTouches[t.identifier];
-        if (circle) {
-            circle.style.left = t.clientX + 'px';
-            circle.style.top = t.clientY + 'px';
-        }
-    }
-}
-
-function handleTouchEnd(e) {
-    if (!swasiBezig) return;
-    for (let i = 0; i < e.changedTouches.length; i++) {
-        let id = e.changedTouches[i].identifier;
-        let circle = actieveSwasiTouches[id];
-        if (circle) {
-            circle.remove();
-            delete actieveSwasiTouches[id];
-        }
-    }
-    checkSwasiTimer();
-}
-
-function checkSwasiTimer() {
-    clearTimeout(swasiTimer);
-    clearInterval(swasiAfteller);
-    document.getElementById('swasi-countdown').style.display = 'none';
-    
-    let keys = Object.keys(actieveSwasiTouches);
-    
-    if (keys.length > 1) {
-        document.getElementById('swasi-instructie').style.display = 'none';
-        document.getElementById('swasi-countdown').style.display = 'block';
-        
-        let count = 3;
-        document.getElementById('swasi-countdown').innerText = count;
-        
-        swasiAfteller = setInterval(() => {
-            count--;
-            if (count > 0) {
-                document.getElementById('swasi-countdown').innerText = count;
-            } else {
-                clearInterval(swasiAfteller);
-                document.getElementById('swasi-countdown').style.display = 'none';
-                kiesSwasiWinnaar(keys);
-            }
-        }, 1000);
-        
-    } else if (keys.length === 1) {
-        document.getElementById('swasi-instructie').style.display = 'block';
-        document.getElementById('swasi-instructie').innerText = "Wacht op meer vingers...";
-    } else {
-        document.getElementById('swasi-instructie').style.display = 'block';
-        document.getElementById('swasi-instructie').innerText = "Plaats allemaal 1 vinger...";
-        swasiKleurIndex = 0;
-    }
-}
-
-function kiesSwasiWinnaar(keys) {
-    swasiBezig = false;
-    if ("vibrate" in navigator) navigator.vibrate([100, 50, 100, 50, 300]);
-    
-    let winnerId = keys[Math.floor(Math.random() * keys.length)];
-    
-    keys.forEach(id => {
-        let circle = actieveSwasiTouches[id];
-        if (id == winnerId) {
-            circle.classList.add('winner');
-        } else {
-            circle.classList.add('loser');
-        }
-    });
-
-    document.getElementById('swasi-sluit-btn').style.display = 'block';
-}
-
-// ==========================================
-// TIJDBOM
-// ==========================================
-function startTijdbom() {
-    if (spelersLijst.length < 2) return alert("Minimaal 2 spelers nodig.");
-    let randomSpeler = spelersLijst[Math.floor(Math.random() * spelersLijst.length)];
-    let ontplofTijd = Date.now() + (Math.floor(Math.random() * 45000) + 30000);
-    
-    db.collection('groepen').doc(currentGroup).collection('tijdbom').doc('status').set({ actief: true, houder: randomSpeler, eindTijdUnix: ontplofTijd });
-    stuurNaarFeed(`💣 TIJDBOM GESTART! Hij ligt nu bij ${randomSpeler.toUpperCase()}!`);
-}
-
-function gooiBomDoor() {
-    let andereSpelers = spelersLijst.filter(n => n !== currentUser);
-    let slachtoffer = andereSpelers[Math.floor(Math.random() * andereSpelers.length)];
-    if ("vibrate" in navigator) navigator.vibrate(50);
-    db.collection('groepen').doc(currentGroup).collection('tijdbom').doc('status').set({ houder: slachtoffer }, { merge: true });
-}
-
-function luisterNaarTijdbom() {
-    if(unsubscribeBom) unsubscribeBom();
-    
-    unsubscribeBom = db.collection('groepen').doc(currentGroup).collection('tijdbom').doc('status').onSnapshot((doc) => {
-        if (!doc.exists) return;
-        const data = doc.data();
-        const card = document.getElementById('bom-card'), statusTekst = document.getElementById('bom-status-tekst'), btnGooi = document.getElementById('btn-gooi-door');
-        
-        if (data.actief) {
-            document.getElementById('bom-idle-ui').style.display = 'none';
-            document.getElementById('bom-active-ui').style.display = 'block';
-            statusTekst.innerText = `Bom is bij ${data.houder.toUpperCase()}!`;
-            
-            if (data.houder === currentUser) {
-                card.classList.add('bom-gevaar');
-                btnGooi.style.display = 'inline-block';
-                if (Date.now() >= data.eindTijdUnix) {
-                    db.collection('groepen').doc(currentGroup).collection('tijdbom').doc('status').set({ actief: false });
-                    pasScoreAan('raggen', -3, '💥 BOM ONTPLOFT');
-                    alert("KABOEM! -3 Punten!");
-                }
-            } else {
-                card.classList.remove('bom-gevaar');
-                btnGooi.style.display = 'none';
-            }
-        } else {
-            document.getElementById('bom-idle-ui').style.display = 'block';
-            document.getElementById('bom-active-ui').style.display = 'none';
-            if(card) card.classList.remove('bom-gevaar');
-        }
-    });
-
-    setInterval(() => {
-        db.collection('groepen').doc(currentGroup).collection('tijdbom').doc('status').get().then(doc => {
-            if (doc.exists && doc.data().actief && doc.data().houder === currentUser && Date.now() >= doc.data().eindTijdUnix) {
-                db.collection('groepen').doc(currentGroup).collection('tijdbom').doc('status').set({ actief: false });
-                pasScoreAan('raggen', -3, '💥 BOM ONTPLOFT');
-                alert("KABOEM! -3 Punten!");
-            }
-        });
-    }, 1000);
-}
-
-// ==========================================
-// RAD VAN FORTUIN, KAART & CHARTS
-// ==========================================
-function draaiRad() {
-    if (isSpinning) return;
-    if ((mijnTotalePunten - mijnGedraaideSpins) <= 0) return alert("Je hebt 0 coins!");
-    isSpinning = true;
-    if ("vibrate" in navigator) navigator.vibrate(50);
-
-    db.collection('groepen').doc(currentGroup).collection('scores').doc(currentUser).set({ spins: firebase.firestore.FieldValue.increment(1) }, { merge: true });
-    let draaiCounter = 0;
-
-    const interval = setInterval(() => {
-        document.getElementById('rad-uitkomst').innerText = haalRandomOptie();
-        document.getElementById('rad-box').style.background = (draaiCounter % 2 === 0) ? "linear-gradient(135deg, #34c759, #30b050)" : "linear-gradient(135deg, #ff9500, #ff2d55)";
-        if (++draaiCounter > 20) {
-            clearInterval(interval);
-            const eind = haalRandomOptie();
-            document.getElementById('rad-uitkomst').innerText = eind;
-            document.getElementById('rad-box').style.background = "linear-gradient(135deg, #007aff, #0056b3)";
-            stuurNaarFeed(`🎡 RAD: ${currentUser.toUpperCase()} draaide: "${eind}"`);
-            isSpinning = false;
-        }
-    }, 100);
-}
-
-function haalRandomOptie() {
-    const basisRadOpties = ["🍻 Atje voor de sfeer!", "🥃 Neem een shotje!", "👉 Deel 2 slokken uit aan [SPELER]", "🎯 [SPELER] moet adten!", "💧 Drink water (Laf)", "🔄 Wissel drankje met [SPELER]", "🚀 Raggen punt!", "🍻 IEDEREEN ADTEN!"];
-    let optie = basisRadOpties[Math.floor(Math.random() * basisRadOpties.length)];
-    if (optie.includes("[SPELER]")) optie = optie.replace("[SPELER]", spelersLijst.filter(n=>n!==currentUser)[Math.floor(Math.random()*(spelersLijst.length-1))] || "iemand");
-    return optie;
-}
-
-function updateCoinWeergave() { 
-    const coins = Math.max(0, mijnTotalePunten - mijnGedraaideSpins);
-    document.querySelectorAll('.coin-weergave-class').forEach(el => el.innerText = coins);
-}
-function verwijderSpeler(naam) { if (confirm(`Verwijder ${naam}?`)) db.collection('groepen').doc(currentGroup).collection('scores').doc(naam).delete(); }
-
-function stuurNaarFeed(bericht) { db.collection('groepen').doc(currentGroup).collection('feed').doc('laatste').set({ bericht: bericht, tijd: firebase.firestore.FieldValue.serverTimestamp() }); }
-
-function luisterNaarLiveFeed() {
-    if(unsubscribeFeed) unsubscribeFeed();
-    let laatsteMelding = "";
-    unsubscribeFeed = db.collection('groepen').doc(currentGroup).collection('feed').doc('laatste').onSnapshot((doc) => {
-        if (!doc.exists || doc.data().bericht === laatsteMelding) return;
-        laatsteMelding = doc.data().bericht;
-        const ticker = document.getElementById('live-ticker');
-        ticker.innerText = laatsteMelding; ticker.style.display = 'block';
-        if ("vibrate" in navigator) navigator.vibrate([200,100,200]);
-        const geluid = document.getElementById('notificatie-geluid');
-        if (geluid) { geluid.currentTime = 0; geluid.play().catch(e => {}); }
-        setTimeout(() => { ticker.style.display = 'none'; }, 5000);
-    });
-}
-
-function tekenGrafieken(b, m, sh, k, r, ra, ko, sl, namen, drankjes) {
-    if (pieChartInstance) pieChartInstance.destroy();
-    pieChartInstance = new Chart(document.getElementById('groepPieChart'), { type: 'pie', data: { labels: ['Bier','Mix','Shotje','Kiss','Reject','Raggen', 'Kotsen', 'Sleutel'], datasets: [{ data: [b,m,sh,k,r,ra,ko,sl], backgroundColor: ['#f1c40f','#9b59b6','#e17055','#ff7675','#636e72','#ffeaa7','#16a085','#bdc3c7'] }] }, options: { responsive: true, maintainAspectRatio: false } });
-    if (barChartInstance) barChartInstance.destroy();
-    barChartInstance = new Chart(document.getElementById('spelerBarChart'), { type: 'bar', data: { labels: namen, datasets: [{ label: 'Drankjes', data: drankjes, backgroundColor: '#007aff' }] }, options: { responsive: true, maintainAspectRatio: false } });
-}
-
-function initKaart() {
-    if (!worldMap) {
-        worldMap = L.map('map').setView([45.0, 5.0], 4);
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(worldMap);
-        db.collection('groepen').doc(currentGroup).collection('locaties').onSnapshot(snap => {
-            mapMarkers.forEach(m => worldMap.removeLayer(m)); mapMarkers = []; const groepen = {};
-            snap.forEach(doc => {
-                const data = doc.data(); if(data.lat && data.lng) {
-                    const s = `${data.naam}_${data.lat.toFixed(4)}_${data.lng.toFixed(4)}`;
-                    if (!groepen[s]) groepen[s] = { naam: data.naam, lat: data.lat, lng: data.lng, acties: {} };
-                    groepen[s].acties[data.actie] = (groepen[s].acties[data.actie] || 0) + 1;
-                }
+        if (!doc.exists || doc.data().datum !== vandaag) {
+            let randomMissie = coopMissies[Math.floor(Math.random() * coopMissies.length)];
+            db.collection('groepen').doc(currentGroup).collection('coop').doc('status').set({
+                datum: vandaag, score: 0, doel: randomMissie.doel, titel: randomMissie.titel, types: randomMissie.types, behaald: false
             });
-            Object.values(groepen).forEach(g => {
-                let pc = `<b>${g.naam}</b><br>`, ta = 0, he = "🍺";
-                Object.entries(g.acties).forEach(([a, n]) => { pc += `${a}: ${n}x<br>`; ta += n; he = a.split(' ')[0]; });
-                const icon = L.divIcon({ html: `<div class="custom-maps-marker-wrapper" style="width:52px;height:52px;"><span style="font-size:34px;">${he}</span><span style="position:absolute;top:-6px;right:-6px;background:#ff3b30;color:white;font-size:13px;font-weight:900;border-radius:50%;width:22px;height:22px;display:flex;align-items:center;justify-content:center;border:2px solid white;">${ta}</span></div>`, className: '', iconSize: [52,52], iconAnchor: [26,26] });
-                const marker = L.marker([g.lat, g.lng], { icon: icon }).bindPopup(pc);
-                marker.addTo(worldMap); mapMarkers.push(marker);
-            });
-        });
-    } else worldMap.invalidateSize();
+            return;
+        }
+
+        actieveCoopMissie = doc.data();
+        let percentage = Math.min(100, (actieveCoopMissie.score / actieveCoopMissie.doel) * 100);
+
+        document.querySelectorAll('.coop-titel-text').forEach(el => el.innerText = actieveCoopMissie.titel);
+        document.querySelectorAll('.coop-bar-fill').forEach(el => el.style.width = percentage + '%');
+        document.querySelectorAll('.coop-progress-text').forEach(el => el.innerText = actieveCoopMissie.score + ' / ' + actieveCoopMissie.doel);
+
+        if (actieveCoopMissie.score >= actieveCoopMissie.doel && !actieveCoopMissie.behaald) {
+            db.collection('groepen').doc(currentGroup).collection('coop').doc('status').update({ behaald: true });
+            pasScoreAan('raggen', 5, '🏆 CO-OP BEHAALD');
+            stuurNaarFeed("🎉 CO-OP MISSIE BEHAALD! Iedereen bedankt, +5 Punten voor de finale tik!");
+        }
+    });
 }
