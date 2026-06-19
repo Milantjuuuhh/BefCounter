@@ -1,3 +1,6 @@
+// ==========================================
+// CONFIGURATIE & INITIALISATIE
+// ==========================================
 const firebaseConfig = {
     apiKey: "AIzaSyDF8LOSjnyIJXrloepCBvSLA2TCH3Us0H8",
     authDomain: "befcounter.firebaseapp.com",
@@ -9,7 +12,20 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore();
 
-if ('serviceWorker' in navigator) { navigator.serviceWorker.register('sw.js'); }
+// Activeer Firebase Messaging
+let messaging = null;
+if (firebase.messaging.isSupported()) {
+    messaging = firebase.messaging();
+}
+
+if ('serviceWorker' in navigator) { 
+    navigator.serviceWorker.register('sw.js').then((reg) => {
+        if (messaging) {
+            messaging.useServiceWorker(reg);
+            setupPushNotificaties();
+        }
+    }); 
+}
 
 let currentUser = localStorage.getItem('bef_user');
 let currentGroup = localStorage.getItem('bef_group');
@@ -24,6 +40,28 @@ let spelersLijst = [];
 let worldMap = null, mapMarkers = [];
 let pieChartInstance = null, barChartInstance = null;
 let mijnBingoKaart = [], mijnBingoStatus = [];
+
+// ==========================================
+// PUSH NOTIFICATIE TOESTEMMING & TOKEN
+// ==========================================
+function setupPushNotificaties() {
+    if (!messaging) return;
+    
+    messaging.requestPermission()
+        .then(() => {
+            return messaging.getToken({ vapidKey: "BMfkVb0XKUWAPQ8HnB_79f1bvyB05Q-DSnkgzSvzfSN9n_ADzgW1FpAFJim8ftNfTeHA5BkUTJ1B-YhKIOyDL9k" });
+        })
+        .then((token) => {
+            if (token && currentUser) {
+                db.collection('groepen').doc(currentGroup).collection('scores').doc(currentUser).set({
+                    push_token: token
+                }, { merge: true });
+            }
+        })
+        .catch((err) => {
+            console.log("Notificatie setup mislukt of geweigerd:", err);
+        });
+}
 
 // ==========================================
 // GAME DATA (CO-OP, BINGO & ASSASSIN)
@@ -145,6 +183,7 @@ function startApp() {
     document.getElementById('ingelogde-naam').innerText = currentUser;
     document.getElementById('display-groepscode').innerText = currentGroup;
 
+    if (messaging) setupPushNotificaties();
     bouwLiveScorebord();
     luisterNaarLiveFeed();
     luisterNaarTijdbom();
@@ -176,12 +215,11 @@ function luisterNaarCoopMissie() {
         if (actieveCoopMissie.score >= actieveCoopMissie.doel && !actieveCoopMissie.behaald) {
             db.collection('groepen').doc(currentGroup).collection('coop').doc('status').update({ behaald: true });
             pasScoreAan('mvp', 5, '🏆 CO-OP BEHAALD');
-            stuurNaarFeed("🎉 CO-OP MISSIE BEHAALD! Iedereen bedankt, +5 MVP Coins voor de finale tik!");
+            stuurNaarFeed("CO-OP MISSIE BEHAALD! Iedereen bedankt, +5 MVP Coins voor de finale tik!");
         }
     });
 }
 
-// Timer tot middernacht
 setInterval(() => {
     const nu = new Date();
     const middernacht = new Date();
@@ -203,17 +241,36 @@ function pasScoreAan(categorie, bedrag, emojiNaam) {
     
     db.collection('groepen').doc(currentGroup).collection('scores').doc(currentUser).set({ [categorie]: firebase.firestore.FieldValue.increment(actueelBedrag) }, { merge: true });
 
-    // Update Co-op Missie als het type overeenkomt
     if (actieveCoopMissie && bedrag > 0 && actieveCoopMissie.types.includes(categorie) && !actieveCoopMissie.behaald) {
         db.collection('groepen').doc(currentGroup).collection('coop').doc('status').update({ score: firebase.firestore.FieldValue.increment(actueelBedrag) });
     }
 
     let startBericht = `${currentUser.charAt(0).toUpperCase() + currentUser.slice(1)} ${bedrag > 0 ? `scoort +${actueelBedrag} bij` : "deed een correctie bij"} ${emojiNaam}${isHappyHour && bedrag > 0 ? " (HAPPY HOUR x2!)" : ""}`;
 
+    // --- DE WEBHOOK NAAR MAKE.COM ---
+    const MAKE_WEBHOOK_URL = "https://hook.eu1.make.com/x5392a4m2kc3ixqy4sbna33m8kuk9m4g";
+
+    db.collection('groepen').doc(currentGroup).collection('scores').get().then(snap => {
+        snap.forEach(doc => {
+            if (doc.id !== currentUser && doc.data().push_token) {
+                fetch(MAKE_WEBHOOK_URL, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                        token: doc.data().push_token,
+                        titel: "BefCounter 🍻",
+                        bericht: startBericht
+                    })
+                }).catch(e => console.log(e));
+            }
+        });
+    });
+    // --------------------------------
+
     if (vakantieModus && "geolocation" in navigator) {
         navigator.geolocation.getCurrentPosition((pos) => {
             db.collection('groepen').doc(currentGroup).collection('locaties').add({ naam: currentUser, actie: emojiNaam, lat: pos.coords.latitude, lng: pos.coords.longitude, tijd: new Date().toISOString() });
-            stuurNaarFeed(`${startBericht} 📍 Maps: http://maps.google.com/?q=${pos.coords.latitude},${pos.coords.longitude}`);
+            stuurNaarFeed(`${startBericht} Maps: http://maps.google.com/?q=${pos.coords.latitude},${pos.coords.longitude}`);
         }, () => stuurNaarFeed(`${startBericht}!`));
     } else stuurNaarFeed(`${startBericht}!`);
 }
@@ -330,7 +387,7 @@ function toggleBingoCel(index, isGehaald) {
 }
 
 // ==========================================
-// SWASI FINGER ROULETTE (FIXED & GEÜPDATET)
+// SWASI FINGER ROULETTE
 // ==========================================
 const swasiOverlay = document.getElementById('swasi-overlay');
 let actieveSwasiTouches = {};
@@ -350,7 +407,7 @@ function startSwasi() {
     actieveSwasiTouches = {};
     swasiKleurIndex = 0;
     swasiBezig = true;
-    document.body.style.overflow = 'hidden'; // Voorkom scrollen
+    document.body.style.overflow = 'hidden';
     
     swasiOverlay.addEventListener('touchstart', handleTouchStart, {passive: false});
     swasiOverlay.addEventListener('touchmove', handleTouchMove, {passive: false});
@@ -365,7 +422,6 @@ function stopSwasi() {
     clearInterval(swasiAfteller);
     swasiBezig = false;
     
-    // Verwijder alle circels
     Object.values(actieveSwasiTouches).forEach(c => c.remove());
     actieveSwasiTouches = {};
     
@@ -376,7 +432,6 @@ function stopSwasi() {
 }
 
 function handleTouchStart(e) {
-    // Laat de "Sluiten" button gewoon z'n click afvuren zonder e.preventDefault()
     if (e.target.id === 'swasi-sluit-btn') return;
     
     e.preventDefault();
@@ -458,12 +513,12 @@ function checkSwasiTimer() {
     } else {
         document.getElementById('swasi-instructie').style.display = 'block';
         document.getElementById('swasi-instructie').innerText = "Plaats allemaal 1 vinger...";
-        swasiKleurIndex = 0; // Reset colors if everyone let go
+        swasiKleurIndex = 0;
     }
 }
 
 function kiesSwasiWinnaar(keys) {
-    swasiBezig = false; // Blokkeer nieuwe touches
+    swasiBezig = false;
     if ("vibrate" in navigator) navigator.vibrate([100, 50, 100, 50, 300]);
     
     let winnerId = keys[Math.floor(Math.random() * keys.length)];
@@ -486,7 +541,7 @@ function kiesSwasiWinnaar(keys) {
 function startTijdbom() {
     if (spelersLijst.length < 2) return alert("Minimaal 2 spelers nodig.");
     let randomSpeler = spelersLijst[Math.floor(Math.random() * spelersLijst.length)];
-    let ontplofTijd = Date.now() + (Math.floor(Math.random() * 45000) + 30000); // 30-75 seconden
+    let ontplofTijd = Date.now() + (Math.floor(Math.random() * 45000) + 30000);
     
     db.collection('groepen').doc(currentGroup).collection('tijdbom').doc('status').set({ actief: true, houder: randomSpeler, eindTijdUnix: ontplofTijd });
     stuurNaarFeed(`💣 TIJDBOM GESTART! Hij ligt nu bij ${randomSpeler.toUpperCase()}!`);
