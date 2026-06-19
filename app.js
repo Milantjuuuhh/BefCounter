@@ -198,7 +198,7 @@ function startApp() {
 }
 
 // ==========================================
-// DRINK SESSIE (RANDOM ATJES TUSSEN 5-20 MIN)
+// DRINK SESSIE (GPS AAN + RANDOM ATJES)
 // ==========================================
 let sessieCheckInterval = null;
 let actieveDrinkSessieTijd = 0;
@@ -216,13 +216,24 @@ function toggleDrinkSessie() {
                 actief: true,
                 volgende_atje: Date.now() + wachttijd
             });
-            stuurNaarFeed(`🍻 DRINK SESSIE GESTART door ${currentUser.toUpperCase()}! De tijd tikt...`);
+            stuurNaarFeed(`🍻 DRINK SESSIE GESTART door ${currentUser.toUpperCase()}! Tracker is nu actief.`);
+            
+            // Zet GPS en Vakantiemodus ook direct aan
+            vakantieModus = true;
+            if ("geolocation" in navigator) {
+                navigator.geolocation.getCurrentPosition(
+                    () => console.log("GPS permissie gegeven"),
+                    (err) => alert("Zorg dat je locatievoorzieningen aan staan voor deze browser!")
+                );
+            }
         } else {
             db.collection('groepen').doc(currentGroup).collection('sessie').doc('status').set({
                 actief: false,
                 volgende_atje: 0
             });
-            stuurNaarFeed(`🛑 Drink Sessie is gestopt door ${currentUser.toUpperCase()}.`);
+            stuurNaarFeed(`🛑 Drink Sessie is gestopt door ${currentUser.toUpperCase()}. Tracker uit.`);
+            // Zet GPS en Vakantiemodus weer uit
+            vakantieModus = false;
         }
     });
 }
@@ -234,8 +245,9 @@ function luisterNaarDrinkSessie() {
         
         if (doc.exists && doc.data().actief) {
             actieveDrinkSessieTijd = doc.data().volgende_atje;
-            btn.innerHTML = "🛑 Stop Drink Sessie";
+            btn.innerHTML = "🛑 Stop Drink Sessie & GPS";
             btn.style.backgroundColor = "#ff3b30";
+            vakantieModus = true; // Sync state
             
             if (!sessieCheckInterval) {
                 sessieCheckInterval = setInterval(checkDrinkSessieTijd, 5000);
@@ -244,6 +256,8 @@ function luisterNaarDrinkSessie() {
             actieveDrinkSessieTijd = 0;
             btn.innerHTML = "🍻 Start Drink Sessie!";
             btn.style.backgroundColor = "#ff9500";
+            vakantieModus = false; // Sync state
+            
             if (sessieCheckInterval) {
                 clearInterval(sessieCheckInterval);
                 sessieCheckInterval = null;
@@ -269,6 +283,7 @@ function checkDrinkSessieTijd() {
     stuurNaarFeed(bericht);
     if ("vibrate" in navigator) navigator.vibrate([200, 100, 200, 100, 500, 100, 500]);
     
+    // ALLEEN DIT STUURT NOG EEN MAKE.COM WEBHOOK (BESPAART LIMIET!)
     const MAKE_WEBHOOK_URL = "https://hook.eu1.make.com/iydcsfjwnlx3147b29w38texvyhgrr62";
     db.collection('groepen').doc(currentGroup).collection('scores').get().then(snap => {
         snap.forEach(doc => {
@@ -340,25 +355,17 @@ function pasScoreAan(categorie, bedrag, emojiNaam) {
 
     let startBericht = `${currentUser.charAt(0).toUpperCase() + currentUser.slice(1)} ${bedrag > 0 ? `scoort +${actueelBedrag} bij` : "deed een correctie bij"} ${emojiNaam}${isHappyHour && bedrag > 0 ? " (HAPPY HOUR x2!)" : ""}`;
 
-    const MAKE_WEBHOOK_URL = "https://hook.eu1.make.com/iydcsfjwnlx3147b29w38texvyhgrr62";
-    db.collection('groepen').doc(currentGroup).collection('scores').get().then(snap => {
-        snap.forEach(doc => {
-            if (doc.data().push_token) {
-                fetch(MAKE_WEBHOOK_URL, {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ token: doc.data().push_token, titel: "BefCounter 🍻", bericht: startBericht })
-                }).catch(e => console.log(e));
-            }
-        });
-    });
+    // Geen webhook meer hier om data te besparen!
 
     if (vakantieModus && "geolocation" in navigator) {
         navigator.geolocation.getCurrentPosition((pos) => {
             db.collection('groepen').doc(currentGroup).collection('locaties').add({ naam: currentUser, actie: emojiNaam, lat: pos.coords.latitude, lng: pos.coords.longitude, tijd: new Date().toISOString() });
-            stuurNaarFeed(`${startBericht} 📍 Maps: http://maps.google.com/?q=${pos.coords.latitude},${pos.coords.longitude}`);
-        }, () => stuurNaarFeed(`${startBericht}!`));
-    } else stuurNaarFeed(`${startBericht}!`);
+            // Maps link weggehaald uit de live ticker!
+            stuurNaarFeed(`${startBericht}`);
+        }, () => stuurNaarFeed(`${startBericht}`));
+    } else {
+        stuurNaarFeed(`${startBericht}`);
+    }
 }
 
 function bouwLiveScorebord() {
@@ -743,31 +750,6 @@ function tekenGrafieken(b, m, k, r, mv, d, namen, drankjes) {
     pieChartInstance = new Chart(document.getElementById('groepPieChart'), { type: 'pie', data: { labels: ['Bier','Mix','Kiss','Reject','MVP','Döner'], datasets: [{ data: [b,m,k,r,mv,d], backgroundColor: ['#f1c40f','#9b59b6','#ff7675','#636e72','#ffeaa7','#e17055'] }] }, options: { responsive: true, maintainAspectRatio: false } });
     if (barChartInstance) barChartInstance.destroy();
     barChartInstance = new Chart(document.getElementById('spelerBarChart'), { type: 'bar', data: { labels: namen, datasets: [{ label: 'Drankjes', data: drankjes, backgroundColor: '#007aff' }] }, options: { responsive: true, maintainAspectRatio: false } });
-}
-
-// ==========================================
-// GPS / VAKANTIEMODUS TOGGLE
-// ==========================================
-function toggleVakantiemodus() {
-    vakantieModus = !vakantieModus;
-    const btnGps = document.getElementById('btn-gps');
-    
-    if (vakantieModus) {
-        btnGps.innerText = "GPS Tracker Uitzetten";
-        btnGps.style.backgroundColor = "#ff3b30";
-        alert("Vakantiemodus AAN 🌴: Jouw locatie wordt nu bij elke actie op de kaart gezet!");
-        
-        if ("geolocation" in navigator) {
-            navigator.geolocation.getCurrentPosition(
-                () => console.log("GPS permissie gegeven"),
-                (err) => alert("Zorg dat je locatievoorzieningen aan staan voor deze browser!")
-            );
-        }
-    } else {
-        btnGps.innerText = "GPS Tracker Aanzetten";
-        btnGps.style.backgroundColor = "#34c759";
-        alert("Vakantiemodus UIT 🛑: Locatie wordt niet meer gedeeld.");
-    }
 }
 
 function initKaart() {

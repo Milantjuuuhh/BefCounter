@@ -13,7 +13,7 @@
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     
-    <link rel="stylesheet" href="style.css?v=5">
+    <link rel="stylesheet" href="style.css?v=6">
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
 </head>
@@ -62,11 +62,6 @@
         <!-- PAGINA 1: SCOREBORD -->
         <div id="page-scorebord" class="page active">
 
-            <!-- DRINK SESSIE KNOP -->
-            <button id="btn-drink-sessie" onclick="toggleDrinkSessie()" style="width:100%; padding:20px; background:#ff9500; border:none; border-radius:16px; color:white; font-weight:bold; font-size:18px; transition: background 0.3s; margin-bottom: 20px; box-shadow: 0 4px 10px rgba(255,149,0,0.3);">
-                🍻 Start Drink Sessie!
-            </button>
-
             <!-- VERNIEUWDE TABEL -->
             <div class="table-wrapper">
                 <table id="score-tabel"></table>
@@ -106,6 +101,15 @@
 
         <!-- PAGINA 3: MISSIES -->
         <div id="page-missies" class="page">
+            
+            <!-- DRINK SESSIE & GPS KNOP -->
+            <div class="card">
+                <button id="btn-drink-sessie" onclick="toggleDrinkSessie()" style="width:100%; padding:20px; background:#ff9500; border:none; border-radius:16px; color:white; font-weight:bold; font-size:18px; transition: background 0.3s; box-shadow: 0 4px 10px rgba(255,149,0,0.3);">
+                    🍻 Start Drink Sessie!
+                </button>
+                <p style="font-size: 13px; color: #666; text-align: center; margin-top: 10px; margin-bottom: 0;">Wijst elke 5-20 min een atje aan én activeert de GPS tracker!</p>
+            </div>
+
             <div class="card" style="background: linear-gradient(135deg, #007aff, #0056b3); color: white;">
                 <h2 style="color: white; border-bottom: 1px solid rgba(255,255,255,0.2); margin-top: 0;">🛡️ Daily Co-op Missie</h2>
                 <p class="coop-titel-text" style="margin-top: 0; font-size: 15px; font-weight: bold;">Missie laden...</p>
@@ -132,13 +136,8 @@
         <div id="page-kaart" class="page">
             <div class="card" style="padding: 15px 10px;">
                 <h2>Interactieve Kaart 📍</h2>
-                <p style="font-size: 14px; color: #666; margin-top: 0; margin-bottom: 15px;">Locaties per persoon worden automatisch opgeteld tot grotere iconen.</p>
+                <p style="font-size: 14px; color: #666; margin-top: 0; margin-bottom: 15px;">Locaties per persoon worden automatisch opgeteld tot grotere iconen. De tracker zet je aan bij 'Missies'.</p>
                 <div id="map"></div>
-            </div>
-            <div class="card">
-                <h2>Vakantiemodus 🌴</h2>
-                <p style="font-size: 14px; color: #666;">Zet dit aan om bij elke score je GPS-locatie op de kaart te zetten.</p>
-                <button id="btn-gps" class="btn-secundair" onclick="toggleVakantiemodus()">GPS Tracker Aanzetten</button>
             </div>
         </div>
 
@@ -223,6 +222,6 @@
         <div class="nav-item" onclick="wisselPagina('page-stats', this)"><span class="nav-icon">📊</span>Stats</div>
     </div>
 
-    <script src="app.js?v=5"></script>
+    <script src="app.js?v=6"></script>
 </body>
 </html>
