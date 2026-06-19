@@ -60,6 +60,16 @@ let pieChartInstance = null, barChartInstance = null;
 let mijnBingoKaart = [], mijnBingoStatus = [];
 
 // ==========================================
+// FULLSCREEN GAME MODALS LOGICA
+// ==========================================
+function openGame(gameId) {
+    document.getElementById(gameId).classList.add('active');
+}
+function sluitGame(gameId) {
+    document.getElementById(gameId).classList.remove('active');
+}
+
+// ==========================================
 // GAME DATA (CO-OP, BINGO & ASSASSIN)
 // ==========================================
 const coopMissies = [
@@ -103,7 +113,6 @@ function genereerBingoKaart() {
     return shuffled.slice(0, 9);
 }
 
-// iOS Audio bypass
 document.body.addEventListener('touchstart', function() {
     const geluid = document.getElementById('notificatie-geluid');
     if (geluid && geluid.paused) { geluid.play().then(() => { geluid.pause(); geluid.currentTime = 0; }).catch(e => {}); }
@@ -179,12 +188,99 @@ function startApp() {
     document.getElementById('ingelogde-naam').innerText = currentUser;
     document.getElementById('display-groepscode').innerText = currentGroup;
 
-    setupPushNotificaties(); // Roept push rechten op
+    setupPushNotificaties();
 
     bouwLiveScorebord();
     luisterNaarLiveFeed();
     luisterNaarTijdbom();
     luisterNaarCoopMissie();
+    luisterNaarDrinkSessie();
+}
+
+// ==========================================
+// DRINK SESSIE (RANDOM ATJES TUSSEN 5-20 MIN)
+// ==========================================
+let sessieCheckInterval = null;
+let actieveDrinkSessieTijd = 0;
+
+function toggleDrinkSessie() {
+    if ("vibrate" in navigator) navigator.vibrate(50);
+    
+    db.collection('groepen').doc(currentGroup).collection('sessie').doc('status').get().then(doc => {
+        let isActief = doc.exists && doc.data().actief;
+        
+        if (!isActief) {
+            let wachttijd = Math.floor(Math.random() * (15 * 60 * 1000)) + (5 * 60 * 1000);
+            
+            db.collection('groepen').doc(currentGroup).collection('sessie').doc('status').set({
+                actief: true,
+                volgende_atje: Date.now() + wachttijd
+            });
+            stuurNaarFeed(`🍻 DRINK SESSIE GESTART door ${currentUser.toUpperCase()}! De tijd tikt...`);
+        } else {
+            db.collection('groepen').doc(currentGroup).collection('sessie').doc('status').set({
+                actief: false,
+                volgende_atje: 0
+            });
+            stuurNaarFeed(`🛑 Drink Sessie is gestopt door ${currentUser.toUpperCase()}.`);
+        }
+    });
+}
+
+function luisterNaarDrinkSessie() {
+    db.collection('groepen').doc(currentGroup).collection('sessie').doc('status').onSnapshot(doc => {
+        const btn = document.getElementById('btn-drink-sessie');
+        if (!btn) return;
+        
+        if (doc.exists && doc.data().actief) {
+            actieveDrinkSessieTijd = doc.data().volgende_atje;
+            btn.innerHTML = "🛑 Stop Drink Sessie";
+            btn.style.backgroundColor = "#ff3b30";
+            
+            if (!sessieCheckInterval) {
+                sessieCheckInterval = setInterval(checkDrinkSessieTijd, 5000);
+            }
+        } else {
+            actieveDrinkSessieTijd = 0;
+            btn.innerHTML = "🍻 Start Drink Sessie!";
+            btn.style.backgroundColor = "#ff9500";
+            if (sessieCheckInterval) {
+                clearInterval(sessieCheckInterval);
+                sessieCheckInterval = null;
+            }
+        }
+    });
+}
+
+function checkDrinkSessieTijd() {
+    if (!actieveDrinkSessieTijd || Date.now() < actieveDrinkSessieTijd) return;
+    
+    actieveDrinkSessieTijd = Date.now() + 99999999; 
+    
+    let nieuweWachttijd = Math.floor(Math.random() * (15 * 60 * 1000)) + (5 * 60 * 1000);
+    db.collection('groepen').doc(currentGroup).collection('sessie').doc('status').update({
+        volgende_atje: Date.now() + nieuweWachttijd
+    });
+    
+    if (spelersLijst.length === 0) return;
+    let slachtoffer = spelersLijst[Math.floor(Math.random() * spelersLijst.length)];
+    let bericht = `🚨 ALARM! De Drink Sessie heeft gekozen... ${slachtoffer.toUpperCase()} moet NU een atje trekken! 🍻`;
+    
+    stuurNaarFeed(bericht);
+    if ("vibrate" in navigator) navigator.vibrate([200, 100, 200, 100, 500, 100, 500]);
+    
+    const MAKE_WEBHOOK_URL = "https://hook.eu1.make.com/iydcsfjwnlx3147b29w38texvyhgrr62";
+    db.collection('groepen').doc(currentGroup).collection('scores').get().then(snap => {
+        snap.forEach(doc => {
+            if (doc.data().push_token) {
+                fetch(MAKE_WEBHOOK_URL, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ token: doc.data().push_token, titel: "🍻 ATJE TREKKEN!", bericht: bericht })
+                }).catch(e => console.log(e));
+            }
+        });
+    });
 }
 
 // ==========================================
@@ -217,7 +313,6 @@ function luisterNaarCoopMissie() {
     });
 }
 
-// Timer tot middernacht
 setInterval(() => {
     const nu = new Date();
     const middernacht = new Date();
@@ -239,18 +334,16 @@ function pasScoreAan(categorie, bedrag, emojiNaam) {
     
     db.collection('groepen').doc(currentGroup).collection('scores').doc(currentUser).set({ [categorie]: firebase.firestore.FieldValue.increment(actueelBedrag) }, { merge: true });
 
-    // Update Co-op Missie als het type overeenkomt
     if (actieveCoopMissie && bedrag > 0 && actieveCoopMissie.types.includes(categorie) && !actieveCoopMissie.behaald) {
         db.collection('groepen').doc(currentGroup).collection('coop').doc('status').update({ score: firebase.firestore.FieldValue.increment(actueelBedrag) });
     }
 
     let startBericht = `${currentUser.charAt(0).toUpperCase() + currentUser.slice(1)} ${bedrag > 0 ? `scoort +${actueelBedrag} bij` : "deed een correctie bij"} ${emojiNaam}${isHappyHour && bedrag > 0 ? " (HAPPY HOUR x2!)" : ""}`;
 
-    // --- DE WEBHOOK NAAR MAKE.COM ---
     const MAKE_WEBHOOK_URL = "https://hook.eu1.make.com/iydcsfjwnlx3147b29w38texvyhgrr62";
     db.collection('groepen').doc(currentGroup).collection('scores').get().then(snap => {
         snap.forEach(doc => {
-            if (doc.data().push_token) { // Stuurt nu notificatie naar alle telefoons!
+            if (doc.data().push_token) {
                 fetch(MAKE_WEBHOOK_URL, {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
@@ -259,7 +352,6 @@ function pasScoreAan(categorie, bedrag, emojiNaam) {
             }
         });
     });
-    // --------------------------------
 
     if (vakantieModus && "geolocation" in navigator) {
         navigator.geolocation.getCurrentPosition((pos) => {
@@ -273,7 +365,7 @@ function bouwLiveScorebord() {
     if(unsubscribeScores) unsubscribeScores();
     
     unsubscribeScores = db.collection('groepen').doc(currentGroup).collection('scores').onSnapshot((snapshot) => {
-        let html = `<tr><th style="text-align:left; padding-left:10px;">Wie</th><th>🍺</th><th>🍹</th><th>😘</th><th>💔</th><th>👑</th><th>🥙</th><th class="totaal-kolom">Tot</th><th></th></tr>`;
+        let html = `<tr><th style="text-align:left; padding-left:15px;">Wie</th><th>🍺</th><th>🍹</th><th>😘</th><th>💔</th><th>👑</th><th>🥙</th><th class="totaal-kolom">Tot</th><th></th></tr>`;
         let somBier=0, somMix=0, somKiss=0, somReject=0, somMvp=0, somDoner=0, somAlles=0;
         let statMaxBier=0, statMaxBierNaam="-", statMaxMVP=0, statMaxMVPNaam="-", statMaxSjaak=0, statMaxSjaakNaam="-", statMaxDoner=0, statMaxDonerNaam="-";
         let grafiekNamen = [], grafiekBierEnMix = [];
@@ -308,10 +400,10 @@ function bouwLiveScorebord() {
             let kleur = katerKans >= 75 ? "#ff3b30" : katerKans >= 40 ? "#ff9500" : "#34c759";
             katerHtml += `<div class="kater-regel"><div class="kater-header"><span>${naam}</span><span>${katerKans}%</span></div><div class="kater-bar-bg"><div class="kater-bar-fill" style="width: ${katerKans}%; background-color: ${kleur};"></div></div></div>`;
 
-            html += `<tr><td class="naam-kolom" style="padding-left:10px;">${naam}</td><td>${b}</td><td>${m}</td><td>${k}</td><td>${r}</td><td>${mv}</td><td>${d}</td><td class="totaal-kolom">${persoonTotaal}</td><td><button class="btn-verwijder" onclick="verwijderSpeler('${naam}')">X</button></td></tr>`;
+            html += `<tr><td class="naam-kolom">${naam}</td><td>${b}</td><td>${m}</td><td>${k}</td><td>${r}</td><td>${mv}</td><td>${d}</td><td class="totaal-kolom">${persoonTotaal}</td><td><button class="btn-verwijder" onclick="verwijderSpeler('${naam}')">X</button></td></tr>`;
         });
 
-        html += `<tr class="totaal-rij"><td style="text-align:left; padding-left:10px;">Totaal</td><td>${somBier}</td><td>${somMix}</td><td>${somKiss}</td><td>${somReject}</td><td>${somMvp}</td><td>${somDoner}</td><td class="totaal-kolom">${somAlles}</td><td></td></tr>`;
+        html += `<tr class="totaal-rij"><td style="text-align:left; padding-left:15px;">Totaal</td><td>${somBier}</td><td>${somMix}</td><td>${somKiss}</td><td>${somReject}</td><td>${somMvp}</td><td>${somDoner}</td><td class="totaal-kolom">${somAlles}</td><td></td></tr>`;
         document.getElementById('score-tabel').innerHTML = html;
         document.getElementById('kater-container').innerHTML = katerHtml;
 
@@ -381,7 +473,7 @@ function toggleBingoCel(index, isGehaald) {
 }
 
 // ==========================================
-// SWASI FINGER ROULETTE (FIXED & GEÜPDATET)
+// SWASI FINGER ROULETTE
 // ==========================================
 const swasiOverlay = document.getElementById('swasi-overlay');
 let actieveSwasiTouches = {};
@@ -401,7 +493,7 @@ function startSwasi() {
     actieveSwasiTouches = {};
     swasiKleurIndex = 0;
     swasiBezig = true;
-    document.body.style.overflow = 'hidden'; // Voorkom scrollen
+    document.body.style.overflow = 'hidden';
     
     swasiOverlay.addEventListener('touchstart', handleTouchStart, {passive: false});
     swasiOverlay.addEventListener('touchmove', handleTouchMove, {passive: false});
@@ -416,7 +508,6 @@ function stopSwasi() {
     clearInterval(swasiAfteller);
     swasiBezig = false;
     
-    // Verwijder alle circels
     Object.values(actieveSwasiTouches).forEach(c => c.remove());
     actieveSwasiTouches = {};
     
@@ -427,9 +518,7 @@ function stopSwasi() {
 }
 
 function handleTouchStart(e) {
-    // Laat de "Sluiten" button gewoon z'n click afvuren zonder e.preventDefault()
     if (e.target.id === 'swasi-sluit-btn') return;
-    
     e.preventDefault();
     if (!swasiBezig) return;
     
@@ -509,12 +598,12 @@ function checkSwasiTimer() {
     } else {
         document.getElementById('swasi-instructie').style.display = 'block';
         document.getElementById('swasi-instructie').innerText = "Plaats allemaal 1 vinger...";
-        swasiKleurIndex = 0; // Reset colors if everyone let go
+        swasiKleurIndex = 0;
     }
 }
 
 function kiesSwasiWinnaar(keys) {
-    swasiBezig = false; // Blokkeer nieuwe touches
+    swasiBezig = false;
     if ("vibrate" in navigator) navigator.vibrate([100, 50, 100, 50, 300]);
     
     let winnerId = keys[Math.floor(Math.random() * keys.length)];
@@ -537,7 +626,7 @@ function kiesSwasiWinnaar(keys) {
 function startTijdbom() {
     if (spelersLijst.length < 2) return alert("Minimaal 2 spelers nodig.");
     let randomSpeler = spelersLijst[Math.floor(Math.random() * spelersLijst.length)];
-    let ontplofTijd = Date.now() + (Math.floor(Math.random() * 45000) + 30000); // 30-75 seconden
+    let ontplofTijd = Date.now() + (Math.floor(Math.random() * 45000) + 30000);
     
     db.collection('groepen').doc(currentGroup).collection('tijdbom').doc('status').set({ actief: true, houder: randomSpeler, eindTijdUnix: ontplofTijd });
     stuurNaarFeed(`💣 TIJDBOM GESTART! Hij ligt nu bij ${randomSpeler.toUpperCase()}!`);
@@ -578,7 +667,7 @@ function luisterNaarTijdbom() {
         } else {
             document.getElementById('bom-idle-ui').style.display = 'block';
             document.getElementById('bom-active-ui').style.display = 'none';
-            card.classList.remove('bom-gevaar');
+            if(card) card.classList.remove('bom-gevaar');
         }
     });
 
@@ -626,29 +715,11 @@ function haalRandomOptie() {
     return optie;
 }
 
-function updateCoinWeergave() { document.getElementById('coin-weergave').innerText = Math.max(0, mijnTotalePunten - mijnGedraaideSpins); }
-function verwijderSpeler(naam) { if (confirm(`Verwijder ${naam}?`)) db.collection('groepen').doc(currentGroup).collection('scores').doc(naam).delete(); }
-
-// --- HIER IS DE WEBHOOK VOOR DE GELE BIERKNOP TOEGEVOEGD ---
-function stuurBierAlarm() { 
-    if ("vibrate" in navigator) navigator.vibrate([200, 100, 200]); 
-    let bericht = `⚠️ RONDJE BIER VOOR IEDEREEN DOOR ${currentUser.toUpperCase()}!`;
-    stuurNaarFeed(bericht); 
-
-    const MAKE_WEBHOOK_URL = "https://hook.eu1.make.com/iydcsfjwnlx3147b29w38texvyhgrr62";
-    db.collection('groepen').doc(currentGroup).collection('scores').get().then(snap => {
-        snap.forEach(doc => {
-            if (doc.data().push_token) {
-                fetch(MAKE_WEBHOOK_URL, {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ token: doc.data().push_token, titel: "BefCounter Alarm 🚨", bericht: bericht })
-                }).catch(e => console.log(e));
-            }
-        });
-    });
+function updateCoinWeergave() { 
+    const coins = Math.max(0, mijnTotalePunten - mijnGedraaideSpins);
+    document.querySelectorAll('#coin-weergave').forEach(el => el.innerText = coins);
 }
-// ------------------------------------------------------------
+function verwijderSpeler(naam) { if (confirm(`Verwijder ${naam}?`)) db.collection('groepen').doc(currentGroup).collection('scores').doc(naam).delete(); }
 
 function stuurNaarFeed(bericht) { db.collection('groepen').doc(currentGroup).collection('feed').doc('laatste').set({ bericht: bericht, tijd: firebase.firestore.FieldValue.serverTimestamp() }); }
 
@@ -674,6 +745,31 @@ function tekenGrafieken(b, m, k, r, mv, d, namen, drankjes) {
     barChartInstance = new Chart(document.getElementById('spelerBarChart'), { type: 'bar', data: { labels: namen, datasets: [{ label: 'Drankjes', data: drankjes, backgroundColor: '#007aff' }] }, options: { responsive: true, maintainAspectRatio: false } });
 }
 
+// ==========================================
+// GPS / VAKANTIEMODUS TOGGLE
+// ==========================================
+function toggleVakantiemodus() {
+    vakantieModus = !vakantieModus;
+    const btnGps = document.getElementById('btn-gps');
+    
+    if (vakantieModus) {
+        btnGps.innerText = "GPS Tracker Uitzetten";
+        btnGps.style.backgroundColor = "#ff3b30";
+        alert("Vakantiemodus AAN 🌴: Jouw locatie wordt nu bij elke actie op de kaart gezet!");
+        
+        if ("geolocation" in navigator) {
+            navigator.geolocation.getCurrentPosition(
+                () => console.log("GPS permissie gegeven"),
+                (err) => alert("Zorg dat je locatievoorzieningen aan staan voor deze browser!")
+            );
+        }
+    } else {
+        btnGps.innerText = "GPS Tracker Aanzetten";
+        btnGps.style.backgroundColor = "#34c759";
+        alert("Vakantiemodus UIT 🛑: Locatie wordt niet meer gedeeld.");
+    }
+}
+
 function initKaart() {
     if (!worldMap) {
         worldMap = L.map('map').setView([45.0, 5.0], 4);
@@ -696,29 +792,4 @@ function initKaart() {
             });
         });
     } else worldMap.invalidateSize();
-}
-// ==========================================
-// GPS / VAKANTIEMODUS TOGGLE
-// ==========================================
-function toggleVakantiemodus() {
-    vakantieModus = !vakantieModus;
-    const btnGps = document.getElementById('btn-gps');
-    
-    if (vakantieModus) {
-        btnGps.innerText = "GPS Tracker Uitzetten";
-        btnGps.style.backgroundColor = "#ff3b30"; // Maakt de knop rood als waarschuwing
-        alert("Vakantiemodus AAN 🌴: Jouw locatie wordt nu bij elke actie op de kaart gezet!");
-        
-        // Vraag direct om GPS permissie aan de telefoon
-        if ("geolocation" in navigator) {
-            navigator.geolocation.getCurrentPosition(
-                () => console.log("GPS permissie gegeven"),
-                (err) => alert("Zorg dat je locatievoorzieningen aan staan voor deze browser!")
-            );
-        }
-    } else {
-        btnGps.innerText = "GPS Tracker Aanzetten";
-        btnGps.style.backgroundColor = "#34c759"; // Maakt de knop weer groen
-        alert("Vakantiemodus UIT 🛑: Locatie wordt niet meer gedeeld.");
-    }
 }

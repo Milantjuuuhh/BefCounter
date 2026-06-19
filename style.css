@@ -14,15 +14,18 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helve
 
 input { width: 100%; padding: 15px; margin-bottom: 15px; border: 1px solid #d1d1d6; border-radius: 10px; font-size: 16px; box-sizing: border-box; background-color: #fafafa; }
 
+/* MODERNE TABEL STYLING */
+.table-wrapper { background: white; border-radius: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); overflow-x: auto; margin-bottom: 20px; }
 table { width: 100%; border-collapse: collapse; text-align: center; font-size: 13px; }
-th { padding: 8px 2px; color: #8e8e93; font-weight: normal; font-size: 14px; border-bottom: 1px solid #e5e5ea;}
-td { padding: 12px 2px; border-bottom: 1px solid #f2f2f7; font-weight: bold; }
-td.naam-kolom { text-align: left; text-transform: capitalize; color: #007aff; }
-.totaal-kolom { background-color: #f8f8f8; border-radius: 8px; color: #000; }
-tr.totaal-rij td { border-top: 2px solid #000; font-weight: 900; background-color: #fff; padding-top: 15px; }
-.btn-verwijder { background-color: #ff3b30; color: white; border: none; border-radius: 6px; padding: 5px 8px; font-weight: bold; cursor: pointer; }
+th { background-color: #f8f8f8; padding: 14px 5px; color: #8e8e93; font-weight: bold; font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 1px solid #e5e5ea; white-space: nowrap; }
+td { padding: 14px 5px; border-bottom: 1px solid #f2f2f7; font-weight: bold; color: #333; }
+tr:nth-child(even) td { background-color: #fafafa; }
+td.naam-kolom { text-align: left; text-transform: capitalize; color: #007aff; padding-left: 15px; font-size: 14px; }
+.totaal-kolom { background-color: rgba(0, 122, 255, 0.08); color: #007aff; border-radius: 8px; font-size: 14px; font-weight: 900; }
+tr.totaal-rij td { border-top: 2px solid #000; font-weight: 900; background-color: #fff; padding: 18px 5px; }
+.btn-verwijder { background-color: #ff3b30; color: white; border: none; border-radius: 6px; padding: 6px 10px; font-weight: bold; cursor: pointer; }
 
-/* Knoppen Grid */
+/* Knoppen Grid Scores */
 .actie-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
 .actie-kaart { border-radius: 14px; padding: 15px; display: flex; flex-direction: column; align-items: center; box-shadow: 0 4px 6px rgba(0,0,0,0.1); color: white; }
 .actie-kaart span.emoji { font-size: 32px; margin-bottom: 5px; }
@@ -52,6 +55,17 @@ tr.totaal-rij td { border-top: 2px solid #000; font-weight: 900; background-colo
 .btn-secundair { background-color: #34c759; width: 100%; padding: 15px; margin-top: 10px; border-radius: 10px; color: white; border: none; font-size: 16px; font-weight: bold; cursor: pointer; }
 .btn-gevaar { background-color: #ff3b30; padding: 8px 12px; border-radius: 8px; color: white; border: none; font-size: 14px; font-weight: bold; cursor: pointer; }
 
+/* GAMES ICONS & MODALS */
+.games-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 10px; }
+.game-icon { background: white; border-radius: 16px; padding: 30px 10px; display: flex; flex-direction: column; align-items: center; box-shadow: 0 4px 12px rgba(0,0,0,0.05); font-weight: bold; font-size: 15px; cursor: pointer; transition: transform 0.1s; }
+.game-icon:active { transform: scale(0.95); }
+.game-icon .g-emoji { font-size: 45px; margin-bottom: 12px; }
+
+.game-modal { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: #f2f2f7; z-index: 2000; display: none; overflow-y: auto; padding-bottom: 50px; }
+.game-modal.active { display: block; animation: slideUp 0.3s forwards; }
+.btn-sluit-modal { background: white; color: #007aff; border: none; padding: 15px 25px; border-radius: 25px; font-weight: bold; font-size: 16px; margin: 20px 15px; cursor: pointer; box-shadow: 0 4px 10px rgba(0,0,0,0.1); display: inline-flex; align-items: center; gap: 8px; }
+@keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+
 /* Rad van Fortuin & Tijdbom */
 #rad-box { background: linear-gradient(135deg, #ff9500, #ff2d55); border-radius: 16px; padding: 40px 20px; text-align: center; color: white; box-shadow: inset 0 0 20px rgba(0,0,0,0.2); margin-bottom: 20px; min-height: 120px; display: flex; align-items: center; justify-content: center; transition: all 0.1s; }
 #rad-uitkomst { font-size: 24px; font-weight: 900; text-transform: uppercase; text-shadow: 0 2px 4px rgba(0,0,0,0.3); }
@@ -61,9 +75,9 @@ tr.totaal-rij td { border-top: 2px solid #000; font-weight: 900; background-colo
 @keyframes pulseRed { from { transform: scale(1); box-shadow: 0 0 10px #ff3b30; } to { transform: scale(1.02); box-shadow: 0 0 30px #ff3b30; } }
 
 /* Bingo Grid */
-.bingo-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin-top: 15px; }
-.bingo-cel { background: #f2f2f7; border-radius: 8px; aspect-ratio: 1; display: flex; align-items: center; justify-content: center; text-align: center; padding: 6px; font-size: 11px; cursor: pointer; border: 2px solid transparent; transition: all 0.2s; font-weight: bold; color: #333; }
-.bingo-cel.voltooid { background: #34c759; color: white; border-color: #28a745; transform: scale(0.95); }
+.bingo-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 15px; }
+.bingo-cel { background: white; border-radius: 12px; aspect-ratio: 1; display: flex; align-items: center; justify-content: center; text-align: center; padding: 8px; font-size: 12px; cursor: pointer; box-shadow: 0 2px 5px rgba(0,0,0,0.05); border: 2px solid transparent; transition: all 0.2s; font-weight: bold; color: #333; }
+.bingo-cel.voltooid { background: #34c759; color: white; border-color: #28a745; transform: scale(0.95); box-shadow: inset 0 2px 5px rgba(0,0,0,0.2); }
 
 /* Kaart */
 #map { height: 450px; width: 100%; border-radius: 14px; z-index: 1; box-shadow: inset 0 0 10px rgba(0,0,0,0.15); border: 1px solid #d1d1d6; }
@@ -78,38 +92,13 @@ tr.totaal-rij td { border-top: 2px solid #000; font-weight: 900; background-colo
 
 /* SWASI FINGER ROULETTE OVERLAY & ANIMATIES */
 #swasi-overlay { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.9); z-index: 10000; display: none; overflow: hidden; touch-action: none; }
-.swasi-circle { 
-    position: absolute; width: 100px; height: 100px; border-radius: 50%; border: 8px solid white; 
-    transform: translate(-50%, -50%); opacity: 0.9; transition: all 0.3s; 
-    box-shadow: inset 0 0 20px rgba(255,255,255,0.4), 0 0 20px rgba(255,255,255,0.4); 
-    pointer-events: none; animation: swasiPulse 1s infinite alternate;
-}
-@keyframes swasiPulse {
-    from { transform: translate(-50%, -50%) scale(0.9); }
-    to { transform: translate(-50%, -50%) scale(1.05); }
-}
-.swasi-circle.winner { 
-    border-color: #ff3b30 !important; background: rgba(255,59,48,0.5); 
-    box-shadow: 0 0 60px #ff3b30 !important; transform: translate(-50%, -50%) scale(1.4) !important; 
-    animation: winnerPulse 0.3s infinite alternate; z-index: 10001; opacity: 1; 
-}
-@keyframes winnerPulse {
-    from { transform: translate(-50%, -50%) scale(1.3); }
-    to { transform: translate(-50%, -50%) scale(1.5); }
-}
+.swasi-circle { position: absolute; width: 100px; height: 100px; border-radius: 50%; border: 8px solid white; transform: translate(-50%, -50%); opacity: 0.9; transition: all 0.3s; box-shadow: inset 0 0 20px rgba(255,255,255,0.4), 0 0 20px rgba(255,255,255,0.4); pointer-events: none; animation: swasiPulse 1s infinite alternate; }
+@keyframes swasiPulse { from { transform: translate(-50%, -50%) scale(0.9); } to { transform: translate(-50%, -50%) scale(1.05); } }
+.swasi-circle.winner { border-color: #ff3b30 !important; background: rgba(255,59,48,0.5); box-shadow: 0 0 60px #ff3b30 !important; transform: translate(-50%, -50%) scale(1.4) !important; animation: winnerPulse 0.3s infinite alternate; z-index: 10001; opacity: 1; }
+@keyframes winnerPulse { from { transform: translate(-50%, -50%) scale(1.3); } to { transform: translate(-50%, -50%) scale(1.5); } }
 .swasi-circle.loser { opacity: 0; transform: translate(-50%, -50%) scale(0) !important; }
-
-#swasi-countdown {
-    position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
-    font-size: 140px; color: white; font-weight: 900; z-index: 9999;
-    text-shadow: 0 5px 25px rgba(0,0,0,0.9); pointer-events: none;
-    animation: popIn 1s infinite;
-}
-@keyframes popIn {
-    0% { transform: translate(-50%, -50%) scale(0.5); opacity: 0; }
-    20% { transform: translate(-50%, -50%) scale(1.2); opacity: 1; }
-    100% { transform: translate(-50%, -50%) scale(1); opacity: 0; }
-}
+#swasi-countdown { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-size: 140px; color: white; font-weight: 900; z-index: 9999; text-shadow: 0 5px 25px rgba(0,0,0,0.9); pointer-events: none; animation: popIn 1s infinite; }
+@keyframes popIn { 0% { transform: translate(-50%, -50%) scale(0.5); opacity: 0; } 20% { transform: translate(-50%, -50%) scale(1.2); opacity: 1; } 100% { transform: translate(-50%, -50%) scale(1); opacity: 0; } }
 #swasi-sluit-btn { position: absolute; bottom: 40px; left: 50%; transform: translateX(-50%); width: 80%; max-width: 300px; display: none; z-index: 10002; box-shadow: 0 4px 15px rgba(0,0,0,0.5); }
 
 #auth-scherm, #lobby-scherm, #app-scherm, #page-scorebord, #page-games, #page-missies, #page-stats, #page-rad, #page-kaart { display: none; }
