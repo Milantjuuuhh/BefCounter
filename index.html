@@ -7,540 +7,244 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <link rel="apple-touch-icon" href="icon-192.png">
     <link rel="manifest" href="manifest.json">
-
     <title>BefCounter</title>
-    <style>
-        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background-color: #f2f2f7; margin: 0; padding: 0; color: #1c1c1e; }
-        
-        /* De Live Ticker is nu fixed (blijft altijd boven in beeld) */
-        #live-ticker { 
-            position: fixed; 
-            top: 0; 
-            left: 0; 
-            width: 100%; 
-            background-color: #34c759; 
-            color: white; 
-            padding: 15px 0; 
-            font-size: 15px; 
-            font-weight: bold; 
-            text-align: center; 
-            z-index: 10000; 
-            display: none; 
-            box-shadow: 0 4px 6px rgba(0,0,0,0.2);
-        }
-        
-        .header { background-color: #ffffff; padding: 50px 20px 15px 20px; text-align: center; box-shadow: 0 1px 3px rgba(0,0,0,0.1); border-bottom: 1px solid #e5e5ea; }
-        .header h1 { margin: 0; font-size: 24px; color: #000; font-weight: 800; }
-        .header-controls { margin-top: 15px; display: none; justify-content: center; align-items: center; gap: 10px; }
-        .groep-badge { background-color: #f2f2f7; padding: 6px 12px; border-radius: 8px; font-weight: bold; font-size: 14px; }
-        
-        .container { padding: 15px; max-width: 600px; margin: 0 auto; padding-bottom: 40px; }
-        
-        .card { background: white; padding: 20px; border-radius: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); margin-bottom: 20px; }
-        .card h2 { margin-top: 0; font-size: 18px; border-bottom: 1px solid #eee; padding-bottom: 10px; margin-bottom: 15px; }
-        
-        input { width: 100%; padding: 15px; margin-bottom: 15px; border: 1px solid #d1d1d6; border-radius: 10px; font-size: 16px; box-sizing: border-box; background-color: #fafafa; }
-        
-        table { width: 100%; border-collapse: collapse; text-align: center; font-size: 14px; }
-        th { padding: 10px 2px; color: #8e8e93; font-weight: normal; font-size: 15px; border-bottom: 1px solid #e5e5ea;}
-        td { padding: 12px 2px; border-bottom: 1px solid #f2f2f7; font-weight: bold; }
-        td.naam-kolom { text-align: left; text-transform: capitalize; color: #007aff; }
-        .totaal-kolom { background-color: #f8f8f8; border-radius: 8px; color: #000; }
-        tr.totaal-rij td { border-top: 2px solid #000; font-weight: 900; background-color: #fff; padding-top: 15px; }
-        
-        .btn-verwijder { background-color: #ff3b30; color: white; border: none; border-radius: 6px; padding: 5px 8px; font-weight: bold; cursor: pointer; }
-
-        .actie-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
-        .actie-kaart { border-radius: 14px; padding: 15px; display: flex; flex-direction: column; align-items: center; box-shadow: 0 4px 6px rgba(0,0,0,0.1); color: white; }
-        .actie-kaart span.emoji { font-size: 32px; margin-bottom: 5px; }
-        .actie-kaart span.titel { font-size: 16px; font-weight: bold; margin-bottom: 15px; text-shadow: 0 1px 2px rgba(0,0,0,0.2); }
-        
-        .knoppen-groep { display: flex; width: 100%; gap: 5px; }
-        .btn-actie { border: none; border-radius: 8px; padding: 10px; font-size: 18px; font-weight: bold; cursor: pointer; transition: transform 0.1s; }
-        .btn-actie:active { transform: scale(0.90); }
-        .btn-min { flex: 1; background-color: rgba(0,0,0,0.2); color: white; }
-        .btn-plus { flex: 2; background-color: rgba(255,255,255,0.3); color: white; }
-
-        .bg-bier { background: linear-gradient(135deg, #f1c40f, #f39c12); }
-        .bg-mix { background: linear-gradient(135deg, #9b59b6, #8e44ad); }
-        .bg-kiss { background: linear-gradient(135deg, #ff7675, #d63031); }
-        .bg-reject { background: linear-gradient(135deg, #636e72, #2d3436); }
-        .bg-mvp { background: linear-gradient(135deg, #ffeaa7, #fdcb6e); color: #2d3436; }
-        .bg-mvp .btn-min { background-color: rgba(0,0,0,0.1); color: #333; }
-        .bg-mvp .btn-plus { background-color: rgba(255,255,255,0.5); color: #000; }
-        .bg-doner { background: linear-gradient(135deg, #e17055, #d35400); }
-        
-        .btn-primair { background-color: #007aff; width: 100%; padding: 15px; margin-top: 10px; border-radius: 10px; color: white; border: none; font-size: 16px; font-weight: bold; cursor: pointer; }
-        .btn-secundair { background-color: #34c759; width: 100%; padding: 15px; margin-top: 10px; border-radius: 10px; color: white; border: none; font-size: 16px; font-weight: bold; cursor: pointer; }
-        .btn-gevaar { background-color: #ff3b30; padding: 8px 12px; border-radius: 8px; color: white; border: none; font-size: 14px; font-weight: bold; cursor: pointer; }
-
-        #auth-scherm, #lobby-scherm, #app-scherm { display: none; }
-    </style>
     
+    <!-- Externe Software -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <!-- Styling & Firebase -->
+    <link rel="stylesheet" href="style.css">
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-messaging.js"></script>
 </head>
 <body>
 
-    <div id="live-ticker">Melding balk</div>
+    <audio id="notificatie-geluid" src="https://www.soundjay.com/buttons/sounds/button-09.mp3" preload="auto"></audio>
+    <div id="live-ticker" onclick="this.style.display='none'"></div>
+
+    <!-- FULLSCREEN SWASI OVERLAY (Geüpdatet) -->
+    <div id="swasi-overlay">
+        <h2 id="swasi-instructie" style="color: white; position: absolute; top: 15%; width: 100%; text-align: center; pointer-events: none; opacity: 0.8; font-size: 22px;">Plaats allemaal 1 vinger...</h2>
+        <div id="swasi-countdown" style="display: none;">3</div>
+        <button id="swasi-sluit-btn" class="btn-primair" onclick="stopSwasi()">Sluiten</button>
+    </div>
 
     <div class="header">
         <h1>BefCounter</h1>
         <div id="header-controls" class="header-controls">
             <span class="groep-badge">Groep: <span id="display-groepscode"></span></span>
-            <button class="btn-gevaar" onclick="verlaatGroep()">Sluit Groep</button>
-            <button class="btn-gevaar" style="background-color: #8e8e93;" onclick="uitloggen()">Uitloggen</button>
+            <button class="btn-gevaar" style="background-color: #8e8e93;" onclick="uitloggen()">Log Uit</button>
         </div>
     </div>
 
-    <div class="container">
-        
+    <!-- Authenticatie en Lobby -->
+    <div class="container" id="auth-container">
         <div id="auth-scherm" class="card">
             <h2>Login of Registreer</h2>
-            <p style="color: #666; font-size: 14px;">Maak een persoonlijk account aan of log in.</p>
             <input type="text" id="auth-naam" placeholder="Jouw Naam (bijv. Milan)">
-            <input type="password" id="auth-wachtwoord" placeholder="Kies of vul een wachtwoord in">
+            <input type="password" id="auth-wachtwoord" placeholder="Kies of vul wachtwoord in">
             <button class="btn-primair" onclick="login()">Inloggen</button>
-            <button class="btn-secundair" onclick="registreer()">Nieuw Account Maken</button>
+            <button class="btn-secundair" onclick="registreer()">Nieuw Account</button>
         </div>
 
         <div id="lobby-scherm" class="card">
             <h2>Welkom <span id="lobby-gebruikersnaam" style="color:#007aff; text-transform:capitalize;"></span>!</h2>
-            <p style="color: #666; font-size: 14px;">Join een bestaande groep of maak een nieuwe aan.</p>
-            
             <input type="text" id="lobby-code" placeholder="Vul Groepscode in (bijv. X8R2P)" style="text-transform: uppercase;">
             <button class="btn-primair" onclick="joinGroep()">Groep Joinen</button>
-            
             <hr style="margin: 30px 0; border: none; border-top: 1px solid #eee;">
-            
             <button class="btn-secundair" style="background-color: #ff9500;" onclick="maakNieuweGroep()">Genereer Nieuwe Groep</button>
-            <button class="btn-gevaar" style="width: 100%; margin-top: 20px; padding: 15px; font-size: 16px; background-color: #8e8e93;" onclick="uitloggen()">Uitloggen</button>
+            <button class="btn-gevaar" style="width: 100%; margin-top: 20px; padding: 15px;" onclick="uitloggen()">Uitloggen</button>
         </div>
+    </div>
 
-        <div id="app-scherm">
+    <!-- Hoofd Applicatie Schermen -->
+    <div id="app-scherm" class="container">
+
+        <!-- ============================== -->
+        <!-- PAGINA 1: SCOREBORD -->
+        <!-- ============================== -->
+        <div id="page-scorebord" class="page active">
             
+            <!-- CO-OP MISSIE WIDGET -->
+            <div class="card" style="background: linear-gradient(135deg, #007aff, #0056b3); color: white;">
+                <h2 style="color: white; border-bottom: 1px solid rgba(255,255,255,0.2); margin-top: 0;">🛡️ Daily Co-op Missie</h2>
+                <p class="coop-titel-text" style="margin-top: 0; font-size: 15px; font-weight: bold;">Nieuwe missie laden...</p>
+                <p class="coop-timer-text" style="margin-top: -10px; font-size: 12px; color: rgba(255,255,255,0.7); margin-bottom: 12px;">Nog 00:00:00 geldig</p>
+                <div style="background: rgba(0,0,0,0.3); height: 22px; border-radius: 11px; overflow: hidden; position: relative;">
+                    <div class="coop-bar-fill" style="background: #34c759; width: 0%; height: 100%; transition: width 0.5s;"></div>
+                    <span class="coop-progress-text" style="position: absolute; width: 100%; text-align: center; top: 3px; left: 0; font-size: 13px; font-weight: bold; color: white;">0 / 0</span>
+                </div>
+            </div>
+
             <div class="card" style="padding: 15px 5px;">
                 <h2 style="margin-left: 10px;">Leaderboard</h2>
                 <div style="overflow-x: auto;">
-                    <table id="score-tabel">
-                        </table>
+                    <table id="score-tabel"></table>
                 </div>
+            </div>
+
+            <div class="card">
+                <button onclick="stuurBierAlarm()" style="width:100%; padding:20px; background:#ff9500; border:none; border-radius:15px; color:white; font-weight:bold; font-size:16px;">
+                    📢 RONDJE BIER VOOR IEDEREEN!
+                </button>
             </div>
 
             <div class="card">
                 <h2>Punten voor: <span id="ingelogde-naam" style="color: #007aff; text-transform: capitalize;"></span></h2>
                 <div class="actie-grid">
-                    
-                    <div class="actie-kaart bg-bier">
-                        <span class="emoji">🍺</span><span class="titel">Bier</span>
-                        <div class="knoppen-groep">
-                            <button class="btn-actie btn-min" onclick="pasScoreAan('bier', -1, '🍺 Bier')">-1</button>
-                            <button class="btn-actie btn-plus" onclick="pasScoreAan('bier', 1, '🍺 Bier')">+1</button>
-                        </div>
-                    </div>
+                    <div class="actie-kaart bg-bier"><span class="emoji">🍺</span><span class="titel">Bier</span><div class="knoppen-groep"><button class="btn-actie btn-min" onclick="pasScoreAan('bier', -1, '🍺 Bier')">-1</button><button class="btn-actie btn-plus" onclick="pasScoreAan('bier', 1, '🍺 Bier')">+1</button></div></div>
+                    <div class="actie-kaart bg-mix"><span class="emoji">🍹</span><span class="titel">Mix</span><div class="knoppen-groep"><button class="btn-actie btn-min" onclick="pasScoreAan('mix', -1, '🍹 Mix')">-1</button><button class="btn-actie btn-plus" onclick="pasScoreAan('mix', 1, '🍹 Mix')">+1</button></div></div>
+                    <div class="actie-kaart bg-kiss"><span class="emoji">😘</span><span class="titel">Kiss</span><div class="knoppen-groep"><button class="btn-actie btn-min" onclick="pasScoreAan('kiss', -1, '😘 Kiss')">-1</button><button class="btn-actie btn-plus" onclick="pasScoreAan('kiss', 1, '😘 Kiss')">+1</button></div></div>
+                    <div class="actie-kaart bg-reject"><span class="emoji">💔</span><span class="titel">Reject</span><div class="knoppen-groep"><button class="btn-actie btn-min" onclick="pasScoreAan('rejection', -1, '💔 Reject')">-1</button><button class="btn-actie btn-plus" onclick="pasScoreAan('rejection', 1, '💔 Reject')">+1</button></div></div>
+                    <div class="actie-kaart bg-mvp"><span class="emoji">👑</span><span class="titel">MVP</span><div class="knoppen-groep"><button class="btn-actie btn-min" onclick="pasScoreAan('mvp', -1, '👑 MVP')">-1</button><button class="btn-actie btn-plus" onclick="pasScoreAan('mvp', 1, '👑 MVP')">+1</button></div></div>
+                    <div class="actie-kaart bg-doner"><span class="emoji">🥙</span><span class="titel">Döner</span><div class="knoppen-groep"><button class="btn-actie btn-min" onclick="pasScoreAan('doner', -1, '🥙 Döner')">-1</button><button class="btn-actie btn-plus" onclick="pasScoreAan('doner', 1, '🥙 Döner')">+1</button></div></div>
+                </div>
+            </div>
+        </div>
 
-                    <div class="actie-kaart bg-mix">
-                        <span class="emoji">🍹</span><span class="titel">Mix</span>
-                        <div class="knoppen-groep">
-                            <button class="btn-actie btn-min" onclick="pasScoreAan('mix', -1, '🍹 Mix')">-1</button>
-                            <button class="btn-actie btn-plus" onclick="pasScoreAan('mix', 1, '🍹 Mix')">+1</button>
-                        </div>
-                    </div>
+        <!-- ============================== -->
+        <!-- PAGINA 2: GAMES (Swasi, Rad, Bom) -->
+        <!-- ============================== -->
+        <div id="page-games" class="page">
+            
+            <!-- SWASI FINGER ROULETTE -->
+            <div class="card" style="background: linear-gradient(135deg, #af52de, #5856d6); color: white;">
+                <h2 style="color: white; border-bottom: 1px solid rgba(255,255,255,0.2);">👆 Swasi (Touch Roulette)</h2>
+                <p style="font-size: 14px; color: rgba(255,255,255,0.8); margin-top: 0;">Iedereen legt een vinger op het scherm. Na 3 seconden kiest de app een willekeurig slachtoffer.</p>
+                <button class="btn-primair" style="background-color: white; color: #5856d6; font-size: 18px; padding: 20px; font-weight: 900;" onclick="startSwasi()">
+                    Start Swasi
+                </button>
+            </div>
 
-                    <div class="actie-kaart bg-kiss">
-                        <span class="emoji">😘</span><span class="titel">Kiss</span>
-                        <div class="knoppen-groep">
-                            <button class="btn-actie btn-min" onclick="pasScoreAan('kiss', -1, '😘 Kiss')">-1</button>
-                            <button class="btn-actie btn-plus" onclick="pasScoreAan('kiss', 1, '😘 Kiss')">+1</button>
-                        </div>
-                    </div>
-
-                    <div class="actie-kaart bg-reject">
-                        <span class="emoji">💔</span><span class="titel">Reject</span>
-                        <div class="knoppen-groep">
-                            <button class="btn-actie btn-min" onclick="pasScoreAan('rejection', -1, '💔 Reject')">-1</button>
-                            <button class="btn-actie btn-plus" onclick="pasScoreAan('rejection', 1, '💔 Reject')">+1</button>
-                        </div>
-                    </div>
-
-                    <div class="actie-kaart bg-mvp">
-                        <span class="emoji">👑</span><span class="titel">MVP</span>
-                        <div class="knoppen-groep">
-                            <button class="btn-actie btn-min" onclick="pasScoreAan('mvp', -1, '👑 MVP')">-1</button>
-                            <button class="btn-actie btn-plus" onclick="pasScoreAan('mvp', 1, '👑 MVP')">+1</button>
-                        </div>
-                    </div>
-
-                    <div class="actie-kaart bg-doner">
-                        <span class="emoji">🥙</span><span class="titel">Döner</span>
-                        <div class="knoppen-groep">
-                            <button class="btn-actie btn-min" onclick="pasScoreAan('doner', -1, '🥙 Döner')">-1</button>
-                            <button class="btn-actie btn-plus" onclick="pasScoreAan('doner', 1, '🥙 Döner')">+1</button>
-                        </div>
-                    </div>
-                    <div class="card">
-    <button onclick="stuurBierAlarm()" style="width:100%; padding:20px; background:#ff9500; border:none; border-radius:15px; color:white; font-weight:bold; font-size:16px;">
-        📢 RONDJE BIER VOOR IEDEREEN!
-    </button>
-</div>
+            <!-- TIJDBOM -->
+            <div class="card" id="bom-card" style="background: #1c1c1e; color: white;">
+                <h2 style="color: #ff3b30; border-bottom: 1px solid #333;">💣 De Tijdbom</h2>
+                <div id="bom-idle-ui">
+                    <p style="font-size: 14px; color: #a1a1aa; margin-top: 0;">Start de bom. Zodra hij bij jou knippert, gooi hem z.s.m. door! Degene die hem vasthoudt als de timer afgaat verliest 3 coins.</p>
+                    <button class="btn-primair" style="background-color: #ff3b30;" onclick="startTijdbom()">💥 Start de Bom!</button>
+                </div>
+                <div id="bom-active-ui" style="display: none; text-align: center; padding: 20px 0;">
+                    <span style="font-size: 50px;">🧨</span>
+                    <h3 id="bom-status-tekst" style="margin: 10px 0;">Bom is bij ...</h3>
+                    <button id="btn-gooi-door" class="btn-primair" style="background-color: #ff9500; display: none; padding: 20px; font-size: 20px;" onclick="gooiBomDoor()">GOOI DOOR!!</button>
                 </div>
             </div>
 
+            <!-- RAD VAN FORTUIN -->
+            <div class="card">
+                <h2><span>Rad van Fortuin</span><span class="coin-badge">🪙 <span id="coin-weergave">0</span></span></h2>
+                <p style="font-size: 14px; color: #666; margin-top: 0;">1 punt gescoord = 1 coin om te draaien!</p>
+                <div id="rad-box">
+                    <span id="rad-uitkomst">Druk op Draai!</span>
+                </div>
+                <button class="btn-primair" style="background-color: #34c759; font-size: 18px; padding: 20px;" onclick="draaiRad()">
+                    🎰 DRAAI (Kosten: 1 Coin)
+                </button>
+            </div>
+        </div>
+
+        <!-- ============================== -->
+        <!-- PAGINA 3: MISSIES (Co-op, Bingo, Assassin) -->
+        <!-- ============================== -->
+        <div id="page-missies" class="page">
+            
+            <!-- VAKANTIE BINGO -->
+            <div class="card">
+                <h2>🌴 Ibiza Bingo</h2>
+                <p style="font-size: 14px; color: #666; margin-top: 0;">Jouw persoonlijke 3x3 kaart. Klik op een vakje als je hem voltooid hebt. Volle kaart = 10 MVP Coins!</p>
+                <div id="bingo-grid" class="bingo-grid">
+                    <!-- Wordt via JS geladen -->
+                </div>
+            </div>
+
+            <!-- CO-OP MISSIE -->
+            <div class="card" style="background: linear-gradient(135deg, #007aff, #0056b3); color: white;">
+                <h2 style="color: white; border-bottom: 1px solid rgba(255,255,255,0.2); margin-top: 0;">🛡️ Daily Co-op Missie</h2>
+                <p class="coop-titel-text" style="margin-top: 0; font-size: 15px; font-weight: bold;">Missie laden...</p>
+                <p class="coop-timer-text" style="margin-top: -10px; font-size: 12px; color: rgba(255,255,255,0.7); margin-bottom: 12px;">Nog 00:00:00 geldig</p>
+                <div style="background: rgba(0,0,0,0.3); height: 22px; border-radius: 11px; overflow: hidden; position: relative;">
+                    <div class="coop-bar-fill" style="background: #34c759; width: 0%; height: 100%; transition: width 0.5s;"></div>
+                    <span class="coop-progress-text" style="position: absolute; width: 100%; text-align: center; top: 3px; left: 0; font-size: 13px; font-weight: bold; color: white;">0 / 0</span>
+                </div>
+            </div>
+
+            <!-- SECRET ASSASSIN -->
+            <div class="card" style="background: #1c1c1e; color: white;">
+                <h2 style="color: white; border-bottom: 1px solid #333; margin-top: 0;">🥷 Secret Assassin</h2>
+                <p style="font-size: 14px; color: #a1a1aa; margin-top: 0;">Laat dit aan niemand zien!</p>
+                <div style="background: #2c2c2e; padding: 15px; border-radius: 10px; margin-bottom: 15px; text-align: center;">
+                    <strong id="geheime-missie-tekst" style="font-size: 16px; color: #ff9500;">Missie laden...</strong>
+                </div>
+                <button class="btn-secundair" style="background-color: #ff3b30; width: 100%; border: none; padding: 15px; border-radius: 10px; color: white; font-weight: bold; cursor: pointer;" onclick="voltooiGeheimeMissie()">
+                    Missie Voltooid (+3 MVP Coins!)
+                </button>
+            </div>
+        </div>
+
+        <!-- ============================== -->
+        <!-- PAGINA 4: WERELDKAART -->
+        <!-- ============================== -->
+        <div id="page-kaart" class="page">
+            <div class="card" style="padding: 15px 10px;">
+                <h2>Interactieve Kaart 📍</h2>
+                <p style="font-size: 14px; color: #666; margin-top: 0; margin-bottom: 15px;">Locaties per persoon worden automatisch opgeteld tot grotere iconen.</p>
+                <div id="map"></div>
+            </div>
+            <div class="card">
+                <h2>Vakantiemodus 🌴</h2>
+                <p style="font-size: 14px; color: #666;">Zet dit aan om bij elke score je GPS-locatie op de kaart te zetten.</p>
+                <button id="btn-gps" class="btn-secundair" onclick="toggleVakantiemodus()">GPS Tracker Aanzetten</button>
+            </div>
+        </div>
+
+        <!-- ============================== -->
+        <!-- PAGINA 5: STATISTIEKEN -->
+        <!-- ============================== -->
+        <div id="page-stats" class="page">
+            <div class="card">
+                <h2>Kater-Voorspeller 🤮</h2>
+                <p style="font-size: 14px; color: #666; margin-top: 0;">Analyse op basis van mixdrank, bier en vettig eten.</p>
+                <div id="kater-container"></div>
+            </div>
+            <div class="card">
+                <h2>Wat drinkt de groep? 🍕</h2>
+                <div class="chart-container"><canvas id="groepPieChart"></canvas></div>
+            </div>
+            <div class="card">
+                <h2>Wie drinkt er het meest? 📊</h2>
+                <div class="chart-container"><canvas id="spelerBarChart"></canvas></div>
+            </div>
+            <div class="card">
+                <h2>Leaderboard Stats 🏆</h2>
+                <div id="stats-container">
+                    <p style="color: #666; text-align: center;">Gegevens worden geladen...</p>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Navigatiebalk Onderkant -->
+    <div class="bottom-nav" id="bottom-nav">
+        <div class="nav-item active" onclick="wisselPagina('page-scorebord', this)">
+            <span class="nav-icon">📝</span>Scores
+        </div>
+        <div class="nav-item" onclick="wisselPagina('page-games', this)">
+            <span class="nav-icon">🕹️</span>Games
+        </div>
+        <div class="nav-item" onclick="wisselPagina('page-missies', this)">
+            <span class="nav-icon">🎯</span>Missies
+        </div>
+        <div class="nav-item" onclick="wisselPagina('page-kaart', this)">
+            <span class="nav-icon">🗺️</span>Kaart
+        </div>
+        <div class="nav-item" onclick="wisselPagina('page-stats', this)">
+            <span class="nav-icon">📊</span>Stats
         </div>
     </div>
 
-    <script>
-        const firebaseConfig = {
-            apiKey: "AIzaSyDF8LOSjnyIJXrloepCBvSLA2TCH3Us0H8",
-            authDomain: "befcounter.firebaseapp.com",
-            projectId: "befcounter",
-            storageBucket: "befcounter.firebasestorage.app",
-            messagingSenderId: "744277190850",
-            appId: "1:744277190850:web:791ef6faaadfe3a0a3b35b",
-            measurementId: "G-HEZYFL8GS5"
-        };
-        
-        firebase.initializeApp(firebaseConfig);
-        const db = firebase.firestore();
-
-        // ---------------------------------------------------------
-        // NOTIFICATIE LOGICA TOEGEVOEGD
-        // ---------------------------------------------------------
-        let messaging = null;
-        try {
-            if (typeof firebase.messaging === "function" && firebase.messaging.isSupported()) {
-                messaging = firebase.messaging();
-            }
-        } catch (error) {
-            console.log("Push notificaties worden momenteel niet ondersteund.");
-        }
-
-        if ('serviceWorker' in navigator) { 
-            navigator.serviceWorker.register('sw.js').then((reg) => {
-                if (messaging) {
-                    messaging.useServiceWorker(reg);
-                }
-            }); 
-        }
-
-        function setupPushNotificaties() {
-            if (!messaging) return;
-            messaging.requestPermission()
-                .then(() => {
-                    return messaging.getToken({ vapidKey: "BMfkVb0XKUWAPQ8HnB_79f1bvyB05Q-DSnkgzSvzfSN9n_ADzgW1FpAFJim8ftNfTeHA5BkUTJ1B-YhKIOyDL9k" });
-                })
-                .then((token) => {
-                    if (token && currentUser && currentGroup) {
-                        db.collection('groepen').doc(currentGroup).collection('scores').doc(currentUser).set({
-                            push_token: token
-                        }, { merge: true });
-                    }
-                })
-                .catch((err) => {
-                    console.log("Notificatie setup mislukt of geweigerd:", err);
-                });
-        }
-        // ---------------------------------------------------------
-
-        // Check lokale status
-        let currentUser = localStorage.getItem('bef_user');
-        let currentGroup = localStorage.getItem('bef_group');
-        let unsubscribeScores = null;
-        let unsubscribeFeed = null;
-
-        bepaalScherm();
-
-        function bepaalScherm() {
-            document.getElementById('auth-scherm').style.display = 'none';
-            document.getElementById('lobby-scherm').style.display = 'none';
-            document.getElementById('app-scherm').style.display = 'none';
-            document.getElementById('header-controls').style.display = 'none';
-
-            if (!currentUser) {
-                document.getElementById('auth-scherm').style.display = 'block';
-            } else if (!currentGroup) {
-                document.getElementById('lobby-gebruikersnaam').innerText = currentUser;
-                document.getElementById('lobby-scherm').style.display = 'block';
-            } else {
-                startApp();
-            }
-        }
-
-        // ==========================
-        // 1. AUTHENTICATIE
-        // ==========================
-        function registreer() {
-            const naam = document.getElementById('auth-naam').value.trim().toLowerCase();
-            const wachtwoord = document.getElementById('auth-wachtwoord').value;
-            
-            if (!naam || !wachtwoord) return alert('Vul zowel een naam als wachtwoord in!');
-
-            db.collection('gebruikers').doc(naam).get().then((doc) => {
-                if (doc.exists) {
-                    alert('Deze naam is al in gebruik. Kies een andere naam of log in.');
-                } else {
-                    db.collection('gebruikers').doc(naam).set({ wachtwoord: wachtwoord }).then(() => {
-                        localStorage.setItem('bef_user', naam);
-                        currentUser = naam;
-                        bepaalScherm();
-                    });
-                }
-            });
-        }
-
-        function login() {
-            const naam = document.getElementById('auth-naam').value.trim().toLowerCase();
-            const wachtwoord = document.getElementById('auth-wachtwoord').value;
-            
-            if (!naam || !wachtwoord) return alert('Vul zowel een naam als wachtwoord in!');
-
-            db.collection('gebruikers').doc(naam).get().then((doc) => {
-                if (!doc.exists || doc.data().wachtwoord !== wachtwoord) {
-                    alert('Verkeerde naam of wachtwoord!');
-                } else {
-                    localStorage.setItem('bef_user', naam);
-                    currentUser = naam;
-                    bepaalScherm();
-                }
-            });
-        }
-
-        function uitloggen() {
-            localStorage.removeItem('bef_user');
-            localStorage.removeItem('bef_group');
-            currentUser = null;
-            currentGroup = null;
-            if(unsubscribeScores) unsubscribeScores();
-            if(unsubscribeFeed) unsubscribeFeed();
-            bepaalScherm();
-        }
-
-        // ==========================
-        // 2. GROEPEN LOBBY
-        // ==========================
-        function maakNieuweGroep() {
-            const code = Math.random().toString(36).substring(2, 7).toUpperCase();
-            db.collection('groepen').doc(code).set({ maker: currentUser, aangemaakt: new Date() }).then(() => {
-                joinSpecifiekeGroep(code);
-            });
-        }
-
-        function joinGroep() {
-            const code = document.getElementById('lobby-code').value.trim().toUpperCase();
-            if (!code) return alert('Vul een code in.');
-            
-            db.collection('groepen').doc(code).get().then((doc) => {
-                if (!doc.exists) {
-                    alert('Groepscode niet gevonden!');
-                } else {
-                    joinSpecifiekeGroep(code);
-                }
-            });
-        }
-
-        function joinSpecifiekeGroep(code) {
-            db.collection('groepen').doc(code).collection('scores').doc(currentUser).set({
-                bier: 0, mix: 0, kiss: 0, rejection: 0, mvp: 0, doner: 0
-            }, { merge: true }).then(() => {
-                localStorage.setItem('bef_group', code);
-                currentGroup = code;
-                bepaalScherm();
-            });
-        }
-
-        function verlaatGroep() {
-            localStorage.removeItem('bef_group');
-            currentGroup = null;
-            if(unsubscribeScores) unsubscribeScores();
-            if(unsubscribeFeed) unsubscribeFeed();
-            bepaalScherm();
-        }
-
-        // ==========================
-        // 3. APP FUNCTIES (SCOREBORD)
-        // ==========================
-        function startApp() {
-            document.getElementById('app-scherm').style.display = 'block';
-            document.getElementById('header-controls').style.display = 'flex';
-            document.getElementById('ingelogde-naam').innerText = currentUser;
-            document.getElementById('display-groepscode').innerText = currentGroup;
-            
-            // Haal de token op en sla op
-            setupPushNotificaties();
-
-            bouwLiveScorebord();
-            luisterNaarLiveFeed();
-        }
-
-        function verwijderSpeler(naamUitTabel) {
-            if (confirm(`Weet je zeker dat je ${naamUitTabel} uit deze groep wilt verwijderen? De scores van deze persoon gaan dan definitief verloren.`)) {
-                db.collection('groepen').doc(currentGroup).collection('scores').doc(naamUitTabel).delete();
-            }
-        }
-        
-        // ---------------------------------------------------------
-        // BIERALARM WEBHOOK TOEGEVOEGD
-        // ---------------------------------------------------------
-        function stuurBierAlarm() {
-            if ("vibrate" in navigator) {
-                navigator.vibrate([200, 100, 200, 100, 200]);
-            }
-
-            const startBericht = `⚠️ RONDJE BIER VOOR ${currentUser.toUpperCase()}!`;
-
-            db.collection('groepen').doc(currentGroup).collection('feed').doc('laatste').set({
-                bericht: startBericht,
-                tijd: firebase.firestore.FieldValue.serverTimestamp()
-            });
-
-            // Webhook naar Make.com sturen
-            const MAKE_WEBHOOK_URL = "https://hook.eu1.make.com/iydcsfjwnlx3147b29w38texvyhgrr62";
-            db.collection('groepen').doc(currentGroup).collection('scores').get().then(snap => {
-                snap.forEach(doc => {
-                    if (doc.data().push_token) {
-                        fetch(MAKE_WEBHOOK_URL, {
-                            method: "POST",
-                            headers: { "Content-Type": "application/json" },
-                            body: JSON.stringify({
-                                token: doc.data().push_token,
-                                titel: "BefCounter Alarm 🚨",
-                                bericht: startBericht
-                            })
-                        }).catch(e => console.log(e));
-                    }
-                });
-            });
-        }
-        // ---------------------------------------------------------
-
-        function bouwLiveScorebord() {
-            if(unsubscribeScores) unsubscribeScores(); // Stop oude listeners
-            
-            unsubscribeScores = db.collection('groepen').doc(currentGroup).collection('scores').onSnapshot((snapshot) => {
-                
-                let html = `
-                    <tr>
-                        <th style="text-align: left; padding-left: 10px;">Wie</th>
-                        <th>🍺</th>
-                        <th>🍹</th>
-                        <th>😘</th>
-                        <th>💔</th>
-                        <th>👑</th>
-                        <th>🥙</th>
-                        <th class="totaal-kolom">Tot</th>
-                        <th></th>
-                    </tr>
-                `;
-
-                let somBier = 0, somMix = 0, somKiss = 0, somReject = 0, somMvp = 0, somDoner = 0, somAlles = 0;
-
-                snapshot.forEach((doc) => {
-                    const data = doc.data();
-                    const naam = doc.id;
-                    
-                    const b = data.bier || 0;
-                    const m = data.mix || 0;
-                    const k = data.kiss || 0;
-                    const r = data.rejection || 0;
-                    const mv = data.mvp || 0;
-                    const d = data.doner || 0;
-                    
-                    const persoonTotaal = b + m + k + r + mv + d;
-
-                    somBier += b; somMix += m; somKiss += k; somReject += r; somMvp += mv; somDoner += d;
-                    somAlles += persoonTotaal;
-
-                    html += `
-                        <tr>
-                            <td class="naam-kolom" style="padding-left: 10px;">${naam}</td>
-                            <td>${b}</td>
-                            <td>${m}</td>
-                            <td>${k}</td>
-                            <td>${r}</td>
-                            <td>${mv}</td>
-                            <td>${d}</td>
-                            <td class="totaal-kolom">${persoonTotaal}</td>
-                            <td><button class="btn-verwijder" onclick="verwijderSpeler('${naam}')">X</button></td>
-                        </tr>
-                    `;
-                });
-
-                html += `
-                    <tr class="totaal-rij">
-                        <td style="text-align: left; padding-left: 10px;">Totaal</td>
-                        <td>${somBier}</td>
-                        <td>${somMix}</td>
-                        <td>${somKiss}</td>
-                        <td>${somReject}</td>
-                        <td>${somMvp}</td>
-                        <td>${somDoner}</td>
-                        <td class="totaal-kolom">${somAlles}</td>
-                        <td></td>
-                    </tr>
-                `;
-
-                document.getElementById('score-tabel').innerHTML = html;
-            });
-        }
-
-        function pasScoreAan(categorie, bedrag, emojiNaam) {
-            if ("vibrate" in navigator) {
-                navigator.vibrate(50);
-            }
-            db.collection('groepen').doc(currentGroup).collection('scores').doc(currentUser).set({
-                [categorie]: firebase.firestore.FieldValue.increment(bedrag)
-            }, { merge: true });
-
-            const actieTekst = bedrag > 0 ? "heeft +1 gescoord bij" : "heeft een correctie gedaan (-1) bij";
-            const startBericht = `${currentUser.charAt(0).toUpperCase() + currentUser.slice(1)} ${actieTekst} ${emojiNaam}!`;
-            
-            db.collection('groepen').doc(currentGroup).collection('feed').doc('laatste').set({
-                bericht: startBericht,
-                tijd: firebase.firestore.FieldValue.serverTimestamp()
-            });
-
-            // ---------------------------------------------------------
-            // SCORE WEBHOOK TOEGEVOEGD
-            // ---------------------------------------------------------
-            const MAKE_WEBHOOK_URL = "https://hook.eu1.make.com/iydcsfjwnlx3147b29w38texvyhgrr62";
-
-            db.collection('groepen').doc(currentGroup).collection('scores').get().then(snap => {
-                snap.forEach(doc => {
-                    if (doc.data().push_token) {
-                        fetch(MAKE_WEBHOOK_URL, {
-                            method: "POST",
-                            headers: { "Content-Type": "application/json" },
-                            body: JSON.stringify({
-                                token: doc.data().push_token,
-                                titel: "BefCounter 🍻",
-                                bericht: startBericht
-                            })
-                        }).catch(e => console.log(e));
-                    }
-                });
-            });
-            // ---------------------------------------------------------
-        }
-
-        function luisterNaarLiveFeed() {
-            if(unsubscribeFeed) unsubscribeFeed();
-            
-            unsubscribeFeed = db.collection('groepen').doc(currentGroup).collection('feed').doc('laatste').onSnapshot((doc) => {
-                if (doc.exists) {
-                    const data = doc.data();
-                    if(data.bericht) {
-                        const ticker = document.getElementById('live-ticker');
-                        ticker.innerText = data.bericht;
-                        ticker.style.display = 'block';
-                        
-                        setTimeout(() => {
-                            ticker.style.display = 'none';
-                        }, 4000);
-                    }
-                }
-            });
-        }
-    </script>
+    <script src="app.js"></script>
 </body>
 </html>
