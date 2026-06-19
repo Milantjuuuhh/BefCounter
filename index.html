@@ -5,164 +5,152 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>BefCounter</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-    <link rel="stylesheet" href="main.css?v=2">
+    <link rel="stylesheet" href="style.css?v=2">
 </head>
 <body>
+    <div id="live-ticker"></div>
 
-    <div id="live-ticker" class="ticker-wrap" style="display: none;"></div>
+    <div class="header">
+        <h1>BefCounter</h1>
+        <div id="header-controls" class="header-controls">
+            <span class="groep-badge" id="display-groepscode">Groep</span>
+            <span class="coin-badge">🪙 <span id="coin-weergave">0</span></span>
+            <button onclick="uitloggen()" class="btn-gevaar">Uitloggen</button>
+        </div>
+    </div>
+
+    <div class="container">
+        <div id="auth-container">
+            <div id="auth-scherm" class="card active">
+                <h2>BefCounter Login</h2>
+                <input type="text" id="auth-naam" placeholder="Gebruikersnaam">
+                <input type="password" id="auth-wachtwoord" placeholder="Wachtwoord">
+                <button onclick="login()" class="btn-primair">Inloggen</button>
+                <button onclick="registreer()" class="btn-secundair">Registreren</button>
+            </div>
+
+            <div id="lobby-scherm" class="card">
+                <h2>Welkom, <span id="lobby-gebruikersnaam"></span>!</h2>
+                <button onclick="maakNieuweGroep()" class="btn-primair">Groep Aanmaken</button>
+                <input type="text" id="lobby-code" placeholder="GROEPSCODE" style="margin-top: 15px;">
+                <button onclick="joinGroep()" class="btn-secundair">Join Groep</button>
+            </div>
+        </div>
+
+        <div id="app-scherm">
+            <div id="page-scores" class="page active">
+                <div class="card">
+                    <h2>Scores Invoeren</h2>
+                    <div class="actie-grid">
+                        <div class="actie-kaart bg-bier">
+                            <span class="emoji">🍺</span><span class="titel">Pils</span>
+                            <div class="knoppen-groep">
+                                <button class="btn-actie btn-min" onclick="pasScoreAan('bier', -1, '🍺 Bier')">-1</button>
+                                <button class="btn-actie btn-plus" onclick="pasScoreAan('bier', 1, '🍺 Bier')">+1</button>
+                            </div>
+                        </div>
+                        <div class="actie-kaart bg-mix">
+                            <span class="emoji">🍹</span><span class="titel">Mix</span>
+                            <div class="knoppen-groep">
+                                <button class="btn-actie btn-min" onclick="pasScoreAan('mix', -1, '🍹 Mixje')">-1</button>
+                                <button class="btn-actie btn-plus" onclick="pasScoreAan('mix', 1, '🍹 Mixje')">+1</button>
+                            </div>
+                        </div>
+                        <div class="actie-kaart bg-kiss">
+                            <span class="emoji">😘</span><span class="titel">Kiss</span>
+                            <div class="knoppen-groep">
+                                <button class="btn-actie btn-min" onclick="pasScoreAan('kiss', -1, '😘 Kiss')">-1</button>
+                                <button class="btn-actie btn-plus" onclick="pasScoreAan('kiss', 1, '😘 Kiss')">+1</button>
+                            </div>
+                        </div>
+                        <div class="actie-kaart bg-reject">
+                            <span class="emoji">💔</span><span class="titel">Reject</span>
+                            <div class="knoppen-groep">
+                                <button class="btn-actie btn-min" onclick="pasScoreAan('rejection', -1, '💔 Reject')">-1</button>
+                                <button class="btn-actie btn-plus" onclick="pasScoreAan('rejection', 1, '💔 Reject')">+1</button>
+                            </div>
+                        </div>
+                        <div class="actie-kaart bg-mvp">
+                            <span class="emoji">👑</span><span class="titel">MVP</span>
+                            <div class="knoppen-groep">
+                                <button class="btn-actie btn-min" onclick="pasScoreAan('mvp', -1, '👑 MVP')">-1</button>
+                                <button class="btn-actie btn-plus" onclick="pasScoreAan('mvp', 1, '👑 MVP')">+1</button>
+                            </div>
+                        </div>
+                        <div class="actie-kaart bg-doner">
+                            <span class="emoji">🥙</span><span class="titel">Döner</span>
+                            <div class="knoppen-groep">
+                                <button class="btn-actie btn-min" onclick="pasScoreAan('doner', -1, '🥙 Döner')">-1</button>
+                                <button class="btn-actie btn-plus" onclick="pasScoreAan('doner', 1, '🥙 Döner')">+1</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card" style="overflow-x: auto;">
+                    <table id="score-tabel"></table>
+                </div>
+            </div>
+
+            <div id="page-games" class="page">
+                <div class="card">
+                    <h2>🎡 Rad van Fortuin</h2>
+                    <div id="rad-box"><span id="rad-uitkomst">Draai het rad!</span></div>
+                    <button onclick="draaiRad()" class="btn-primair">Draai</button>
+                </div>
+                <div class="card bom-card" id="bom-card">
+                    <h2>💣 Tijdbom</h2>
+                    <div id="bom-idle-ui"><button onclick="startTijdbom()" class="btn-primair">Start</button></div>
+                    <div id="bom-active-ui" style="display:none;"><p id="bom-status-tekst"></p><button id="btn-gooi-door" onclick="gooiBomDoor()" class="btn-gevaar">Gooi door!</button></div>
+                </div>
+                <div class="card">
+                    <h2>🌴 Bingo</h2>
+                    <div id="bingo-grid" class="bingo-grid"></div>
+                </div>
+            </div>
+
+            <div id="page-stats" class="page">
+                <div class="card">
+                    <h2>Statistieken</h2>
+                    <div id="stats-container"></div>
+                    <div class="chart-container"><canvas id="groepPieChart"></canvas></div>
+                    <div class="chart-container"><canvas id="spelerBarChart"></canvas></div>
+                </div>
+                <div class="card">
+                    <h2>Kater Voorspeller</h2>
+                    <div id="kater-container"></div>
+                </div>
+            </div>
+
+            <div id="page-kaart" class="page">
+                <div class="card">
+                    <h2>Kaart</h2>
+                    <div id="map"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="bottom-nav" id="bottom-nav">
+        <div class="nav-item active" onclick="wisselPagina('page-scores', this)"><span class="nav-icon">📊</span>Scores</div>
+        <div class="nav-item" onclick="wisselPagina('page-games', this)"><span class="nav-icon">🎮</span>Games</div>
+        <div class="nav-item" onclick="wisselPagina('page-stats', this)"><span class="nav-icon">📈</span>Stats</div>
+        <div class="nav-item" onclick="wisselPagina('page-kaart', this)"><span class="nav-icon">📍</span>Kaart</div>
+    </div>
+
+    <div id="swasi-overlay">
+        <div id="swasi-instructie">Vingers op het scherm</div>
+        <div id="swasi-countdown">3</div>
+        <button id="swasi-sluit-btn" onclick="stopSwasi()" class="btn-gevaar">Sluiten</button>
+    </div>
 
     <audio id="notificatie-geluid" src="https://assets.mixkit.co/active_storage/sfx/2869/2869-500.wav" preload="auto"></audio>
-
-    <div id="header-controls" class="header" style="display: none;">
-        <div class="header-info">
-            <span id="ingelogde-naam"></span> @ <span id="display-groepscode"></span>
-        </div>
-        <div class="coin-box">
-            🪙 <span id="coin-weergave">0</span> Coins
-        </div>
-        <button onclick="uitloggen()" class="btn-logout">Uitloggen</button>
-    </div>
-
-    <div id="auth-container">
-        <div id="auth-scherm" class="auth-card">
-            <h2>BefCounter Login</h2>
-            <input type="text" id="auth-naam" placeholder="Gebruikersnaam">
-            <input type="password" id="auth-wachtwoord" placeholder="Wachtwoord">
-            <div class="auth-buttons">
-                <button onclick="login()" class="btn-primary">Inloggen</button>
-                <button onclick="registreer()" class="btn-secondary">Registreren</button>
-            </div>
-        </div>
-
-        <div id="lobby-scherm" class="auth-card" style="display: none;">
-            <h2>Welkom, <span id="lobby-gebruikersnaam"></span>!</h2>
-            <p>Maak een nieuwe groep aan of join een bestaande code.</p>
-            <button onclick="maakNieuweGroep()" class="btn-primary">Groep Aanmaken</button>
-            <div class="divider">of join met code</div>
-            <input type="text" id="lobby-code" placeholder="GROEPSCODE" style="text-transform: uppercase;">
-            <button onclick="joinGroep()" class="btn-secondary">Join Groep</button>
-        </div>
-    </div>
-
-    <div id="app-scherm" style="display: none;" class="app-container">
-        
-        <div id="page-scores" class="page active">
-            <div class="coop-card">
-                <div class="coop-header">
-                    <span class="coop-titel-text">Laden van missie...</span>
-                    <span class="coop-timer-text">Nog 00:00:00 geldig</span>
-                </div>
-                <div class="coop-progress-bg">
-                    <div class="coop-bar-fill" style="width: 0%;"></div>
-                </div>
-                <div class="coop-footer">
-                    <span>Groepsdoel voortgang:</span>
-                    <span class="coop-progress-text">0 / 0</span>
-                </div>
-            </div>
-
-            <div class="score-input-grid">
-                <button onclick="pasScoreAan('bier', 1, '🍺 Bier')" class="btn-action pils">🍺 +1 Pils</button>
-                <button onclick="pasScoreAan('mix', 1, '🍹 Mixje')" class="btn-action mix">🍹 +1 Mix</button>
-                <button onclick="pasScoreAan('kiss', 1, '😘 Kiss')" class="btn-action kiss">😘 +1 Kiss</button>
-                <button onclick="pasScoreAan('rejection', 1, '💔 Reject')" class="btn-action reject">💔 +1 Reject</button>
-                <button onclick="pasScoreAan('mvp', 1, '👑 MVP')" class="btn-action mvp">👑 +1 MVP</button>
-                <button onclick="pasScoreAan('doner', 1, '🥙 Döner')" class="btn-action doner">🥙 +1 Döner</button>
-            </div>
-
-            <div class="table-responsive">
-                <table id="score-tabel" class="score-table"></table>
-            </div>
-
-            <button onclick="stuurBierAlarm()" class="btn-alarm">⚠️ GEF BIER ALARM</button>
-        </div>
-
-        <div id="page-games" class="page">
-            <div class="game-row">
-                <div class="game-card">
-                    <h3>🥷 Je Geheime Moordenaarsmissie</h3>
-                    <p id="geheime-missie-tekst">Laden...</p>
-                    <button onclick="voltooiGeheimeMissie()" class="btn-game-clear">Missie Voltooid (+3 Coins)</button>
-                </div>
-            </div>
-
-            <div class="game-card">
-                <h3>🌴 Vakantie Bingo</h3>
-                <div id="bingo-grid" class="bingo-container"></div>
-            </div>
-
-            <div id="bom-card" class="game-card bom-card">
-                <h3>💣 De Tijdbom Roulette</h3>
-                <div id="bom-idle-ui">
-                    <p>De bom ligt momenteel stil.</p>
-                    <button onclick="startTijdbom()" class="btn-primary">Bom Starten!</button>
-                </div>
-                <div id="bom-active-ui" style="display: none;">
-                    <p id="bom-status-tekst">Bom tikken...</p>
-                    <button id="btn-gooi-door" onclick="gooiBomDoor()" class="btn-bom-throw" style="display: none;">👉 GOOI DOOR!</button>
-                </div>
-            </div>
-
-            <div class="game-card">
-                <h3>🎡 Rad van Fortuin</h3>
-                <p>Kost 1 coin van je totaalscore om te draaien!</p>
-                <div id="rad-box" class="rad-visual">
-                    <span id="rad-uitkomst">Draai het rad!</span>
-                </div>
-                <button onclick="draaiRad()" class="btn-primary">Draai het Rad</button>
-            </div>
-
-            <div class="game-card">
-                <h3>☝️ Swasi Finger Roulette</h3>
-                <p>Wie moet het volgende rondje halen? Bepaal het live!</p>
-                <button onclick="startSwasi()" class="btn-primary">Start Vinger Roulette</button>
-            </div>
-        </div>
-
-        <div id="page-stats" class="page">
-            <div class="game-card">
-                <h3>📊 Live Groepstatistieken</h3>
-                <div id="stats-container"></div>
-            </div>
-            <div class="chart-container-box">
-                <div class="chart-wrapper"><canvas id="groepPieChart"></canvas></div>
-                <div class="chart-wrapper"><canvas id="spelerBarChart"></canvas></div>
-            </div>
-            <div class="game-card">
-                <h3>🤢 Kater Kans Berekening</h3>
-                <div id="kater-container"></div>
-            </div>
-        </div>
-
-        <div id="page-kaart" class="page">
-            <div class="game-card map-card">
-                <h3>📍 Live Speler Locaties (Vakantiemodus)</h3>
-                <div id="map" style="height: 400px; width: 100%; border-radius: 12px;"></div>
-            </div>
-        </div>
-
-    </div>
-
-    <div id="bottom-nav" class="bottom-nav" style="display: none;">
-        <div class="nav-item active" onclick="wisselPagina('page-scores', this)">📊 Scores</div>
-        <div class="nav-item" onclick="wisselPagina('page-games', this)">🎮 Games</div>
-        <div class="nav-item" onclick="wisselPagina('page-stats', this)">📈 Stats</div>
-        <div class="nav-item" onclick="wisselPagina('page-kaart', this)">📍 Kaart</div>
-    </div>
-
-    <div id="swasi-overlay" class="swasi-fullscreen" style="display: none;">
-        <div id="swasi-instructie" class="swasi-text">Plaats allemaal 1 vinger op het scherm...</div>
-        <div id="swasi-countdown" class="swasi-countdown" style="display: none;">3</div>
-        <button id="swasi-sluit-btn" onclick="stopSwasi()" class="btn-swasi-close" style="display: none;">Sluiten</button>
-    </div>
 
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-messaging.js"></script>
-
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-
     <script src="app.js"></script>
 </body>
 </html>
