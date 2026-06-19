@@ -505,14 +505,16 @@ function luisterNaarReflex() {
             reflexGroenTijd = groen;
             reflexGeklikt = false;
             
-            btn.style.backgroundColor = '#ff3b30'; // Rode kleur
-            btn.innerText = 'Wacht...';
-            btn.disabled = false;
+            if(btn) {
+                btn.style.backgroundColor = '#ff3b30'; // Rode kleur
+                btn.innerText = 'Wacht...';
+                btn.disabled = false;
+            }
             
             // Loopje dat wacht tot het groen mag worden
             clearInterval(reflexInterval);
             reflexInterval = setInterval(() => {
-                if (Date.now() >= reflexGroenTijd && btn.style.backgroundColor !== 'rgb(52, 199, 89)' && !reflexGeklikt) {
+                if (Date.now() >= reflexGroenTijd && btn && btn.style.backgroundColor !== 'rgb(52, 199, 89)' && !reflexGeklikt) {
                     btn.style.backgroundColor = '#34c759'; // Groene kleur
                     btn.innerText = 'KLIK NU!';
                 }
@@ -520,7 +522,7 @@ function luisterNaarReflex() {
         }
 
         // Leaderboard tekenen
-        if (Object.keys(scores).length > 0) {
+        if (Object.keys(scores).length > 0 && lb) {
             lb.style.display = 'block';
             let arr = [];
             for (let speler in scores) {
@@ -542,7 +544,7 @@ function luisterNaarReflex() {
             });
             html += '</ol>';
             lb.innerHTML = html;
-        } else {
+        } else if (lb) {
             lb.style.display = 'none';
         }
     });
@@ -572,10 +574,12 @@ function klikReflex(e) {
         if ("vibrate" in navigator) navigator.vibrate([200, 100, 200]);
     }
 
-    document.getElementById('reflex-btn').innerText = 'Geklikt!';
-    document.getElementById('reflex-btn').style.backgroundColor = '#8e8e93';
+    const btn = document.getElementById('reflex-btn');
+    if (btn) {
+        btn.innerText = 'Geklikt!';
+        btn.style.backgroundColor = '#8e8e93';
+    }
 
-    // Voeg jouw score live toe aan Firebase
     db.collection('groepen').doc(currentGroup).collection('games').doc('reflex').set({
         scores: { [currentUser]: tijdScore }
     }, { merge: true });
@@ -632,4 +636,58 @@ function luisterNaarCoopMissie() {
             stuurNaarFeed("🎉 CO-OP MISSIE BEHAALD! Iedereen bedankt, +5 Punten voor de finale tik!");
         }
     });
+}
+
+function updateCoinWeergave() { 
+    const coins = Math.max(0, mijnTotalePunten - mijnGedraaideSpins);
+    document.querySelectorAll('.coin-weergave-class').forEach(el => el.innerText = coins);
+}
+function verwijderSpeler(naam) { if (confirm(`Verwijder ${naam}?`)) db.collection('groepen').doc(currentGroup).collection('scores').doc(naam).delete(); }
+
+function stuurNaarFeed(bericht) { db.collection('groepen').doc(currentGroup).collection('feed').doc('laatste').set({ bericht: bericht, tijd: firebase.firestore.FieldValue.serverTimestamp() }); }
+
+function luisterNaarLiveFeed() {
+    if(unsubscribeFeed) unsubscribeFeed();
+    let laatsteMelding = "";
+    unsubscribeFeed = db.collection('groepen').doc(currentGroup).collection('feed').doc('laatste').onSnapshot((doc) => {
+        if (!doc.exists || doc.data().bericht === laatsteMelding) return;
+        laatsteMelding = doc.data().bericht;
+        const ticker = document.getElementById('live-ticker');
+        ticker.innerText = laatsteMelding; ticker.style.display = 'block';
+        if ("vibrate" in navigator) navigator.vibrate([200,100,200]);
+        const geluid = document.getElementById('notificatie-geluid');
+        if (geluid) { geluid.currentTime = 0; geluid.play().catch(e => {}); }
+        setTimeout(() => { ticker.style.display = 'none'; }, 5000);
+    });
+}
+
+function tekenGrafieken(b, m, sh, k, r, ra, ko, sl, namen, drankjes) {
+    if (pieChartInstance) pieChartInstance.destroy();
+    pieChartInstance = new Chart(document.getElementById('groepPieChart'), { type: 'pie', data: { labels: ['Bier','Mix','Shotje','Kiss','Reject','Raggen', 'Kotsen', 'Sleutel'], datasets: [{ data: [b,m,sh,k,r,ra,ko,sl], backgroundColor: ['#f1c40f','#9b59b6','#e17055','#ff7675','#636e72','#ffeaa7','#16a085','#bdc3c7'] }] }, options: { responsive: true, maintainAspectRatio: false } });
+    if (barChartInstance) barChartInstance.destroy();
+    barChartInstance = new Chart(document.getElementById('spelerBarChart'), { type: 'bar', data: { labels: namen, datasets: [{ label: 'Drankjes', data: drankjes, backgroundColor: '#007aff' }] }, options: { responsive: true, maintainAspectRatio: false } });
+}
+
+function initKaart() {
+    if (!worldMap) {
+        worldMap = L.map('map').setView([45.0, 5.0], 4);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(worldMap);
+        db.collection('groepen').doc(currentGroup).collection('locaties').onSnapshot(snap => {
+            mapMarkers.forEach(m => worldMap.removeLayer(m)); mapMarkers = []; const groepen = {};
+            snap.forEach(doc => {
+                const data = doc.data(); if(data.lat && data.lng) {
+                    const s = `${data.naam}_${data.lat.toFixed(4)}_${data.lng.toFixed(4)}`;
+                    if (!groepen[s]) groepen[s] = { naam: data.naam, lat: data.lat, lng: data.lng, acties: {} };
+                    groepen[s].acties[data.actie] = (groepen[s].acties[data.actie] || 0) + 1;
+                }
+            });
+            Object.values(groepen).forEach(g => {
+                let pc = `<b>${g.naam}</b><br>`, ta = 0, he = "🍺";
+                Object.entries(g.acties).forEach(([a, n]) => { pc += `${a}: ${n}x<br>`; ta += n; he = a.split(' ')[0]; });
+                const icon = L.divIcon({ html: `<div class="custom-maps-marker-wrapper" style="width:52px;height:52px;"><span style="font-size:34px;">${he}</span><span style="position:absolute;top:-6px;right:-6px;background:#ff3b30;color:white;font-size:13px;font-weight:900;border-radius:50%;width:22px;height:22px;display:flex;align-items:center;justify-content:center;border:2px solid white;">${ta}</span></div>`, className: '', iconSize: [52,52], iconAnchor: [26,26] });
+                const marker = L.marker([g.lat, g.lng], { icon: icon }).bindPopup(pc);
+                marker.addTo(worldMap); mapMarkers.push(marker);
+            });
+        });
+    } else worldMap.invalidateSize();
 }
