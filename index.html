@@ -13,7 +13,7 @@
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     
-    <link rel="stylesheet" href="style.css?v=8">
+    <link rel="stylesheet" href="style.css?v=10">
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
 </head>
@@ -22,7 +22,6 @@
     <audio id="notificatie-geluid" src="https://www.soundjay.com/buttons/sounds/button-09.mp3" preload="auto"></audio>
     <div id="live-ticker" onclick="this.style.display='none'"></div>
 
-    <!-- FULLSCREEN SWASI OVERLAY -->
     <div id="swasi-overlay">
         <h2 id="swasi-instructie" style="color: white; position: absolute; top: 15%; width: 100%; text-align: center; pointer-events: none; opacity: 0.8; font-size: 22px;">Plaats allemaal 1 vinger...</h2>
         <div id="swasi-countdown" style="display: none;">3</div>
@@ -45,7 +44,6 @@
             <button class="btn-primair" onclick="login()">Inloggen</button>
             <button class="btn-secundair" onclick="registreer()">Nieuw Account</button>
         </div>
-
         <div id="lobby-scherm" class="card">
             <h2>Welkom <span id="lobby-gebruikersnaam" style="color:#007aff; text-transform:capitalize;"></span>!</h2>
             <input type="text" id="lobby-code" placeholder="Vul Groepscode in (bijv. X8R2P)" style="text-transform: uppercase;">
@@ -56,13 +54,8 @@
         </div>
     </div>
 
-    <!-- Hoofd Applicatie Schermen -->
     <div id="app-scherm" class="container">
-
-        <!-- PAGINA 1: SCOREBORD -->
         <div id="page-scorebord" class="page active">
-
-            <!-- VERNIEUWDE TABEL -->
             <div class="table-wrapper">
                 <table id="score-tabel"></table>
             </div>
@@ -70,241 +63,87 @@
             <div class="card">
                 <h2>Punten voor: <span id="ingelogde-naam" style="color: #007aff; text-transform: capitalize;"></span></h2>
                 <div class="actie-grid">
-                    <div class="actie-kaart bg-bier"><span class="emoji">🍺</span><span class="titel">Bier (1p)</span><div class="knoppen-groep"><button class="btn-actie btn-min" onclick="pasScoreAan('bier', -1, '🍺 Bier')">-1</button><button class="btn-actie btn-plus" onclick="pasScoreAan('bier', 1, '🍺 Bier')">+1</button></div></div>
-                    <div class="actie-kaart bg-mix"><span class="emoji">🍹</span><span class="titel">Mix (2p)</span><div class="knoppen-groep"><button class="btn-actie btn-min" onclick="pasScoreAan('mix', -1, '🍹 Mix')">-1</button><button class="btn-actie btn-plus" onclick="pasScoreAan('mix', 1, '🍹 Mix')">+1</button></div></div>
-                    <div class="actie-kaart bg-shotje"><span class="emoji">🥃</span><span class="titel">Shotje (2p)</span><div class="knoppen-groep"><button class="btn-actie btn-min" onclick="pasScoreAan('shotje', -1, '🥃 Shotje')">-1</button><button class="btn-actie btn-plus" onclick="pasScoreAan('shotje', 1, '🥃 Shotje')">+1</button></div></div>
-                    <div class="actie-kaart bg-kiss"><span class="emoji">😘</span><span class="titel">Kiss (10p)</span><div class="knoppen-groep"><button class="btn-actie btn-min" onclick="pasScoreAan('kiss', -1, '😘 Kiss')">-1</button><button class="btn-actie btn-plus" onclick="pasScoreAan('kiss', 1, '😘 Kiss')">+1</button></div></div>
-                    <div class="actie-kaart bg-reject"><span class="emoji">💔</span><span class="titel">Reject (5p)</span><div class="knoppen-groep"><button class="btn-actie btn-min" onclick="pasScoreAan('rejection', -1, '💔 Reject')">-1</button><button class="btn-actie btn-plus" onclick="pasScoreAan('rejection', 1, '💔 Reject')">+1</button></div></div>
-                    <div class="actie-kaart bg-raggen"><span class="emoji">🚀</span><span class="titel">Raggen (15p)</span><div class="knoppen-groep"><button class="btn-actie btn-min" onclick="pasScoreAan('raggen', -1, '🚀 Raggen')">-1</button><button class="btn-actie btn-plus" onclick="pasScoreAan('raggen', 1, '🚀 Raggen')">+1</button></div></div>
-                    <div class="actie-kaart bg-kotsen"><span class="emoji">🤮</span><span class="titel">Kotsen (5p)</span><div class="knoppen-groep"><button class="btn-actie btn-min" onclick="pasScoreAan('kotsen', -1, '🤮 Kotsen')">-1</button><button class="btn-actie btn-plus" onclick="pasScoreAan('kotsen', 1, '🤮 Kotsen')">+1</button></div></div>
-                    <div class="actie-kaart bg-sleutel"><span class="emoji">🔑</span><span class="titel">Sleutel (5p)</span><div class="knoppen-groep"><button class="btn-actie btn-min" onclick="pasScoreAan('sleutel', -1, '🔑 Sleutel')">-1</button><button class="btn-actie btn-plus" onclick="pasScoreAan('sleutel', 1, '🔑 Sleutel')">+1</button></div></div>
+                    <div class="actie-kaart bg-bier"><span class="emoji">🍺</span><span class="titel">Bier (1)</span><div class="knoppen-groep"><button class="btn-actie btn-min" onclick="pasScoreAan('bier', -1, '🍺 Bier')">-1</button><button class="btn-actie btn-plus" onclick="pasScoreAan('bier', 1, '🍺 Bier')">+1</button></div></div>
+                    <div class="actie-kaart bg-mix"><span class="emoji">🍹</span><span class="titel">Mix (2)</span><div class="knoppen-groep"><button class="btn-actie btn-min" onclick="pasScoreAan('mix', -1, '🍹 Mix')">-1</button><button class="btn-actie btn-plus" onclick="pasScoreAan('mix', 1, '🍹 Mix')">+1</button></div></div>
+                    <div class="actie-kaart bg-shotje"><span class="emoji">🥃</span><span class="titel">Shotje (2)</span><div class="knoppen-groep"><button class="btn-actie btn-min" onclick="pasScoreAan('shotje', -1, '🥃 Shotje')">-1</button><button class="btn-actie btn-plus" onclick="pasScoreAan('shotje', 1, '🥃 Shotje')">+1</button></div></div>
+                    <div class="actie-kaart bg-kiss"><span class="emoji">😘</span><span class="titel">Kiss (10)</span><div class="knoppen-groep"><button class="btn-actie btn-min" onclick="pasScoreAan('kiss', -1, '😘 Kiss')">-1</button><button class="btn-actie btn-plus" onclick="pasScoreAan('kiss', 1, '😘 Kiss')">+1</button></div></div>
+                    <div class="actie-kaart bg-reject"><span class="emoji">💔</span><span class="titel">Reject (5)</span><div class="knoppen-groep"><button class="btn-actie btn-min" onclick="pasScoreAan('rejection', -1, '💔 Reject')">-1</button><button class="btn-actie btn-plus" onclick="pasScoreAan('rejection', 1, '💔 Reject')">+1</button></div></div>
+                    <div class="actie-kaart bg-raggen"><span class="emoji">🚀</span><span class="titel">Raggen (15)</span><div class="knoppen-groep"><button class="btn-actie btn-min" onclick="pasScoreAan('raggen', -1, '🚀 Raggen')">-1</button><button class="btn-actie btn-plus" onclick="pasScoreAan('raggen', 1, '🚀 Raggen')">+1</button></div></div>
+                    <div class="actie-kaart bg-kotsen"><span class="emoji">🤮</span><span class="titel">Kotsen (5)</span><div class="knoppen-groep"><button class="btn-actie btn-min" onclick="pasScoreAan('kotsen', -1, '🤮 Kotsen')">-1</button><button class="btn-actie btn-plus" onclick="pasScoreAan('kotsen', 1, '🤮 Kotsen')">+1</button></div></div>
+                    <div class="actie-kaart bg-sleutel"><span class="emoji">🔑</span><span class="titel">Sleutel (5)</span><div class="knoppen-groep"><button class="btn-actie btn-min" onclick="pasScoreAan('sleutel', -1, '🔑 Sleutel')">-1</button><button class="btn-actie btn-plus" onclick="pasScoreAan('sleutel', 1, '🔑 Sleutel')">+1</button></div></div>
                 </div>
             </div>
         </div>
 
-        <!-- PAGINA 2: GAMES (OVERZICHT ICONEN) -->
         <div id="page-games" class="page">
             <h2 style="margin-left: 10px;">Selecteer een Game</h2>
             <div class="games-grid">
-                <div class="game-icon" onclick="startSwasi()">
-                    <span class="g-emoji">👆</span><span>Swasi</span>
-                </div>
-                <div class="game-icon" onclick="openGame('modal-bom')">
-                    <span class="g-emoji">💣</span><span>Tijdbom</span>
-                </div>
-                <div class="game-icon" onclick="openGame('modal-rad')">
-                    <span class="g-emoji">🎰</span><span>Rad van Fortuin</span>
-                </div>
-                <div class="game-icon" onclick="openGame('modal-bingo')">
-                    <span class="g-emoji">🌴</span><span>Ibiza Bingo</span>
-                </div>
-                <div class="game-icon" onclick="openGame('modal-sjaak'); startSjaakVraag();">
-                    <span class="g-emoji">👉</span><span>Wie is de Sjaak?</span>
-                </div>
-                <div class="game-icon" onclick="openGame('modal-hogerlager'); initHogerLager();">
-                    <span class="g-emoji">🃏</span><span>Hoger of Lager</span>
-                </div>
-                <div class="game-icon" onclick="openGame('modal-reflex')">
-                    <span class="g-emoji">⚡</span><span>Reflex Roulette</span>
-                </div>
-                <div class="game-icon" onclick="openGame('modal-mexen')">
-                    <span class="g-emoji">🎲</span><span>Virtueel Mexen</span>
-                </div>
+                <div class="game-icon" onclick="startSwasi()"><span class="g-emoji">👆</span><span>Swasi</span></div>
+                <div class="game-icon" onclick="openGame('modal-bom')"><span class="g-emoji">💣</span><span>Tijdbom</span></div>
+                <div class="game-icon" onclick="openGame('modal-rad')"><span class="g-emoji">🎰</span><span>Rad van Fortuin</span></div>
+                <div class="game-icon" onclick="openGame('modal-bingo')"><span class="g-emoji">🌴</span><span>Ibiza Bingo</span></div>
+                <div class="game-icon" onclick="openGame('modal-sjaak'); startSjaakVraag();"><span class="g-emoji">👉</span><span>Wie is de Sjaak?</span></div>
+                <div class="game-icon" onclick="openGame('modal-hogerlager'); initHogerLager();"><span class="g-emoji">🃏</span><span>Hoger of Lager</span></div>
+                <div class="game-icon" onclick="openGame('modal-reflex')"><span class="g-emoji">⚡</span><span>Reflex Roulette</span></div>
+                <div class="game-icon" onclick="openGame('modal-mexen')"><span class="g-emoji">🎲</span><span>Virtueel Mexen</span></div>
             </div>
         </div>
 
-        <!-- PAGINA 3: MISSIES -->
         <div id="page-missies" class="page">
-            
-            <!-- DRINK SESSIE & GPS KNOP MET ZICHTBARE TIMER -->
             <div class="card">
-                <button id="btn-drink-sessie" onclick="toggleDrinkSessie()" style="width:100%; padding:20px; background:#ff9500; border:none; border-radius:16px; color:white; font-weight:bold; font-size:18px; transition: background 0.3s; box-shadow: 0 4px 10px rgba(255,149,0,0.3);">
-                    🍻 Start Drink Sessie!
-                </button>
-                <p id="drink-sessie-timer-tekst" style="font-size: 18px; font-weight: 900; color: #ff3b30; text-align: center; margin-top: 15px; display: none;">
-                    ⏰ Volgende Atje over: 00:00
-                </p>
-                <p style="font-size: 13px; color: #666; text-align: center; margin-top: 10px; margin-bottom: 0;">Wijst elke 5-20 min een slachtoffer aan voor een Atje én activeert direct de GPS tracker!</p>
+                <button id="btn-drink-sessie" onclick="toggleDrinkSessie()" style="width:100%; padding:20px; background:#ff9500; border:none; border-radius:16px; color:white; font-weight:bold; font-size:18px;">🍻 Start Drink Sessie!</button>
+                <p id="drink-sessie-timer-tekst" style="font-size: 18px; font-weight: 900; color: #ff3b30; text-align: center; margin-top: 15px; display: none;">⏰ Volgende Atje over: 00:00</p>
+                <button id="btn-skip-timer" onclick="forceerSessieAtje()" style="display:none; background:#ff3b30; color:white; border:none; padding:8px 15px; border-radius:8px; font-weight:bold; margin: 10px auto; cursor:pointer;">⏩ Skip Timer (Test Push)</button>
+                <p style="font-size: 13px; color: #666; text-align: center;">Wijst elke 5-20 min iemand aan voor een Atje én activeert direct de GPS tracker voor iedereen!</p>
             </div>
-
             <div class="card" style="background: linear-gradient(135deg, #007aff, #0056b3); color: white;">
                 <h2 style="color: white; border-bottom: 1px solid rgba(255,255,255,0.2); margin-top: 0;">🛡️ Daily Co-op Missie</h2>
-                <p class="coop-titel-text" style="margin-top: 0; font-size: 15px; font-weight: bold;">Missie laden...</p>
-                <p class="coop-timer-text" style="margin-top: -10px; font-size: 12px; color: rgba(255,255,255,0.7); margin-bottom: 12px;">Nog 00:00:00 geldig</p>
+                <p class="coop-titel-text" style="font-size: 15px; font-weight: bold;">Missie laden...</p>
+                <p class="coop-timer-text" style="font-size: 12px; color: rgba(255,255,255,0.7); margin-bottom: 12px;">Nog 00:00:00 geldig</p>
                 <div style="background: rgba(0,0,0,0.3); height: 22px; border-radius: 11px; overflow: hidden; position: relative;">
-                    <div class="coop-bar-fill" style="background: #34c759; width: 0%; height: 100%; transition: width 0.5s;"></div>
-                    <span class="coop-progress-text" style="position: absolute; width: 100%; text-align: center; top: 3px; left: 0; font-size: 13px; font-weight: bold; color: white;">0 / 0</span>
+                    <div class="coop-bar-fill" style="background: #34c759; width: 0%; height: 100%;"></div>
+                    <span class="coop-progress-text" style="position: absolute; width: 100%; text-align: center; top: 3px; font-size: 13px; font-weight: bold; color: white;">0 / 0</span>
                 </div>
             </div>
-
             <div class="card" style="background: #1c1c1e; color: white;">
                 <h2 style="color: white; border-bottom: 1px solid #333; margin-top: 0;">🥷 Secret Assassin</h2>
-                <p style="font-size: 14px; color: #a1a1aa; margin-top: 0;">Laat dit aan niemand zien!</p>
                 <div style="background: #2c2c2e; padding: 15px; border-radius: 10px; margin-bottom: 15px; text-align: center;">
                     <strong id="geheime-missie-tekst" style="font-size: 16px; color: #ff9500;">Missie laden...</strong>
                 </div>
-                <button class="btn-secundair" style="background-color: #ff3b30; width: 100%; border: none; padding: 15px; border-radius: 10px; color: white; font-weight: bold; cursor: pointer;" onclick="voltooiGeheimeMissie()">
-                    Missie Voltooid (+3 Punten!)
-                </button>
+                <button class="btn-secundair" style="background-color: #ff3b30;" onclick="voltooiGeheimeMissie()">Missie Voltooid (+3 Punten!)</button>
             </div>
         </div>
 
-        <!-- PAGINA 4: WERELDKAART -->
         <div id="page-kaart" class="page">
             <div class="card" style="padding: 15px 10px;">
                 <h2>Interactieve Kaart 📍</h2>
-                <p style="font-size: 14px; color: #666; margin-top: 0; margin-bottom: 15px;">Locaties per persoon worden automatisch opgeteld tot grotere iconen. De tracker zet je aan bij 'Missies'.</p>
+                <p style="font-size: 14px; color: #666;">Locaties worden opgeslagen als de Drink Sessie aan staat.</p>
                 <div id="map"></div>
             </div>
         </div>
 
-        <!-- PAGINA 5: STATISTIEKEN -->
         <div id="page-stats" class="page">
-            <div class="card">
-                <h2>Kater-Voorspeller 🤮</h2>
-                <p style="font-size: 14px; color: #666; margin-top: 0;">Analyse op basis van mixdrank, bier en vettig eten.</p>
-                <div id="kater-container"></div>
-            </div>
-            <div class="card">
-                <h2>Wat drinkt de groep? 🍕</h2>
-                <div class="chart-container"><canvas id="groepPieChart"></canvas></div>
-            </div>
-            <div class="card">
-                <h2>Wie drinkt er het meest? 📊</h2>
-                <div class="chart-container"><canvas id="spelerBarChart"></canvas></div>
-            </div>
-            <div class="card">
-                <h2>Leaderboard Stats 🏆</h2>
-                <div id="stats-container">
-                    <p style="color: #666; text-align: center;">Gegevens worden geladen...</p>
-                </div>
-            </div>
+            <div class="card"><h2>Kater-Voorspeller 🤮</h2><div id="kater-container"></div></div>
+            <div class="card"><h2>Wat drinkt de groep? 🍕</h2><div class="chart-container"><canvas id="groepPieChart"></canvas></div></div>
+            <div class="card"><h2>Wie drinkt er het meest? 📊</h2><div class="chart-container"><canvas id="spelerBarChart"></canvas></div></div>
+            <div class="card"><h2>Leaderboard Stats 🏆</h2><div id="stats-container"></div></div>
         </div>
     </div>
 
-    <!-- FULLSCREEN MODALS VOOR DE GAMES -->
+    <div id="modal-bom" class="game-modal"><button class="btn-sluit-modal" onclick="sluitGame('modal-bom')">⬅ Terug</button><div class="container"><div class="card" id="bom-card" style="background: #1c1c1e; color: white;"><h2 style="color: #ff3b30;">💣 De Tijdbom</h2><div id="bom-idle-ui"><button class="btn-primair" style="background-color: #ff3b30;" onclick="startTijdbom()">💥 Start de Bom!</button></div><div id="bom-active-ui" style="display: none; text-align: center;"><span style="font-size: 50px;">🧨</span><h3 id="bom-status-tekst">Bom is bij ...</h3><button id="btn-gooi-door" class="btn-primair" style="background-color: #ff9500; display: none;" onclick="gooiBomDoor()">GOOI DOOR!!</button></div></div></div></div>
     
-    <!-- MODAL TIJDBOM -->
-    <div id="modal-bom" class="game-modal">
-        <button class="btn-sluit-modal" onclick="sluitGame('modal-bom')">⬅ Terug naar overzicht</button>
-        <div class="container">
-            <div class="card" id="bom-card" style="background: #1c1c1e; color: white;">
-                <h2 style="color: #ff3b30; border-bottom: 1px solid #333;">💣 De Tijdbom</h2>
-                <div id="bom-idle-ui">
-                    <p style="font-size: 14px; color: #a1a1aa; margin-top: 0;">Start de bom. Zodra hij bij jou knippert, gooi hem z.s.m. door! Degene die hem vasthoudt als de timer afgaat verliest 3 coins.</p>
-                    <button class="btn-primair" style="background-color: #ff3b30;" onclick="startTijdbom()">💥 Start de Bom!</button>
-                </div>
-                <div id="bom-active-ui" style="display: none; text-align: center; padding: 20px 0;">
-                    <span style="font-size: 50px;">🧨</span>
-                    <h3 id="bom-status-tekst" style="margin: 10px 0;">Bom is bij ...</h3>
-                    <button id="btn-gooi-door" class="btn-primair" style="background-color: #ff9500; display: none; padding: 20px; font-size: 20px;" onclick="gooiBomDoor()">GOOI DOOR!!</button>
-                </div>
-            </div>
-        </div>
-    </div>
+    <div id="modal-rad" class="game-modal"><button class="btn-sluit-modal" onclick="sluitGame('modal-rad')">⬅ Terug</button><div class="container"><div class="card"><h2>Rad van Fortuin<span class="coin-badge">🪙 <span class="coin-weergave-class">0</span></span></h2><div id="rad-box"><span id="rad-uitkomst">Druk op Draai!</span></div><button class="btn-primair" style="background-color: #34c759;" onclick="draaiRad()">🎰 DRAAI (Kosten: 1 Coin)</button></div></div></div>
+    
+    <div id="modal-bingo" class="game-modal"><button class="btn-sluit-modal" onclick="sluitGame('modal-bingo')">⬅ Terug</button><div class="container"><div class="card"><h2>🌴 Ibiza Bingo</h2><div id="bingo-grid" class="bingo-grid"></div></div></div></div>
+    
+    <div id="modal-sjaak" class="game-modal"><button class="btn-sluit-modal" onclick="sluitGame('modal-sjaak')">⬅ Terug</button><div class="container"><div class="card" style="text-align: center; background: #000; color: white;"><h2 style="color: #ff3b30;">👉 Wie is de Sjaak?</h2><div style="background: #1c1c1e; padding: 20px; border-radius: 10px;"><strong id="sjaak-vraag" style="font-size: 20px; color: #ff9500;">Start!</strong></div><div id="sjaak-timer" style="font-size: 60px; font-weight: 900; margin: 20px 0;">5</div><button class="btn-primair" style="background-color: #34c759;" onclick="startSjaakGame()">Vraag & Start Timer</button></div></div></div>
+    
+    <div id="modal-hogerlager" class="game-modal"><button class="btn-sluit-modal" onclick="sluitGame('modal-hogerlager')">⬅ Terug</button><div class="container"><div class="card" style="text-align: center;"><h2>Hoger of Lager<span class="coin-badge">🪙 <span class="coin-weergave-class">0</span></span></h2><div style="background: #f2f2f7; padding: 30px; font-size: 80px; font-weight: 900;"><span id="hl-getal">?</span></div><input type="number" id="hl-inzet" value="1" min="1" style="text-align: center; font-size: 20px; width: 100px; display: inline-block;"><div style="display: flex; gap: 10px;"><button class="btn-primair" style="background-color: #ff3b30; flex: 1;" onclick="speelHogerLager('lager')">🔽 LAGER</button><button class="btn-primair" style="background-color: #34c759; flex: 1;" onclick="speelHogerLager('hoger')">🔼 HOGER</button></div></div></div></div>
+    
+    <div id="modal-reflex" class="game-modal"><button class="btn-sluit-modal" onclick="sluitGame('modal-reflex')">⬅ Terug</button><div class="container"><div class="card" style="text-align: center; background: #e5e5ea;"><h2>⚡ Reflex Roulette</h2><button class="btn-secundair" onclick="startReflexRonde()">Start Nieuwe Ronde</button><button id="reflex-btn" class="reflex-btn" onmousedown="klikReflex()" ontouchstart="klikReflex(event)">Wacht...</button><div id="reflex-leaderboard" style="text-align: left; background: white; padding: 15px; border-radius: 10px; display: none;"></div></div></div></div>
+    
+    <div id="modal-mexen" class="game-modal"><button class="btn-sluit-modal" onclick="sluitGame('modal-mexen')">⬅ Terug</button><div class="container"><div class="card" style="text-align: center; background: #2c3e50; color: white;"><h2>🎲 Virtueel Mexen</h2><div style="display: flex; justify-content: center; gap: 20px;"><div id="mex-d1" class="dice-box">?</div><div id="mex-d2" class="dice-box">?</div></div><button class="btn-primair" style="background-color: #f1c40f; color: #000;" onclick="gooiMexen()">ROLLEN!</button></div></div></div>
 
-    <!-- MODAL RAD VAN FORTUIN -->
-    <div id="modal-rad" class="game-modal">
-        <button class="btn-sluit-modal" onclick="sluitGame('modal-rad')">⬅ Terug naar overzicht</button>
-        <div class="container">
-            <div class="card">
-                <h2><span>Rad van Fortuin</span><span class="coin-badge">🪙 <span id="coin-weergave">0</span></span></h2>
-                <p style="font-size: 14px; color: #666; margin-top: 0;">1 punt gescoord = 1 coin om te draaien!</p>
-                <div id="rad-box">
-                    <span id="rad-uitkomst">Druk op Draai!</span>
-                </div>
-                <button class="btn-primair" style="background-color: #34c759; font-size: 18px; padding: 20px;" onclick="draaiRad()">🎰 DRAAI (Kosten: 1 Coin)</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- MODAL BINGO -->
-    <div id="modal-bingo" class="game-modal">
-        <button class="btn-sluit-modal" onclick="sluitGame('modal-bingo')">⬅ Terug naar overzicht</button>
-        <div class="container">
-            <div class="card">
-                <h2>🌴 Ibiza Bingo</h2>
-                <p style="font-size: 14px; color: #666; margin-top: 0;">Jouw persoonlijke 3x3 kaart. Klik op een vakje als je hem voltooid hebt. Volle kaart = 10 Punten!</p>
-                <div id="bingo-grid" class="bingo-grid"></div>
-            </div>
-        </div>
-    </div>
-
-    <!-- MODAL WIE IS DE SJAAK -->
-    <div id="modal-sjaak" class="game-modal">
-        <button class="btn-sluit-modal" onclick="sluitGame('modal-sjaak')">⬅ Terug</button>
-        <div class="container">
-            <div class="card" style="text-align: center; background: #000; color: white;">
-                <h2 style="color: #ff3b30; border-bottom: 1px solid #333; justify-content: center;">👉 Wie is de Sjaak?</h2>
-                <p style="font-size: 14px; color: #a1a1aa; margin-top: 0;">Lees de vraag voor. Tel af en wijs ALLEMAAL tegelijk naar 1 persoon. Meeste stemmen? Neem een shotje!</p>
-                <div style="background: #1c1c1e; padding: 20px; border-radius: 10px; margin: 20px 0; min-height: 80px; display: flex; align-items: center; justify-content: center;">
-                    <strong id="sjaak-vraag" style="font-size: 20px; color: #ff9500;">Klik op Start!</strong>
-                </div>
-                <div id="sjaak-timer" style="font-size: 60px; font-weight: 900; color: white; margin-bottom: 20px; text-shadow: 0 4px 10px rgba(0,0,0,0.5);">5</div>
-                <button id="btn-start-sjaak" class="btn-primair" style="background-color: #34c759; font-size: 18px; padding: 20px;" onclick="startSjaakGame()">Nieuwe Vraag & Start Timer</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- MODAL HOGER LAGER -->
-    <div id="modal-hogerlager" class="game-modal">
-        <button class="btn-sluit-modal" onclick="sluitGame('modal-hogerlager')">⬅ Terug</button>
-        <div class="container">
-            <div class="card" style="text-align: center;">
-                <h2><span>🃏 Hoger of Lager</span><span class="coin-badge">🪙 <span class="coin-weergave-class">0</span></span></h2>
-                <p style="font-size: 14px; color: #666; margin-top: 0;">Zet je Coins in. Is de volgende kaart hoger of lager? Bij verlies drink je het verschil in slokken!</p>
-                
-                <div style="background: #f2f2f7; border-radius: 16px; padding: 30px; margin: 20px 0; font-size: 80px; font-weight: 900; color: #1c1c1e; box-shadow: inset 0 2px 10px rgba(0,0,0,0.1);">
-                    <span id="hl-getal">?</span>
-                </div>
-                
-                <div style="margin-bottom: 20px;">
-                    <label style="font-weight: bold; font-size: 14px;">Inzet (Coins):</label>
-                    <input type="number" id="hl-inzet" value="1" min="1" style="text-align: center; font-size: 20px; font-weight: bold; width: 100px; padding: 10px; margin-top: 5px; display: inline-block;">
-                </div>
-
-                <div style="display: flex; gap: 10px;">
-                    <button class="btn-primair" style="background-color: #ff3b30; flex: 1; padding: 20px; font-size: 20px;" onclick="speelHogerLager('lager')">🔽 LAGER</button>
-                    <button class="btn-primair" style="background-color: #34c759; flex: 1; padding: 20px; font-size: 20px;" onclick="speelHogerLager('hoger')">🔼 HOGER</button>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- MODAL REFLEX -->
-    <div id="modal-reflex" class="game-modal">
-        <button class="btn-sluit-modal" onclick="sluitGame('modal-reflex')">⬅ Terug</button>
-        <div class="container">
-            <div class="card" style="text-align: center;">
-                <h2>⚡ Reflex Roulette</h2>
-                <p style="font-size: 14px; color: #666; margin-top: 0;">Druk op de knop ZODRA hij groen wordt. De app stuurt jouw score naar de live-feed. Te vroeg klikken = Straf atje!</p>
-                
-                <button id="reflex-btn" class="reflex-btn" onclick="startReflex()">Start</button>
-                
-                <p id="reflex-result" style="font-size: 24px; font-weight: 900; color: #333; margin-top: 20px;"></p>
-            </div>
-        </div>
-    </div>
-
-    <!-- MODAL MEXEN -->
-    <div id="modal-mexen" class="game-modal">
-        <button class="btn-sluit-modal" onclick="sluitGame('modal-mexen')">⬅ Terug</button>
-        <div class="container">
-            <div class="card" style="text-align: center; background: #2c3e50; color: white;">
-                <h2 style="color: white; border-bottom: 1px solid #1a252f; justify-content: center;">🎲 Virtueel Mexen</h2>
-                <p style="font-size: 14px; color: #bdc3c7; margin-top: 0;">Jouw worp wordt live in de groep gegooid. Gooi je 21 (Mex)? Dan drinkt iedereen!</p>
-                
-                <div style="display: flex; justify-content: center; gap: 20px; margin: 30px 0;">
-                    <div id="mex-d1" class="dice-box">?</div>
-                    <div id="mex-d2" class="dice-box">?</div>
-                </div>
-
-                <button class="btn-primair" style="background-color: #f1c40f; color: #000; padding: 20px; font-size: 22px;" onclick="gooiMexen()">ROLLEN!</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- Navigatiebalk -->
     <div class="bottom-nav" id="bottom-nav">
         <div class="nav-item active" onclick="wisselPagina('page-scorebord', this)"><span class="nav-icon">📝</span>Scores</div>
         <div class="nav-item" onclick="wisselPagina('page-games', this)"><span class="nav-icon">🕹️</span>Games</div>
@@ -313,6 +152,6 @@
         <div class="nav-item" onclick="wisselPagina('page-stats', this)"><span class="nav-icon">📊</span>Stats</div>
     </div>
 
-    <script src="app.js?v=8"></script>
+    <script src="app.js?v=10"></script>
 </body>
 </html>

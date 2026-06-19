@@ -1,31 +1,22 @@
 body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background-color: #f2f2f7; margin: 0; padding: 0; color: #1c1c1e; padding-bottom: 90px; }
-
 #live-ticker { position: fixed; top: 0; left: 0; width: 100%; background-color: #34c759; color: white; padding: 15px 0; font-size: 15px; font-weight: bold; text-align: center; z-index: 10000; display: none; box-shadow: 0 4px 6px rgba(0,0,0,0.2); cursor: pointer; }
-
 .header { background-color: #ffffff; padding: 40px 20px 15px 20px; text-align: center; box-shadow: 0 1px 3px rgba(0,0,0,0.1); border-bottom: 1px solid #e5e5ea; position: sticky; top: 0; z-index: 999; }
 .header h1 { margin: 0; font-size: 22px; color: #000; font-weight: 900; letter-spacing: -0.5px; }
 .header-controls { margin-top: 10px; display: none; justify-content: center; align-items: center; gap: 10px; }
 .groep-badge { background-color: #f2f2f7; padding: 6px 10px; border-radius: 8px; font-weight: bold; font-size: 13px; }
-
 .container { padding: 15px; max-width: 600px; margin: 0 auto; }
-
 .card { background: white; padding: 20px; border-radius: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); margin-bottom: 20px; }
 .card h2 { margin-top: 0; font-size: 18px; border-bottom: 1px solid #eee; padding-bottom: 10px; margin-bottom: 15px; display: flex; justify-content: space-between; align-items: center; }
-
 input { width: 100%; padding: 15px; margin-bottom: 15px; border: 1px solid #d1d1d6; border-radius: 10px; font-size: 16px; box-sizing: border-box; background-color: #fafafa; }
-
-/* MODERNE TABEL STYLING */
 .table-wrapper { background: white; border-radius: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); overflow-x: auto; margin-bottom: 20px; }
 table { width: 100%; border-collapse: collapse; text-align: center; font-size: 13px; }
-th { background-color: #f8f8f8; padding: 14px 4px; color: #8e8e93; font-weight: bold; font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 1px solid #e5e5ea; white-space: nowrap; }
+th { background-color: #f8f8f8; padding: 14px 4px; color: #8e8e93; font-weight: bold; font-size: 11px; text-transform: uppercase; border-bottom: 1px solid #e5e5ea; white-space: nowrap; }
 td { padding: 14px 4px; border-bottom: 1px solid #f2f2f7; font-weight: bold; color: #333; }
 tr:nth-child(even) td { background-color: #fafafa; }
-td.naam-kolom { text-align: left; text-transform: capitalize; color: #007aff; padding-left: 10px; font-size: 14px; }
-.totaal-kolom { background-color: rgba(0, 122, 255, 0.08); color: #007aff; border-radius: 8px; font-size: 15px; font-weight: 900; }
+td.naam-kolom { text-align: left; text-transform: capitalize; color: #007aff; padding-left: 10px; font-size: 13px; }
+.totaal-kolom { background-color: rgba(0, 122, 255, 0.08); color: #007aff; border-radius: 8px; font-size: 14px; font-weight: 900; }
 tr.totaal-rij td { border-top: 2px solid #000; font-weight: 900; background-color: #fff; padding: 18px 4px; }
 .btn-verwijder { background-color: #ff3b30; color: white; border: none; border-radius: 6px; padding: 6px 10px; font-weight: bold; cursor: pointer; }
-
-/* Knoppen Grid Scores */
 .actie-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 .actie-kaart { border-radius: 14px; padding: 12px; display: flex; flex-direction: column; align-items: center; box-shadow: 0 4px 6px rgba(0,0,0,0.1); color: white; }
 .actie-kaart span.emoji { font-size: 28px; margin-bottom: 5px; }
@@ -35,8 +26,6 @@ tr.totaal-rij td { border-top: 2px solid #000; font-weight: 900; background-colo
 .btn-actie:active { transform: scale(0.90); }
 .btn-min { flex: 1; background-color: rgba(0,0,0,0.2); color: white; }
 .btn-plus { flex: 2; background-color: rgba(255,255,255,0.3); color: white; }
-
-/* Kleuren voor de Knoppen */
 .bg-bier { background: linear-gradient(135deg, #f1c40f, #f39c12); }
 .bg-mix { background: linear-gradient(135deg, #9b59b6, #8e44ad); }
 .bg-shotje { background: linear-gradient(135deg, #e17055, #d35400); }
@@ -49,67 +38,45 @@ tr.totaal-rij td { border-top: 2px solid #000; font-weight: 900; background-colo
 .bg-kotsen .btn-min { background-color: rgba(0,0,0,0.1); color: #333; }
 .bg-kotsen .btn-plus { background-color: rgba(255,255,255,0.5); color: #000; }
 .bg-sleutel { background: linear-gradient(135deg, #bdc3c7, #2c3e50); }
-
-/* Navigatie Balk */
-.bottom-nav { position: fixed; bottom: 0; left: 0; width: 100%; background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(10px); display: none; justify-content: space-around; padding: 10px 0; padding-bottom: calc(10px + env(safe-area-inset-bottom)); border-top: 1px solid #e5e5ea; z-index: 1000; }
-.nav-item { text-align: center; color: #8e8e93; font-size: 11px; cursor: pointer; flex: 1; font-weight: 600; transition: color 0.2s; }
+.bottom-nav { position: fixed; bottom: 0; left: 0; width: 100%; background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(10px); display: none; justify-content: space-around; padding: 10px 0; border-top: 1px solid #e5e5ea; z-index: 1000; }
+.nav-item { text-align: center; color: #8e8e93; font-size: 11px; cursor: pointer; flex: 1; font-weight: 600; }
 .nav-item.active { color: #007aff; }
 .nav-icon { font-size: 20px; display: block; margin-bottom: 4px; }
-
 .btn-primair { background-color: #007aff; width: 100%; padding: 15px; margin-top: 10px; border-radius: 10px; color: white; border: none; font-size: 16px; font-weight: bold; cursor: pointer; }
 .btn-secundair { background-color: #34c759; width: 100%; padding: 15px; margin-top: 10px; border-radius: 10px; color: white; border: none; font-size: 16px; font-weight: bold; cursor: pointer; }
 .btn-gevaar { background-color: #ff3b30; padding: 8px 12px; border-radius: 8px; color: white; border: none; font-size: 14px; font-weight: bold; cursor: pointer; }
-
-/* GAMES ICONS & MODALS */
 .games-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 10px; }
-.game-icon { background: white; border-radius: 16px; padding: 25px 5px; display: flex; flex-direction: column; align-items: center; box-shadow: 0 4px 12px rgba(0,0,0,0.05); font-weight: bold; font-size: 14px; cursor: pointer; transition: transform 0.1s; text-align: center;}
+.game-icon { background: white; border-radius: 16px; padding: 25px 5px; display: flex; flex-direction: column; align-items: center; box-shadow: 0 4px 12px rgba(0,0,0,0.05); font-weight: bold; font-size: 14px; cursor: pointer; text-align: center;}
 .game-icon:active { transform: scale(0.95); }
 .game-icon .g-emoji { font-size: 40px; margin-bottom: 10px; }
-
 .game-modal { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: #f2f2f7; z-index: 2000; display: none; overflow-y: auto; padding-bottom: 50px; }
 .game-modal.active { display: block; animation: slideUp 0.3s forwards; }
-.btn-sluit-modal { background: white; color: #007aff; border: none; padding: 15px 25px; border-radius: 25px; font-weight: bold; font-size: 16px; margin: 20px 15px; cursor: pointer; box-shadow: 0 4px 10px rgba(0,0,0,0.1); display: inline-flex; align-items: center; gap: 8px; }
+.btn-sluit-modal { background: white; color: #007aff; border: none; padding: 15px 25px; border-radius: 25px; font-weight: bold; font-size: 16px; margin: 20px 15px; cursor: pointer; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
 @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
-
-/* Rad, Bom & Nieuwe Games Styling */
-#rad-box { background: linear-gradient(135deg, #ff9500, #ff2d55); border-radius: 16px; padding: 40px 20px; text-align: center; color: white; box-shadow: inset 0 0 20px rgba(0,0,0,0.2); margin-bottom: 20px; min-height: 120px; display: flex; align-items: center; justify-content: center; transition: all 0.1s; }
+#rad-box { background: linear-gradient(135deg, #ff9500, #ff2d55); border-radius: 16px; padding: 40px 20px; text-align: center; color: white; box-shadow: inset 0 0 20px rgba(0,0,0,0.2); margin-bottom: 20px; min-height: 120px; display: flex; align-items: center; justify-content: center; }
 #rad-uitkomst { font-size: 24px; font-weight: 900; text-transform: uppercase; text-shadow: 0 2px 4px rgba(0,0,0,0.3); }
-.coin-badge { background: #ffd60a; color: #000; padding: 4px 10px; border-radius: 12px; font-size: 14px; font-weight: bold; display: inline-flex; align-items: center; gap: 5px;}
+.coin-badge { background: #ffd60a; color: #000; padding: 4px 10px; border-radius: 12px; font-size: 14px; font-weight: bold; margin-left: 5px;}
 .bom-gevaar { background: linear-gradient(135deg, #ff3b30, #c00000) !important; animation: pulseRed 0.5s infinite alternate; }
-
-.reflex-btn { width: 220px; height: 220px; border-radius: 50%; font-size: 30px; border: none; font-weight: 900; color: white; margin: 30px auto; display: flex; align-items: center; justify-content: center; box-shadow: 0 10px 30px rgba(0,0,0,0.3); transition: transform 0.1s; background-color: #007aff; cursor: pointer; }
+.reflex-btn { width: 220px; height: 220px; border-radius: 50%; font-size: 30px; border: none; font-weight: 900; color: white; margin: 30px auto; display: flex; align-items: center; justify-content: center; box-shadow: 0 10px 30px rgba(0,0,0,0.3); background-color: #8e8e93; cursor: pointer; }
 .reflex-btn:active { transform: scale(0.95); }
 .dice-box { font-size: 80px; margin: 20px; display: inline-block; background: white; width: 100px; height: 100px; line-height: 100px; border-radius: 20px; box-shadow: 0 5px 15px rgba(0,0,0,0.1); color: #1c1c1e; font-weight: bold; }
-
 @keyframes pulseRed { from { transform: scale(1); box-shadow: 0 0 10px #ff3b30; } to { transform: scale(1.02); box-shadow: 0 0 30px #ff3b30; } }
-
-/* Bingo Grid */
 .bingo-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 15px; }
-.bingo-cel { background: white; border-radius: 12px; aspect-ratio: 1; display: flex; align-items: center; justify-content: center; text-align: center; padding: 8px; font-size: 12px; cursor: pointer; box-shadow: 0 2px 5px rgba(0,0,0,0.05); border: 2px solid transparent; transition: all 0.2s; font-weight: bold; color: #333; }
-.bingo-cel.voltooid { background: #34c759; color: white; border-color: #28a745; transform: scale(0.95); box-shadow: inset 0 2px 5px rgba(0,0,0,0.2); }
-
-/* Kaart */
+.bingo-cel { background: white; border-radius: 12px; aspect-ratio: 1; display: flex; align-items: center; justify-content: center; text-align: center; padding: 8px; font-size: 12px; cursor: pointer; border: 2px solid transparent; font-weight: bold; color: #333; }
+.bingo-cel.voltooid { background: #34c759; color: white; border-color: #28a745; transform: scale(0.95); }
 #map { height: 450px; width: 100%; border-radius: 14px; z-index: 1; box-shadow: inset 0 0 10px rgba(0,0,0,0.15); border: 1px solid #d1d1d6; }
-.custom-maps-marker-wrapper { background: white; border: 3px solid #007aff; border-radius: 50%; box-shadow: 0 4px 12px rgba(0,0,0,0.35); display: flex; align-items: center; justify-content: center; transition: transform 0.2s; }
-
-/* Kater Voorspeller & Grafieken */
+.custom-maps-marker-wrapper { background: white; border: 3px solid #007aff; border-radius: 50%; display: flex; align-items: center; justify-content: center; }
 .kater-regel { margin-bottom: 12px; }
 .kater-header { display: flex; justify-content: space-between; font-weight: bold; font-size: 14px; margin-bottom: 4px; text-transform: capitalize; }
 .kater-bar-bg { background-color: #e5e5ea; border-radius: 6px; height: 12px; width: 100%; overflow: hidden; }
-.kater-bar-fill { height: 100%; transition: width 0.5s ease-out, background-color 0.5s; }
+.kater-bar-fill { height: 100%; transition: width 0.5s; }
 .chart-container { position: relative; width: 100%; height: 250px; }
-
-/* SWASI FINGER ROULETTE OVERLAY & ANIMATIES */
 #swasi-overlay { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.9); z-index: 10000; display: none; overflow: hidden; touch-action: none; }
-.swasi-circle { position: absolute; width: 100px; height: 100px; border-radius: 50%; border: 8px solid white; transform: translate(-50%, -50%); opacity: 0.9; transition: all 0.3s; box-shadow: inset 0 0 20px rgba(255,255,255,0.4), 0 0 20px rgba(255,255,255,0.4); pointer-events: none; animation: swasiPulse 1s infinite alternate; }
+.swasi-circle { position: absolute; width: 100px; height: 100px; border-radius: 50%; border: 8px solid white; transform: translate(-50%, -50%); opacity: 0.9; pointer-events: none; animation: swasiPulse 1s infinite alternate; }
 @keyframes swasiPulse { from { transform: translate(-50%, -50%) scale(0.9); } to { transform: translate(-50%, -50%) scale(1.05); } }
-.swasi-circle.winner { border-color: #ff3b30 !important; background: rgba(255,59,48,0.5); box-shadow: 0 0 60px #ff3b30 !important; transform: translate(-50%, -50%) scale(1.4) !important; animation: winnerPulse 0.3s infinite alternate; z-index: 10001; opacity: 1; }
-@keyframes winnerPulse { from { transform: translate(-50%, -50%) scale(1.3); } to { transform: translate(-50%, -50%) scale(1.5); } }
+.swasi-circle.winner { border-color: #ff3b30 !important; background: rgba(255,59,48,0.5); box-shadow: 0 0 60px #ff3b30 !important; transform: translate(-50%, -50%) scale(1.4) !important; z-index: 10001; opacity: 1; }
 .swasi-circle.loser { opacity: 0; transform: translate(-50%, -50%) scale(0) !important; }
-#swasi-countdown { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-size: 140px; color: white; font-weight: 900; z-index: 9999; text-shadow: 0 5px 25px rgba(0,0,0,0.9); pointer-events: none; animation: popIn 1s infinite; }
-@keyframes popIn { 0% { transform: translate(-50%, -50%) scale(0.5); opacity: 0; } 20% { transform: translate(-50%, -50%) scale(1.2); opacity: 1; } 100% { transform: translate(-50%, -50%) scale(1); opacity: 0; } }
-#swasi-sluit-btn { position: absolute; bottom: 40px; left: 50%; transform: translateX(-50%); width: 80%; max-width: 300px; display: none; z-index: 10002; box-shadow: 0 4px 15px rgba(0,0,0,0.5); }
-
+#swasi-countdown { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-size: 140px; color: white; font-weight: 900; z-index: 9999; }
+#swasi-sluit-btn { position: absolute; bottom: 40px; left: 50%; transform: translateX(-50%); width: 80%; max-width: 300px; display: none; z-index: 10002; }
 #auth-scherm, #lobby-scherm, #app-scherm, #page-scorebord, #page-games, #page-missies, #page-stats, #page-rad, #page-kaart { display: none; }
-.page.active { display: block !important; animation: fadeIn 0.2s ease-in; }
-@keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+.page.active { display: block !important; }
