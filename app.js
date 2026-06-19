@@ -251,27 +251,20 @@ function pasScoreAan(categorie, bedrag, emojiNaam) {
 
     let startBericht = `${currentUser.charAt(0).toUpperCase() + currentUser.slice(1)} ${bedrag > 0 ? `scoort +${actueelBedrag} bij` : "deed een correctie bij"} ${emojiNaam}${isHappyHour && bedrag > 0 ? " (HAPPY HOUR x2!)" : ""}`;
 
-    // --- DE WEBHOOK NAAR MAKE.COM ---
+ // --- DE WEBHOOK NAAR MAKE.COM ---
     const MAKE_WEBHOOK_URL = "https://hook.eu1.make.com/iydcsfjwnlx3147b29w38texvyhgrr62";
 
-    db.collection('groepen').doc(currentGroup).collection('scores').get().then(snap => {
-        snap.forEach(doc => {
-            // TESTMODUS: Stuurt nu het bericht ook naar Make als JIJ op de knop drukt!
-            if (doc.data().push_token) {
-                fetch(MAKE_WEBHOOK_URL, {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({
-                        token: doc.data().push_token,
-                        titel: "BefCounter 🍻",
-                        bericht: startBericht
-                    })
-                }).catch(e => console.log(e));
-            }
-        });
-    });
+    // BRUTE FORCE TEST: Vuurt nu ALTIJD af, puur om Make.com wakker te schudden
+    fetch(MAKE_WEBHOOK_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+            token: "dit-is-een-test-token-zodat-make-niet-klaagt",
+            titel: "BefCounter 🍻",
+            bericht: startBericht
+        })
+    }).then(() => console.log("BOOM! Verzonden naar Make.")).catch(e => console.log("Fout bij webhook:", e));
     // --------------------------------
-
     if (vakantieModus && "geolocation" in navigator) {
         navigator.geolocation.getCurrentPosition((pos) => {
             db.collection('groepen').doc(currentGroup).collection('locaties').add({ naam: currentUser, actie: emojiNaam, lat: pos.coords.latitude, lng: pos.coords.longitude, tijd: new Date().toISOString() });
