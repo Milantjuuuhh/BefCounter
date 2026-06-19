@@ -266,7 +266,6 @@ function luisterNaarDrinkSessie() {
     });
 }
 
-// LOKALE TIMER VOOR OP HET SCHERM (1x per sec)
 setInterval(() => {
     if (actieveDrinkSessieTijd > 0) {
         let diff = actieveDrinkSessieTijd - Date.now();
@@ -298,7 +297,6 @@ function checkDrinkSessieTijd() {
     stuurNaarFeed(bericht);
     if ("vibrate" in navigator) navigator.vibrate([200, 100, 200, 100, 500, 100, 500]);
     
-    // ALLEEN DIT STUURT NOG EEN MAKE.COM WEBHOOK (BESPAART LIMIET!)
     const MAKE_WEBHOOK_URL = "https://hook.eu1.make.com/iydcsfjwnlx3147b29w38texvyhgrr62";
     db.collection('groepen').doc(currentGroup).collection('scores').get().then(snap => {
         snap.forEach(doc => {
@@ -360,8 +358,6 @@ setInterval(() => {
 function pasScoreAan(categorie, bedrag, emojiNaam) {
     if ("vibrate" in navigator) navigator.vibrate(50);
     
-    // We slaan op hoe VAAK je iets doet (bijv: 3 biertjes gedronken),
-    // de app berekent lokaal hoeveel punten dat totaal waard is!
     db.collection('groepen').doc(currentGroup).collection('scores').doc(currentUser).set({ [categorie]: firebase.firestore.FieldValue.increment(bedrag) }, { merge: true });
 
     if (actieveCoopMissie && bedrag > 0 && actieveCoopMissie.types.includes(categorie) && !actieveCoopMissie.behaald) {
@@ -404,7 +400,6 @@ function bouwLiveScorebord() {
             const ko = data.kotsen || 0;
             const sl = data.sleutel || 0;
             
-            // HET GEWOGEN PUNTENSYSTEEM
             const persoonTotaal = (b * 1) + (m * 2) + (sh * 2) + (k * 10) + (r * 5) + (ra * 15) + (ko * 5) + (sl * 5);
             
             somBier += b; somMix += m; somShot += sh; somKiss += k; somReject += r; somRaggen += ra; somKotsen += ko; somSleutel += sl; somAlles += persoonTotaal;
@@ -445,6 +440,149 @@ function bouwLiveScorebord() {
         tekenGrafieken(somBier, somMix, somShot, somKiss, somReject, somRaggen, somKotsen, somSleutel, grafiekNamen, grafiekData);
     });
 }
+
+// ==========================================
+// DE 4 NIEUWE GAMES LOGICA
+// ==========================================
+
+/* 1. WIE IS DE SJAAK */
+const sjaakVragen = [
+    "Wie kotst vanavond als eerste?", "Wie regelt er vannacht de minste actie?", 
+    "Wie verliest er als eerste zijn telefoon of sleutels?", "Wie is morgen de grootste jankerd met een kater?", 
+    "Wie betaalt zonder zeuren de volgende ronde?", "Wie doet de domste uitspraak vanavond?", 
+    "Wie is de slechtste leugenaar van de groep?", "Wie durft er nu het minst een atje te trekken?"
+];
+let sjaakInterval = null;
+
+function startSjaakVraag() {
+    clearInterval(sjaakInterval);
+    document.getElementById('sjaak-timer').innerText = "5";
+    document.getElementById('sjaak-vraag').innerText = sjaakVragen[Math.floor(Math.random() * sjaakVragen.length)];
+}
+
+function startSjaakGame() {
+    startSjaakVraag();
+    let count = 5;
+    const timerUI = document.getElementById('sjaak-timer');
+    if ("vibrate" in navigator) navigator.vibrate(50);
+    
+    sjaakInterval = setInterval(() => {
+        count--;
+        timerUI.innerText = count;
+        if(count <= 0) {
+            clearInterval(sjaakInterval);
+            timerUI.innerText = "👉 WIE IS HET?!";
+            if ("vibrate" in navigator) navigator.vibrate([300, 100, 300]);
+        }
+    }, 1000);
+}
+
+/* 2. HOGER OF LAGER */
+let hlHuidig = 5;
+function initHogerLager() {
+    hlHuidig = Math.floor(Math.random() * 10) + 1;
+    document.getElementById('hl-getal').innerText = hlHuidig;
+}
+
+function speelHogerLager(keuze) {
+    let inzet = parseInt(document.getElementById('hl-inzet').value);
+    let coins = Math.max(0, mijnTotalePunten - mijnGedraaideSpins);
+    
+    if (isNaN(inzet) || inzet < 1) return alert("Vul een geldige inzet in!");
+    if (inzet > coins) return alert("Je hebt niet genoeg Coins!");
+
+    db.collection('groepen').doc(currentGroup).collection('scores').doc(currentUser).set({ spins: firebase.firestore.FieldValue.increment(inzet) }, { merge: true });
+
+    let nieuw = Math.floor(Math.random() * 10) + 1;
+    document.getElementById('hl-getal').innerText = nieuw;
+    
+    let win = false;
+    if (keuze === 'hoger' && nieuw > hlHuidig) win = true;
+    if (keuze === 'lager' && nieuw < hlHuidig) win = true;
+    if (nieuw === hlHuidig) win = false; // Gelijk is altijd verliezen voor het casino!
+
+    if (win) {
+        let winst = inzet * 2;
+        db.collection('groepen').doc(currentGroup).collection('scores').doc(currentUser).set({ spins: firebase.firestore.FieldValue.increment(-winst) }, { merge: true });
+        alert(`Je raadde het goed! Je wint ${winst} Coins terug! 🎉`);
+        stuurNaarFeed(`🃏 Casino: ${currentUser.toUpperCase()} won zojuist ${winst} Coins met Hoger/Lager!`);
+    } else {
+        let straf = Math.abs(nieuw - hlHuidig) || 1;
+        alert(`FOUT! Het was ${nieuw}. Jij neemt nu ${straf} grote slokken! 🥃`);
+        stuurNaarFeed(`🃏 Casino: ${currentUser.toUpperCase()} verloor met Hoger/Lager en moet ${straf} slokken nemen!`);
+    }
+    hlHuidig = nieuw;
+}
+
+/* 3. REFLEX ROULETTE */
+let reflexStart = 0;
+let reflexTimeout = null;
+
+function startReflex() {
+    const btn = document.getElementById('reflex-btn');
+    btn.style.backgroundColor = '#ff3b30';
+    btn.innerText = 'Wacht...';
+    document.getElementById('reflex-result').innerText = '';
+    
+    // Voorkom valsspelen
+    btn.onmousedown = () => {
+        if (btn.style.backgroundColor === 'rgb(255, 59, 48)') {
+            clearTimeout(reflexTimeout);
+            alert("TE VROEG! Straf Atje voor jou! 🥃");
+            stuurNaarFeed(`⚡ Reflex: ${currentUser.toUpperCase()} klikte te vroeg en trekt een straf-atje!`);
+            resetReflexBtn(btn);
+        }
+    };
+    btn.ontouchstart = btn.onmousedown; 
+
+    let delay = Math.floor(Math.random() * 4000) + 2000; // 2 tot 6 seconden
+    
+    reflexTimeout = setTimeout(() => {
+        btn.style.backgroundColor = '#34c759';
+        btn.innerText = 'KLIK NU!';
+        reflexStart = Date.now();
+        
+        btn.onmousedown = () => klikReflex(btn);
+        btn.ontouchstart = () => klikReflex(btn);
+    }, delay);
+}
+
+function klikReflex(btn) {
+    let reactie = Date.now() - reflexStart;
+    document.getElementById('reflex-result').innerText = `Jouw tijd: ${reactie} ms`;
+    stuurNaarFeed(`⚡ Reflex: ${currentUser.toUpperCase()} klikte in ${reactie}ms!`);
+    resetReflexBtn(btn);
+}
+
+function resetReflexBtn(btn) {
+    btn.style.backgroundColor = '#007aff';
+    btn.innerText = 'Start';
+    btn.onmousedown = null;
+    btn.ontouchstart = null;
+}
+
+/* 4. VIRTUEEL MEXEN */
+function gooiMexen() {
+    let d1 = Math.floor(Math.random() * 6) + 1;
+    let d2 = Math.floor(Math.random() * 6) + 1;
+    let high = Math.max(d1, d2);
+    let low = Math.min(d1, d2);
+    let score = high.toString() + low.toString();
+    
+    document.getElementById('mex-d1').innerText = d1;
+    document.getElementById('mex-d2').innerText = d2;
+    
+    let extraText = "";
+    if (score === "21") {
+        extraText = " 🚨 MEX! IEDEREEN DRINKEN!!";
+        if ("vibrate" in navigator) navigator.vibrate([200, 100, 200]);
+    } else if (d1 === d2) {
+        extraText = " (Honderden!)";
+    }
+
+    stuurNaarFeed(`🎲 Mexen: ${currentUser.toUpperCase()} gooide ${score}${extraText}`);
+}
+
 
 // ==========================================
 // MISSIES & BINGO LOGICA
@@ -745,7 +883,7 @@ function haalRandomOptie() {
 
 function updateCoinWeergave() { 
     const coins = Math.max(0, mijnTotalePunten - mijnGedraaideSpins);
-    document.querySelectorAll('#coin-weergave').forEach(el => el.innerText = coins);
+    document.querySelectorAll('.coin-weergave-class').forEach(el => el.innerText = coins);
 }
 function verwijderSpeler(naam) { if (confirm(`Verwijder ${naam}?`)) db.collection('groepen').doc(currentGroup).collection('scores').doc(naam).delete(); }
 
