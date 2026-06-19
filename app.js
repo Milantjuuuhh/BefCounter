@@ -697,3 +697,28 @@ function initKaart() {
         });
     } else worldMap.invalidateSize();
 }
+// ==========================================
+// GPS / VAKANTIEMODUS TOGGLE
+// ==========================================
+function toggleVakantiemodus() {
+    vakantieModus = !vakantieModus;
+    const btnGps = document.getElementById('btn-gps');
+    
+    if (vakantieModus) {
+        btnGps.innerText = "GPS Tracker Uitzetten";
+        btnGps.style.backgroundColor = "#ff3b30"; // Maakt de knop rood als waarschuwing
+        alert("Vakantiemodus AAN 🌴: Jouw locatie wordt nu bij elke actie op de kaart gezet!");
+        
+        // Vraag direct om GPS permissie aan de telefoon
+        if ("geolocation" in navigator) {
+            navigator.geolocation.getCurrentPosition(
+                () => console.log("GPS permissie gegeven"),
+                (err) => alert("Zorg dat je locatievoorzieningen aan staan voor deze browser!")
+            );
+        }
+    } else {
+        btnGps.innerText = "GPS Tracker Aanzetten";
+        btnGps.style.backgroundColor = "#34c759"; // Maakt de knop weer groen
+        alert("Vakantiemodus UIT 🛑: Locatie wordt niet meer gedeeld.");
+    }
+}
