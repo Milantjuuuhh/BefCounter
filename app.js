@@ -1,6 +1,3 @@
-// ==========================================
-// CONFIGURATIE & INITIALISATIE
-// ==========================================
 const firebaseConfig = {
     apiKey: "AIzaSyDF8LOSjnyIJXrloepCBvSLA2TCH3Us0H8",
     authDomain: "befcounter.firebaseapp.com",
@@ -12,24 +9,7 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore();
 
-// Activeer Firebase Messaging (met crash-beveiliging)
-let messaging = null;
-try {
-    if (typeof firebase.messaging === "function" && firebase.messaging.isSupported()) {
-        messaging = firebase.messaging();
-    }
-} catch (error) {
-    console.log("Push notificaties worden momenteel niet ondersteund door deze browser.");
-}
-
-if ('serviceWorker' in navigator) { 
-    navigator.serviceWorker.register('sw.js').then((reg) => {
-        if (messaging) {
-            messaging.useServiceWorker(reg);
-            setupPushNotificaties();
-        }
-    }); 
-}
+if ('serviceWorker' in navigator) { navigator.serviceWorker.register('sw.js'); }
 
 let currentUser = localStorage.getItem('bef_user');
 let currentGroup = localStorage.getItem('bef_group');
@@ -44,28 +24,6 @@ let spelersLijst = [];
 let worldMap = null, mapMarkers = [];
 let pieChartInstance = null, barChartInstance = null;
 let mijnBingoKaart = [], mijnBingoStatus = [];
-
-// ==========================================
-// PUSH NOTIFICATIE TOESTEMMING & TOKEN
-// ==========================================
-function setupPushNotificaties() {
-    if (!messaging) return;
-    
-    messaging.requestPermission()
-        .then(() => {
-            return messaging.getToken({ vapidKey: "BMfkVb0XKUWAPQ8HnB_79f1bvyB05Q-DSnkgzSvzfSN9n_ADzgW1FpAFJim8ftNfTeHA5BkUTJ1B-YhKIOyDL9k" });
-        })
-        .then((token) => {
-            if (token && currentUser) {
-                db.collection('groepen').doc(currentGroup).collection('scores').doc(currentUser).set({
-                    push_token: token
-                }, { merge: true });
-            }
-        })
-        .catch((err) => {
-            console.log("Notificatie setup mislukt of geweigerd:", err);
-        });
-}
 
 // ==========================================
 // GAME DATA (CO-OP, BINGO & ASSASSIN)
@@ -187,7 +145,6 @@ function startApp() {
     document.getElementById('ingelogde-naam').innerText = currentUser;
     document.getElementById('display-groepscode').innerText = currentGroup;
 
-    if (messaging) setupPushNotificaties();
     bouwLiveScorebord();
     luisterNaarLiveFeed();
     luisterNaarTijdbom();
@@ -210,7 +167,7 @@ function luisterNaarCoopMissie() {
         }
 
         actieveCoopMissie = doc.data();
-        let percentage = Math.min(100.0, (actieveCoopMissie.score / actieveCoopMissie.doel) * 100.0);
+        let percentage = Math.min(100, (actieveCoopMissie.score / actieveCoopMissie.doel) * 100);
 
         document.querySelectorAll('.coop-titel-text').forEach(el => el.innerText = actieveCoopMissie.titel);
         document.querySelectorAll('.coop-bar-fill').forEach(el => el.style.width = percentage + '%');
@@ -219,11 +176,12 @@ function luisterNaarCoopMissie() {
         if (actieveCoopMissie.score >= actieveCoopMissie.doel && !actieveCoopMissie.behaald) {
             db.collection('groepen').doc(currentGroup).collection('coop').doc('status').update({ behaald: true });
             pasScoreAan('mvp', 5, '🏆 CO-OP BEHAALD');
-            stuurNaarFeed("CO-OP MISSIE BEHAALD! Iedereen bedankt, +5 MVP Coins voor de finale tik!");
+            stuurNaarFeed("🎉 CO-OP MISSIE BEHAALD! Iedereen bedankt, +5 MVP Coins voor de finale tik!");
         }
     });
 }
 
+// Timer tot middernacht
 setInterval(() => {
     const nu = new Date();
     const middernacht = new Date();
@@ -236,7 +194,7 @@ setInterval(() => {
 }, 1000);
 
 // ==========================================
-// SCOREBORD & DATA SYNC (WEBHOOK TRIGGER FIX)
+// SCOREBORD & DATA SYNC
 // ==========================================
 function pasScoreAan(categorie, bedrag, emojiNaam) {
     if ("vibrate" in navigator) navigator.vibrate(50);
@@ -245,30 +203,17 @@ function pasScoreAan(categorie, bedrag, emojiNaam) {
     
     db.collection('groepen').doc(currentGroup).collection('scores').doc(currentUser).set({ [categorie]: firebase.firestore.FieldValue.increment(actueelBedrag) }, { merge: true });
 
+    // Update Co-op Missie als het type overeenkomt
     if (actieveCoopMissie && bedrag > 0 && actieveCoopMissie.types.includes(categorie) && !actieveCoopMissie.behaald) {
         db.collection('groepen').doc(currentGroup).collection('coop').doc('status').update({ score: firebase.firestore.FieldValue.increment(actueelBedrag) });
     }
 
     let startBericht = `${currentUser.charAt(0).toUpperCase() + currentUser.slice(1)} ${bedrag > 0 ? `scoort +${actueelBedrag} bij` : "deed een correctie bij"} ${emojiNaam}${isHappyHour && bedrag > 0 ? " (HAPPY HOUR x2!)" : ""}`;
 
- // --- DE WEBHOOK NAAR MAKE.COM ---
-    const MAKE_WEBHOOK_URL = "https://hook.eu1.make.com/iydcsfjwnlx3147b29w38texvyhgrr62";
-
-    // BRUTE FORCE TEST: Vuurt nu ALTIJD af, puur om Make.com wakker te schudden
-    fetch(MAKE_WEBHOOK_URL, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-            token: "dit-is-een-test-token-zodat-make-niet-klaagt",
-            titel: "BefCounter 🍻",
-            bericht: startBericht
-        })
-    }).then(() => console.log("BOOM! Verzonden naar Make.")).catch(e => console.log("Fout bij webhook:", e));
-    // --------------------------------
     if (vakantieModus && "geolocation" in navigator) {
         navigator.geolocation.getCurrentPosition((pos) => {
             db.collection('groepen').doc(currentGroup).collection('locaties').add({ naam: currentUser, actie: emojiNaam, lat: pos.coords.latitude, lng: pos.coords.longitude, tijd: new Date().toISOString() });
-            stuurNaarFeed(`${startBericht} 📍 Maps: https://maps.google.com/?q=${pos.coords.latitude},${pos.coords.longitude}`);
+            stuurNaarFeed(`${startBericht} 📍 Maps: http://maps.google.com/?q=${pos.coords.latitude},${pos.coords.longitude}`);
         }, () => stuurNaarFeed(`${startBericht}!`));
     } else stuurNaarFeed(`${startBericht}!`);
 }
@@ -277,7 +222,6 @@ function bouwLiveScorebord() {
     if(unsubscribeScores) unsubscribeScores();
     
     unsubscribeScores = db.collection('groepen').doc(currentGroup).collection('scores').onSnapshot((snapshot) => {
-        // DÖNER TYPFOUT GECORRIGEERD
         let html = `<tr><th style="text-align:left; padding-left:10px;">Wie</th><th>🍺</th><th>🍹</th><th>😘</th><th>💔</th><th>👑</th><th>🥙</th><th class="totaal-kolom">Tot</th><th></th></tr>`;
         let somBier=0, somMix=0, somKiss=0, somReject=0, somMvp=0, somDoner=0, somAlles=0;
         let statMaxBier=0, statMaxBierNaam="-", statMaxMVP=0, statMaxMVPNaam="-", statMaxSjaak=0, statMaxSjaakNaam="-", statMaxDoner=0, statMaxDonerNaam="-";
@@ -386,7 +330,7 @@ function toggleBingoCel(index, isGehaald) {
 }
 
 // ==========================================
-// SWASI FINGER ROULETTE
+// SWASI FINGER ROULETTE (FIXED & GEÜPDATET)
 // ==========================================
 const swasiOverlay = document.getElementById('swasi-overlay');
 let actieveSwasiTouches = {};
@@ -406,7 +350,7 @@ function startSwasi() {
     actieveSwasiTouches = {};
     swasiKleurIndex = 0;
     swasiBezig = true;
-    document.body.style.overflow = 'hidden';
+    document.body.style.overflow = 'hidden'; // Voorkom scrollen
     
     swasiOverlay.addEventListener('touchstart', handleTouchStart, {passive: false});
     swasiOverlay.addEventListener('touchmove', handleTouchMove, {passive: false});
@@ -421,6 +365,7 @@ function stopSwasi() {
     clearInterval(swasiAfteller);
     swasiBezig = false;
     
+    // Verwijder alle circels
     Object.values(actieveSwasiTouches).forEach(c => c.remove());
     actieveSwasiTouches = {};
     
@@ -431,6 +376,7 @@ function stopSwasi() {
 }
 
 function handleTouchStart(e) {
+    // Laat de "Sluiten" button gewoon z'n click afvuren zonder e.preventDefault()
     if (e.target.id === 'swasi-sluit-btn') return;
     
     e.preventDefault();
@@ -512,12 +458,12 @@ function checkSwasiTimer() {
     } else {
         document.getElementById('swasi-instructie').style.display = 'block';
         document.getElementById('swasi-instructie').innerText = "Plaats allemaal 1 vinger...";
-        swasiKleurIndex = 0;
+        swasiKleurIndex = 0; // Reset colors if everyone let go
     }
 }
 
 function kiesSwasiWinnaar(keys) {
-    swasiBezig = false;
+    swasiBezig = false; // Blokkeer nieuwe touches
     if ("vibrate" in navigator) navigator.vibrate([100, 50, 100, 50, 300]);
     
     let winnerId = keys[Math.floor(Math.random() * keys.length)];
@@ -540,7 +486,7 @@ function kiesSwasiWinnaar(keys) {
 function startTijdbom() {
     if (spelersLijst.length < 2) return alert("Minimaal 2 spelers nodig.");
     let randomSpeler = spelersLijst[Math.floor(Math.random() * spelersLijst.length)];
-    let ontplofTijd = Date.now() + (Math.floor(Math.random() * 45000) + 30000);
+    let ontplofTijd = Date.now() + (Math.floor(Math.random() * 45000) + 30000); // 30-75 seconden
     
     db.collection('groepen').doc(currentGroup).collection('tijdbom').doc('status').set({ actief: true, houder: randomSpeler, eindTijdUnix: ontplofTijd });
     stuurNaarFeed(`💣 TIJDBOM GESTART! Hij ligt nu bij ${randomSpeler.toUpperCase()}!`);
