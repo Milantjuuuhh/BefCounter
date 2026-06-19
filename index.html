@@ -13,7 +13,7 @@
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     
-    <link rel="stylesheet" href="style.css?v=9">
+    <link rel="stylesheet" href="style.css?v=8">
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
 </head>
@@ -124,10 +124,7 @@
                 <p id="drink-sessie-timer-tekst" style="font-size: 18px; font-weight: 900; color: #ff3b30; text-align: center; margin-top: 15px; display: none;">
                     ⏰ Volgende Atje over: 00:00
                 </p>
-                <button id="btn-skip-timer" onclick="forceerSessieAtje()" style="display:none; background:#ff3b30; color:white; border:none; padding:8px 15px; border-radius:8px; font-weight:bold; margin: 10px auto; cursor:pointer;">
-                    ⏩ Skip Timer (Test Push)
-                </button>
-                <p style="font-size: 13px; color: #666; text-align: center; margin-top: 10px; margin-bottom: 0;">Wijst elke 5-20 min een slachtoffer aan voor een Atje én activeert direct de GPS tracker voor iedereen!</p>
+                <p style="font-size: 13px; color: #666; text-align: center; margin-top: 10px; margin-bottom: 0;">Wijst elke 5-20 min een slachtoffer aan voor een Atje én activeert direct de GPS tracker!</p>
             </div>
 
             <div class="card" style="background: linear-gradient(135deg, #007aff, #0056b3); color: white;">
@@ -211,7 +208,7 @@
         <button class="btn-sluit-modal" onclick="sluitGame('modal-rad')">⬅ Terug naar overzicht</button>
         <div class="container">
             <div class="card">
-                <h2><span>Rad van Fortuin</span><span class="coin-badge">🪙 <span class="coin-weergave-class">0</span></span></h2>
+                <h2><span>Rad van Fortuin</span><span class="coin-badge">🪙 <span id="coin-weergave">0</span></span></h2>
                 <p style="font-size: 14px; color: #666; margin-top: 0;">1 punt gescoord = 1 coin om te draaien!</p>
                 <div id="rad-box">
                     <span id="rad-uitkomst">Druk op Draai!</span>
@@ -278,16 +275,13 @@
     <div id="modal-reflex" class="game-modal">
         <button class="btn-sluit-modal" onclick="sluitGame('modal-reflex')">⬅ Terug</button>
         <div class="container">
-            <div class="card" style="text-align: center; background: #e5e5ea;">
+            <div class="card" style="text-align: center;">
                 <h2>⚡ Reflex Roulette</h2>
-                <p style="font-size: 14px; color: #333; margin-top: 0;">Start een ronde voor de hele groep. Druk op de knop ZODRA hij groen wordt. De traagste pakt een Atje!</p>
+                <p style="font-size: 14px; color: #666; margin-top: 0;">Druk op de knop ZODRA hij groen wordt. De app stuurt jouw score naar de live-feed. Te vroeg klikken = Straf atje!</p>
                 
-                <button class="btn-secundair" onclick="startReflexRonde()">Start Nieuwe Ronde</button>
+                <button id="reflex-btn" class="reflex-btn" onclick="startReflex()">Start</button>
                 
-                <button id="reflex-btn" class="reflex-btn" onmousedown="klikReflex()" ontouchstart="klikReflex(event)">Wacht...</button>
-                
-                <!-- LEADERBOARD VOOR REFLEX -->
-                <div id="reflex-leaderboard" style="margin-top: 20px; text-align: left; background: white; padding: 15px; border-radius: 10px; color: black; display: none;"></div>
+                <p id="reflex-result" style="font-size: 24px; font-weight: 900; color: #333; margin-top: 20px;"></p>
             </div>
         </div>
     </div>
@@ -319,6 +313,6 @@
         <div class="nav-item" onclick="wisselPagina('page-stats', this)"><span class="nav-icon">📊</span>Stats</div>
     </div>
 
-    <script src="app.js?v=9"></script>
+    <script src="app.js?v=8"></script>
 </body>
 </html>
