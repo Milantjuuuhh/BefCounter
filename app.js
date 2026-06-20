@@ -29,7 +29,7 @@ if ('serviceWorker' in navigator) {
 
 function setupPushNotificaties(toonAlert = false) {
     if (!messaging) {
-        if(toonAlert) alert("Push notificaties worden niet ondersteund. Zorg dat je op iOS de app aan je Beginscherm hebt toegevoegd via Safari!");
+        if(toonAlert) alert("Push notificaties worden niet ondersteund. Zorg dat je op iOS de app aan je Beginscherm hebt toegevoegd!");
         return;
     }
     
@@ -49,6 +49,17 @@ function setupPushNotificaties(toonAlert = false) {
             if(toonAlert) alert("❌ Meldingen geweigerd. Zet ze aan in de Instellingen van je telefoon/Safari!");
             console.log("Notificatie setup mislukt of geweigerd:", err);
         });
+}
+
+function vraagLocatieToestemming() {
+    if ("geolocation" in navigator) {
+        navigator.geolocation.getCurrentPosition(
+            (pos) => { alert("✅ Locatie toegang is succesvol verleend!"); },
+            (err) => { alert("❌ Locatie toegang geweigerd of niet beschikbaar. Check je instellingen."); }
+        );
+    } else {
+        alert("Locatie wordt niet ondersteund door dit apparaat.");
+    }
 }
 
 let currentUser = localStorage.getItem('bef_user');
@@ -72,6 +83,7 @@ let mijnBingoStatus = [];
 
 function openGame(gameId) { document.getElementById(gameId).classList.add('active'); }
 function sluitGame(gameId) { document.getElementById(gameId).classList.remove('active'); }
+function openInstellingen() { openGame('modal-instellingen'); }
 
 const coopMissies = [
     { titel: "Drink 100 Pils met de groep", doel: 100, types: ['bier'] },
@@ -188,6 +200,7 @@ function startApp() {
     document.getElementById('ingelogde-naam').innerText = currentUser;
     document.getElementById('display-groepscode').innerText = currentGroup;
 
+    setupPushNotificaties(); // Probeert het stil op de achtergrond
     bouwLiveScorebord();
     luisterNaarLiveFeed();
     luisterNaarTijdbom();
@@ -201,18 +214,17 @@ function startApp() {
 // ==========================================
 let sessieCheckInterval = null;
 let actieveDrinkSessieTijd = 0;
-let drinkSessieStarter = ""; // Cruciaal om te voorkomen dat 5 mensen de webhook sturen!
+let drinkSessieStarter = "";
 
 function toggleDrinkSessie() {
     if ("vibrate" in navigator) navigator.vibrate(50);
-    
-    // Vraag direct push notificaties aan / update token (wordt getolereerd door iOS omdat we nu geklikt hebben!)
-    setupPushNotificaties(false);
     
     db.collection('groepen').doc(currentGroup).collection('sessie').doc('status').get().then(doc => {
         let isActief = doc.exists && doc.data().actief;
         
         if (!isActief) {
+            setupPushNotificaties(false); // Probeer stiekem notificaties te activeren
+            
             let wachttijd = Math.floor(Math.random() * (15 * 60 * 1000)) + (5 * 60 * 1000);
             db.collection('groepen').doc(currentGroup).collection('sessie').doc('status').set({
                 actief: true,
@@ -221,14 +233,10 @@ function toggleDrinkSessie() {
             });
             stuurNaarFeed(`🍻 DRINK SESSIE GESTART door ${currentUser.toUpperCase()}! Tracker is nu actief.`);
             
-            // Forceer eigen locatie update direct
             vakantieModus = true;
             if ("geolocation" in navigator) {
-                navigator.geolocation.getCurrentPosition((pos) => {
-                    db.collection('groepen').doc(currentGroup).collection('locaties').add({ 
-                        naam: currentUser, actie: "📍 Locatie Update", lat: pos.coords.latitude, lng: pos.coords.longitude, tijd: new Date().toISOString() 
-                    });
-                }, () => {});
+                // Vraag locatie op om te activeren, maar we loggen GEEN '📍 Locatie Update' meer op de kaart!
+                navigator.geolocation.getCurrentPosition(() => {}, () => {});
             }
         } else {
             db.collection('groepen').doc(currentGroup).collection('sessie').doc('status').set({ actief: false, starter: '', volgende_atje: 0 });
@@ -239,7 +247,6 @@ function toggleDrinkSessie() {
 }
 
 function forceerSessieAtje() {
-    // BYPASS: in plaats van de klok aan te passen, schieten we direct de test melding naar Make.com!
     let slachtoffer = spelersLijst.length > 0 ? spelersLijst[Math.floor(Math.random() * spelersLijst.length)] : currentUser;
     let bericht = `🚨 TEST ALARM! De Drink Sessie wijst aan... ${slachtoffer.toUpperCase()} moet adten! 🍻`;
     
@@ -262,7 +269,7 @@ function forceerSessieAtje() {
         });
         
         if (tokensGevonden === 0) {
-            alert("❌ Er is geen enkel Push-Token gevonden. Klik eerst op de blauwe knop 'Zet Meldingen Aan'!");
+            alert("❌ Er is geen enkel Push-Token in de database gevonden. Klik in de Instellingen ⚙️ op 'Zet Meldingen Aan'!");
         } else {
             console.log(`Test Webhook succesvol afgeschoten naar Make.com voor ${tokensGevonden} apparaat/apparaten!`);
         }
@@ -285,15 +292,10 @@ function luisterNaarDrinkSessie() {
             if(timerUI) timerUI.style.display = "block";
             if(btnSkip) btnSkip.style.display = "block";
             
-            // Zet locatie direct aan voor IEDEREEN als de sessie net gestart is
             if (!vakantieModus && doc.data().starter !== currentUser) {
-                alert(`🍻 DRINK SESSIE GESTART door ${doc.data().starter.toUpperCase()}! Jouw locatie wordt nu live gedeeld.`);
+                alert(`🍻 DRINK SESSIE GESTART door ${doc.data().starter.toUpperCase()}! Jouw locatie wordt nu live gedeeld (bij scoren).`);
                 if ("geolocation" in navigator) {
-                    navigator.geolocation.getCurrentPosition((pos) => {
-                        db.collection('groepen').doc(currentGroup).collection('locaties').add({ 
-                            naam: currentUser, actie: "📍 Locatie Update", lat: pos.coords.latitude, lng: pos.coords.longitude, tijd: new Date().toISOString() 
-                        });
-                    }, () => {});
+                    navigator.geolocation.getCurrentPosition(() => {}, () => {});
                 }
             }
             vakantieModus = true;
@@ -329,7 +331,6 @@ setInterval(() => {
 function checkDrinkSessieTijd() {
     if (!actieveDrinkSessieTijd || Date.now() < actieveDrinkSessieTijd) return;
     
-    // ANTI-SPAM: Alleen de host vuurt Make.com af, anders vuren we de webhook 5 keer!
     if (drinkSessieStarter !== currentUser) return;
     
     actieveDrinkSessieTijd = Date.now() + 99999999; 
@@ -941,6 +942,7 @@ function initKaart() {
     if (!worldMap) {
         worldMap = L.map('map').setView([45.0, 5.0], 4);
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(worldMap);
+        
         db.collection('groepen').doc(currentGroup).collection('locaties').onSnapshot(snap => {
             mapMarkers.forEach(m => worldMap.removeLayer(m)); 
             mapMarkers = []; 
@@ -974,6 +976,12 @@ function initKaart() {
                 });
                 
                 const marker = L.marker([g.lat, g.lng], { icon: icon }).bindPopup(pc);
+                
+                // DE AUTO-ZOOM FUNCTIE OP EEN MARKER
+                marker.on('click', function(e) {
+                    worldMap.flyTo(e.latlng, 16, { animate: true });
+                });
+
                 marker.addTo(worldMap); 
                 mapMarkers.push(marker);
             });
