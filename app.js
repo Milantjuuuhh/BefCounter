@@ -27,8 +27,13 @@ if ('serviceWorker' in navigator) {
     }); 
 }
 
-function setupPushNotificaties() {
-    if (!messaging) return;
+// Toegevoegd: toonAlert zodat je altijd een bevestiging in beeld krijgt als je hem start!
+function setupPushNotificaties(toonAlert = false) {
+    if (!messaging) {
+        if(toonAlert) alert("Push notificaties worden niet ondersteund. Zorg dat je op iOS de app aan je Beginscherm hebt toegevoegd!");
+        return;
+    }
+    
     messaging.requestPermission()
         .then(() => {
             return messaging.getToken({ vapidKey: "BMfkVb0XKUWAPQ8HnB_79f1bvyB05Q-DSnkgzSvzfSN9n_ADzgW1FpAFJim8ftNfTeHA5BkUTJ1B-YhKIOyDL9k" });
@@ -38,9 +43,11 @@ function setupPushNotificaties() {
                 db.collection('groepen').doc(currentGroup).collection('scores').doc(currentUser).set({
                     push_token: token
                 }, { merge: true });
+                if(toonAlert) alert("✅ Meldingen staan succesvol AAN voor dit apparaat!");
             }
         })
         .catch((err) => {
+            if(toonAlert) alert("❌ Meldingen geweigerd. Zet ze aan in de Instellingen van je telefoon/Safari!");
             console.log("Notificatie setup mislukt of geweigerd:", err);
         });
 }
@@ -182,7 +189,7 @@ function startApp() {
     document.getElementById('ingelogde-naam').innerText = currentUser;
     document.getElementById('display-groepscode').innerText = currentGroup;
 
-    setupPushNotificaties();
+    setupPushNotificaties(); // Probeert het stil op de achtergrond (werkt op Android/PC)
     bouwLiveScorebord();
     luisterNaarLiveFeed();
     luisterNaarTijdbom();
@@ -200,13 +207,13 @@ let actieveDrinkSessieTijd = 0;
 function toggleDrinkSessie() {
     if ("vibrate" in navigator) navigator.vibrate(50);
     
-    // SETUP NOTIFICATIES ZODRA ER GEKLIKT WORDT
-    setupPushNotificaties();
-    
     db.collection('groepen').doc(currentGroup).collection('sessie').doc('status').get().then(doc => {
         let isActief = doc.exists && doc.data().actief;
         
         if (!isActief) {
+            // FORCEER NOTIFICATIES + ALERT ZODRA IEMAND DE SESSIE START
+            setupPushNotificaties(true);
+            
             let wachttijd = Math.floor(Math.random() * (15 * 60 * 1000)) + (5 * 60 * 1000);
             db.collection('groepen').doc(currentGroup).collection('sessie').doc('status').set({
                 actief: true,
@@ -215,7 +222,6 @@ function toggleDrinkSessie() {
             });
             stuurNaarFeed(`🍻 DRINK SESSIE GESTART door ${currentUser.toUpperCase()}! Tracker is nu actief.`);
             
-            // Forceer eigen locatie update direct
             vakantieModus = true;
             if ("geolocation" in navigator) {
                 navigator.geolocation.getCurrentPosition((pos) => {
@@ -233,7 +239,6 @@ function toggleDrinkSessie() {
 }
 
 function forceerSessieAtje() {
-    // Zet de timer in de database in het verleden en trigger direct een check
     db.collection('groepen').doc(currentGroup).collection('sessie').doc('status').update({
         volgende_atje: Date.now() - 5000
     }).then(() => {
@@ -255,7 +260,6 @@ function luisterNaarDrinkSessie() {
             if(timerUI) timerUI.style.display = "block";
             if(btnSkip) btnSkip.style.display = "block";
             
-            // Zet locatie direct aan voor IEDEREEN als de sessie net gestart is
             if (!vakantieModus && doc.data().starter !== currentUser) {
                 alert(`🍻 DRINK SESSIE GESTART door ${doc.data().starter.toUpperCase()}! Jouw locatie wordt nu live gedeeld.`);
                 if ("geolocation" in navigator) {
