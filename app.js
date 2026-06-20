@@ -9,7 +9,9 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore();
 
-// PUSH NOTIFICATIES SETUP
+// ==========================================
+// PUSH NOTIFICATIES & TOESTEMMINGEN
+// ==========================================
 let messaging = null;
 try {
     if (typeof firebase.messaging === "function" && firebase.messaging.isSupported()) {
@@ -62,6 +64,9 @@ function vraagLocatieToestemming() {
     }
 }
 
+// ==========================================
+// GLOBALE VARIABELEN
+// ==========================================
 let currentUser = localStorage.getItem('bef_user');
 let currentGroup = localStorage.getItem('bef_group');
 let unsubscribeScores = null;
@@ -223,7 +228,7 @@ function toggleDrinkSessie() {
         let isActief = doc.exists && doc.data().actief;
         
         if (!isActief) {
-            setupPushNotificaties(false); // Probeer stiekem notificaties te activeren
+            setupPushNotificaties(false); 
             
             let wachttijd = Math.floor(Math.random() * (15 * 60 * 1000)) + (5 * 60 * 1000);
             db.collection('groepen').doc(currentGroup).collection('sessie').doc('status').set({
@@ -235,7 +240,7 @@ function toggleDrinkSessie() {
             
             vakantieModus = true;
             if ("geolocation" in navigator) {
-                // Vraag locatie op om te activeren, maar we loggen GEEN '📍 Locatie Update' meer op de kaart!
+                // We slaan niet meer expliciet "📍 Locatie Update" op de kaart op.
                 navigator.geolocation.getCurrentPosition(() => {}, () => {});
             }
         } else {
@@ -287,7 +292,7 @@ function luisterNaarDrinkSessie() {
             actieveDrinkSessieTijd = doc.data().volgende_atje;
             drinkSessieStarter = doc.data().starter;
             
-            btn.innerHTML = "🛑 Stop Drink Sessie & GPS";
+            btn.innerHTML = "🛑 Stop Drink Sessie";
             btn.style.backgroundColor = "#ff3b30";
             if(timerUI) timerUI.style.display = "block";
             if(btnSkip) btnSkip.style.display = "block";
