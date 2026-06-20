@@ -133,6 +133,9 @@ document.body.addEventListener('touchstart', function() {
 
 bepaalScherm();
 
+// ==========================================
+// BASIS NAVIGATIE & AUTH
+// ==========================================
 function bepaalScherm() {
     document.getElementById('auth-container').style.display = 'block';
     document.getElementById('auth-scherm').style.display = 'none';
@@ -203,6 +206,7 @@ function startApp() {
     luisterNaarCoopMissie();
     luisterNaarDrinkSessie();
     luisterNaarReflex();
+    luisterNaarQuiplash();
 }
 
 let sessieCheckInterval = null;
@@ -368,12 +372,7 @@ function pasScoreAan(categorie, bedrag, emojiNaam) {
     if (vakantieModus && "geolocation" in navigator) {
         navigator.geolocation.getCurrentPosition((pos) => {
             db.collection('groepen').doc(currentGroup).collection('locaties').add({ 
-                naam: currentUser, 
-                actie: emojiNaam, 
-                bedrag: bedrag,
-                lat: pos.coords.latitude, 
-                lng: pos.coords.longitude, 
-                tijd: new Date().toISOString() 
+                naam: currentUser, actie: emojiNaam, bedrag: bedrag, lat: pos.coords.latitude, lng: pos.coords.longitude, tijd: new Date().toISOString() 
             });
             stuurNaarFeed(startBericht);
         }, () => stuurNaarFeed(startBericht));
@@ -740,10 +739,8 @@ function updateCoinWeergave() {
 function verwijderSpeler(naam) { if (confirm(`Verwijder ${naam}?`)) db.collection('groepen').doc(currentGroup).collection('scores').doc(naam).delete(); }
 
 // ==========================================
-// NIEUWE GAMES
+// SJAAK
 // ==========================================
-
-/* SJAAK */
 const sjaakVragen = [
     "Wie kotst vanavond als eerste?", "Wie regelt er vannacht de minste actie?", 
     "Wie verliest er als eerste zijn telefoon of sleutels?", "Wie is morgen de grootste jankerd met een kater?", 
@@ -775,7 +772,9 @@ function startSjaakGame() {
     }, 1000);
 }
 
-/* HOGER LAGER */
+// ==========================================
+// HOGER LAGER
+// ==========================================
 let hlHuidig = 5;
 function initHogerLager() {
     hlHuidig = Math.floor(Math.random() * 10) + 1;
@@ -811,7 +810,9 @@ function speelHogerLager(keuze) {
     hlHuidig = nieuw;
 }
 
-/* REFLEX */
+// ==========================================
+// REFLEX
+// ==========================================
 let huidigeReflexRonde = 0;
 let reflexGroenTijd = 0;
 let reflexGeklikt = false;
@@ -910,7 +911,9 @@ function klikReflex(e) {
     }, { merge: true });
 }
 
-/* MEXEN */
+// ==========================================
+// MEXEN
+// ==========================================
 function gooiMexen() {
     let d1 = Math.floor(Math.random() * 6) + 1;
     let d2 = Math.floor(Math.random() * 6) + 1;
@@ -948,12 +951,10 @@ function initKaart() {
             snap.forEach(doc => {
                 const data = doc.data(); 
                 if(data.lat && data.lng) {
-                    // Groter grid (ongeveer 1.1 km) zodat alles in de buurt samenvoegt
                     const s = `${data.lat.toFixed(2)}_${data.lng.toFixed(2)}`;
                     if (!groepen[s]) groepen[s] = { lat: data.lat, lng: data.lng, personen: {} };
                     if (!groepen[s].personen[data.naam]) groepen[s].personen[data.naam] = {};
                     
-                    // Zorgt dat een min-klik er netjes af gaat
                     let val = data.bedrag !== undefined ? data.bedrag : 1;
                     groepen[s].personen[data.naam][data.actie] = (groepen[s].personen[data.naam][data.actie] || 0) + val;
                 }
@@ -969,7 +970,7 @@ function initKaart() {
                     let pStr = `<b style="text-transform:capitalize; color:#007aff;">${naam}</b><br>`;
                     
                     Object.entries(acties).forEach(([a, n]) => { 
-                        if (n > 0) { // Alleen tonen als het boven 0 is
+                        if (n > 0) { 
                             pStr += `${a}: ${n}x<br>`; 
                             ta += n; 
                             he = a.split(' ')[0]; 
@@ -981,7 +982,6 @@ function initKaart() {
                     }
                 });
                 
-                // Icon alleen tekenen als er daadwerkelijk acties > 0 zijn in dit gebied
                 if (ta > 0) {
                     const icon = L.divIcon({ 
                         html: `<div class="custom-maps-marker-wrapper" style="width:52px;height:52px;"><span style="font-size:34px;">${he}</span><span style="position:absolute;top:-6px;right:-6px;background:#ff3b30;color:white;font-size:13px;font-weight:900;border-radius:50%;width:22px;height:22px;display:flex;align-items:center;justify-content:center;border:2px solid white;">${ta}</span></div>`, 
@@ -992,7 +992,6 @@ function initKaart() {
                     
                     const marker = L.marker([g.lat, g.lng], { icon: icon }).bindPopup(pc);
                     
-                    // Zoom the camera on click
                     marker.on('click', function(e) {
                         worldMap.flyTo(e.latlng, 16, { animate: true });
                     });
@@ -1005,4 +1004,186 @@ function initKaart() {
     } else {
         worldMap.invalidateSize();
     }
+}
+
+// ==========================================
+// QUIPLASH
+// ==========================================
+let qlHuidigeVraag = "";
+let qlFase = "wachten";
+let qlAntwoorden = {};
+let qlStemmen = {};
+
+const quiplashVragenArray = [
+    "De echte reden waarom [SPELER] nog steeds single is, is ___.",
+    "Wat vind je als je een blacklight schijnt op de slaapkamer van [SPELER]?",
+    "Het ergste om te horen vlak nadat je de daad hebt verricht is ___.",
+    "Waarom is [SPELER] gisteravond uit de kroeg gezet?",
+    "Het minst succesvolle condoom-merk heet: ___.",
+    "Wat is de zwaar bewaakte, geheime fetisj van [SPELER]?",
+    "Je bent op een date, alles gaat perfect totdat je date begint te praten over ___.",
+    "Wat staat er op de stiekeme OnlyFans pagina van [SPELER]?",
+    "Wat is het aller ranzigste dat [SPELER] ooit in zijn mond heeft gestopt?",
+    "De dokter had slecht nieuws. [SPELER] is zojuist gediagnosticeerd met chronische ___.",
+    "Wat is de absolute favoriete zoekterm van [SPELER] op de hub?",
+    "Als [SPELER] een superkracht had, zou het de kracht zijn om ___ te verpesten.",
+    "Wat roept [SPELER] per ongeluk tijdens de seks?",
+    "Het allerslechtste excuus van [SPELER] om niet te hoeven adten is ___.",
+    "Wat is de echte reden dat de ouders van [SPELER] diep teleurgesteld in hem zijn?",
+    "Je weet dat het een waardeloze afterparty is als [SPELER] begint over ___.",
+    "Wat verbergt [SPELER] diep achterin zijn nachtkastje?",
+    "Als de browsergeschiedenis van [SPELER] uitlekt, moet hij direct de bak in voor ___.",
+    "Wat is het laatste dat door het hoofd van [SPELER] ging voordat hij out ging op de vloer?",
+    "Het nieuwe parfum van [SPELER] ruikt naar zweet, schaamte en ___.",
+    "Waarom mag [SPELER] absoluut niet meer in het lokale zwembad komen?",
+    "Wat is de ultieme, gigantische red flag van [SPELER]?",
+    "Wat was de daadwerkelijke oorzaak van de scheiding van de ouders van [SPELER]?",
+    "Het allersmerigste dat je na een wilde nacht onder je nagels kunt vinden is ___.",
+    "Wat is het meest beschamende wat [SPELER] heeft gedaan voor een gratis lauw biertje?",
+    "Wat doet [SPELER] als hij denkt dat niemand kijkt?",
+    "Het ergste wat je kan vinden in de koelkast van [SPELER] de ochtend na het stappen is ___.",
+    "Als [SPELER] een SOA was, welke zou hij dan zijn en waarom?",
+    "Waarom begint [SPELER] altijd spontaan te zweten als hij een politieauto ziet?",
+    "Wat is de titel van de autobiografie van [SPELER]?",
+    "De slechtste openingszin die [SPELER] ooit heeft gebruikt (en die faalde) is ___.",
+    "Wat is het eerste wat [SPELER] doet als hij alleen thuis is?",
+    "Het ergste cadeau dat [SPELER] ooit aan een scharrel heeft gegeven is ___.",
+    "Als [SPELER] sterft, wat staat er dan op zijn grafsteen?",
+    "Wat is de echte reden dat [SPELER] is ontslagen bij zijn vorige bijbaan?",
+    "Wat is het vreemdste object dat artsen uit het lichaam van [SPELER] hebben moeten verwijderen?",
+    "Waarom huilt [SPELER] zichzelf elke avond in slaap?",
+    "Wat is de grootste leugen op het Tinder profiel van [SPELER]?",
+    "Als [SPELER] een seksspeeltje was, hoe zou hij dan heten en wat doet het?",
+    "Wat is het smerigste dat [SPELER] ooit van de grond heeft gegeten in de kroeg?",
+    "Waar is [SPELER] daadwerkelijk bang voor in het donker?",
+    "Hoe heeft [SPELER] dat litteken op die ongemakkelijke plek gekregen?",
+    "Wat is de meest trieste gedachte die [SPELER] had tijdens een onenightstand?",
+    "Wat is het geheime wapen van [SPELER] in bed (dat eigenlijk super zielig is)?",
+    "Wat zou de reden zijn dat [SPELER] ooit op Opsporing Verzocht komt?",
+    "Wat is de meest walgelijke gewoonte van [SPELER] op de wc?",
+    "Wat is het donkerste geheim dat [SPELER] voor zijn vrienden achterhoudt?",
+    "Wat is het pijnlijkste compliment dat [SPELER] ooit heeft gekregen?",
+    "Als [SPELER] een geurkaars zou uitbrengen, welke geur zou dat dan zijn?",
+    "Waarom eindigt elke relatie van [SPELER] in een drama met huilbuien en ___?"
+];
+
+function luisterNaarQuiplash() {
+    db.collection('groepen').doc(currentGroup).collection('games').doc('quiplash').onSnapshot(doc => {
+        if (!doc.exists) return;
+        const data = doc.data();
+        qlFase = data.fase || 'wachten';
+        qlHuidigeVraag = data.vraag || '';
+        qlAntwoorden = data.antwoorden || {};
+        qlStemmen = data.stemmen || {};
+
+        document.getElementById('ql-wachten').style.display = 'none';
+        document.getElementById('ql-antwoorden').style.display = 'none';
+        document.getElementById('ql-stemmen').style.display = 'none';
+        document.getElementById('ql-resultaten').style.display = 'none';
+
+        if (qlFase === 'wachten') {
+            document.getElementById('ql-wachten').style.display = 'block';
+        } else if (qlFase === 'antwoorden') {
+            document.getElementById('ql-antwoorden').style.display = 'block';
+            document.getElementById('ql-vraag-tekst').innerText = qlHuidigeVraag;
+            document.getElementById('ql-invoer').value = qlAntwoorden[currentUser] || '';
+            document.getElementById('ql-status-antwoorden').innerText = `${Object.keys(qlAntwoorden).length} van de ${spelersLijst.length} spelers hebben geantwoord.`;
+            document.getElementById('btn-ql-forceer-stemmen').style.display = (data.host === currentUser) ? 'inline-block' : 'none';
+        } else if (qlFase === 'stemmen') {
+            document.getElementById('ql-stemmen').style.display = 'block';
+            document.getElementById('ql-vraag-stemmen').innerText = qlHuidigeVraag;
+            document.getElementById('ql-status-stemmen').innerText = `${Object.keys(qlStemmen).length} stemmen binnen.`;
+            document.getElementById('btn-ql-forceer-resultaat').style.display = (data.host === currentUser) ? 'inline-block' : 'none';
+
+            let stemLijst = document.getElementById('ql-stem-lijst');
+            stemLijst.innerHTML = '';
+            
+            let ansArr = Object.entries(qlAntwoorden).map(([naam, antw]) => ({naam, antw})).sort(() => 0.5 - Math.random());
+            ansArr.forEach(item => {
+                let btn = document.createElement('button');
+                btn.className = 'btn-primair';
+                btn.style.backgroundColor = (qlStemmen[currentUser] === item.naam) ? '#34c759' : '#007aff';
+                btn.innerText = item.antw;
+                btn.disabled = (qlStemmen[currentUser] != null || item.naam === currentUser);
+                btn.onclick = () => { if(item.naam !== currentUser) stemOpQuiplash(item.naam); };
+                stemLijst.appendChild(btn);
+            });
+        } else if (qlFase === 'resultaat') {
+            document.getElementById('ql-resultaten').style.display = 'block';
+            document.getElementById('ql-vraag-resultaat').innerText = qlHuidigeVraag;
+            let resLijst = document.getElementById('ql-uitslag-lijst');
+            resLijst.innerHTML = '';
+
+            let scores = {};
+            Object.values(qlStemmen).forEach(gestemdOp => {
+                scores[gestemdOp] = (scores[gestemdOp] || 0) + 1;
+            });
+
+            let resArr = Object.entries(qlAntwoorden).map(([naam, antw]) => ({naam, antw, stemmen: scores[naam] || 0}));
+            resArr.sort((a, b) => b.stemmen - a.stemmen);
+
+            resArr.forEach((item) => {
+                let p = document.createElement('div');
+                p.style.backgroundColor = '#1c1c1e'; p.style.padding = '10px'; p.style.borderRadius = '8px'; p.style.marginBottom = '5px';
+                p.innerHTML = `<b>${item.naam.toUpperCase()}</b> (${item.stemmen} stemmen)<br><span style="color:#a1a1aa;">"${item.antw}"</span>`;
+                resLijst.appendChild(p);
+            });
+        }
+    });
+}
+
+function startQuiplashRonde() {
+    let randomSpeler = spelersLijst.length > 0 ? spelersLijst[Math.floor(Math.random() * spelersLijst.length)] : "iemand";
+    let vr = quiplashVragenArray[Math.floor(Math.random() * quiplashVragenArray.length)].replace(/\[SPELER\]/g, randomSpeler.charAt(0).toUpperCase() + randomSpeler.slice(1));
+    
+    db.collection('groepen').doc(currentGroup).collection('games').doc('quiplash').set({
+        fase: 'antwoorden', vraag: vr, host: currentUser, antwoorden: {}, stemmen: {}
+    });
+    stuurNaarFeed(`🤐 Quiplash gestart door ${currentUser.toUpperCase()}!`);
+}
+
+function verstuurQuiplashAntwoord() {
+    let v = document.getElementById('ql-invoer').value.trim();
+    if(!v) return alert("Vul iets in!");
+    db.collection('groepen').doc(currentGroup).collection('games').doc('quiplash').set({
+        antwoorden: { [currentUser]: v }
+    }, {merge: true});
+    document.getElementById('ql-invoer').value = '';
+}
+
+function startQuiplashStemmen() {
+    db.collection('groepen').doc(currentGroup).collection('games').doc('quiplash').update({ fase: 'stemmen' });
+}
+
+function stemOpQuiplash(opWie) {
+    db.collection('groepen').doc(currentGroup).collection('games').doc('quiplash').set({
+        stemmen: { [currentUser]: opWie }
+    }, {merge: true});
+}
+
+function toonQuiplashResultaten() {
+    let maxStemmen = 0;
+    let winnaars = [];
+    let scores = {};
+    
+    Object.values(qlStemmen).forEach(gestemdOp => {
+        scores[gestemdOp] = (scores[gestemdOp] || 0) + 1;
+        if(scores[gestemdOp] > maxStemmen) maxStemmen = scores[gestemdOp];
+    });
+    
+    Object.keys(scores).forEach(naam => {
+        if(scores[naam] === maxStemmen) winnaars.push(naam);
+    });
+
+    winnaars.forEach(w => {
+        db.collection('groepen').doc(currentGroup).collection('scores').doc(w).set({
+            raggen: firebase.firestore.FieldValue.increment(5)
+        }, {merge: true});
+    });
+
+    if(winnaars.length > 0) {
+        stuurNaarFeed(`🏆 Quiplash: ${winnaars.join(' & ').toUpperCase()} won(nen) en kregen 5 punten!`);
+    }
+
+    db.collection('groepen').doc(currentGroup).collection('games').doc('quiplash').update({ fase: 'resultaat' });
 }
