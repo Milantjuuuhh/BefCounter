@@ -13,8 +13,9 @@
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     
-    <link rel="stylesheet" href="style.css?v=23">
+    <link rel="stylesheet" href="style.css?v=24">
     
+    <!-- FIREBASE SCRIPTS -->
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-messaging.js"></script>
@@ -93,7 +94,6 @@
                 <div class="game-icon" onclick="openGame('modal-quiplash')"><span class="g-emoji">🤐</span><span>Quiplash</span></div>
                 <div class="game-icon" onclick="openGame('modal-lava')"><span class="g-emoji">🌋</span><span>Vloer is Lava</span></div>
                 <div class="game-icon" onclick="openGame('modal-shake')"><span class="g-emoji">📳</span><span>Shake It!</span></div>
-                <div class="game-icon" onclick="openGame('modal-asm')"><span class="g-emoji">💀</span><span>Adt, Shot, Mix</span></div>
             </div>
         </div>
 
@@ -143,7 +143,7 @@
         <div id="page-stats" class="page">
             <div class="card">
                 <h2>Leaderboard Stats 🏆</h2>
-                <div id="stats-container"></div>
+                <div id="stats-container">Laden...</div>
             </div>
             <div class="card">
                 <h2>Wie drinkt er het meest? 📊</h2>
@@ -155,23 +155,14 @@
             </div>
             <div class="card">
                 <h2>Kater-Voorspeller 🤮</h2>
-                <div id="kater-container"></div>
+                <div id="kater-container">Laden...</div>
             </div>
-        </div>
-        
-        <div id="page-quotes" class="page">
-            <div class="card">
-                <h2>Wall of Shame 📸</h2>
-                <div style="display:flex; gap:10px;">
-                    <input type="text" id="quote-input" placeholder="Wat is er zojuist voor debiels gezegd?!" style="box-sizing:border-box; flex:1; padding:10px; border-radius:8px; border:1px solid #ccc;">
-                    <button class="btn-primair" style="width:auto; padding:0 20px; background-color:#ff9500;" onclick="voegQuoteToe()">Plaats</button>
-                </div>
-            </div>
-            <div id="quotes-lijst" style="margin-top:20px; display:flex; flex-direction:column; gap:10px;"></div>
         </div>
 
     </div>
 
+    <!-- MODALS / GAMES -->
+    
     <div id="modal-instellingen" class="game-modal">
         <button class="btn-sluit-modal" onclick="sluitGame('modal-instellingen')">⬅ Terug</button>
         <div class="container">
@@ -186,6 +177,7 @@
         </div>
     </div>
 
+    <!-- SPELLEN -->
     <div id="modal-bom" class="game-modal"><button class="btn-sluit-modal" onclick="sluitGame('modal-bom')">⬅ Terug</button><div class="container"><div class="card" id="bom-card" style="background: #1c1c1e; color: white;"><h2 style="color: #ff3b30;">💣 De Tijdbom</h2><div id="bom-idle-ui"><button class="btn-primair" style="background-color: #ff3b30;" onclick="startTijdbom()">💥 Start de Bom!</button></div><div id="bom-active-ui" style="display: none; text-align: center;"><span style="font-size: 50px;">🧨</span><h3 id="bom-status-tekst">Bom is bij ...</h3><button id="btn-gooi-door" class="btn-primair" style="background-color: #ff9500; display: none;" onclick="gooiBomDoor()">GOOI DOOR!!</button></div></div></div></div>
     <div id="modal-rad" class="game-modal"><button class="btn-sluit-modal" onclick="sluitGame('modal-rad')">⬅ Terug</button><div class="container"><div class="card"><h2>Rad van Fortuin<span class="coin-badge">🪙 <span class="coin-weergave-class">0</span></span></h2><div id="rad-box"><span id="rad-uitkomst">Druk op Draai!</span></div><button class="btn-primair" style="background-color: #34c759;" onclick="draaiRad()">🎰 DRAAI (Kosten: 1 Coin)</button></div></div></div>
     <div id="modal-bingo" class="game-modal"><button class="btn-sluit-modal" onclick="sluitGame('modal-bingo')">⬅ Terug</button><div class="container"><div class="card"><h2>🌴 Ibiza Bingo</h2><div id="bingo-grid" class="bingo-grid"></div></div></div></div>
@@ -194,6 +186,7 @@
     <div id="modal-reflex" class="game-modal"><button class="btn-sluit-modal" onclick="sluitGame('modal-reflex')">⬅ Terug</button><div class="container"><div class="card" style="text-align: center; background: #e5e5ea;"><h2>⚡ Reflex Roulette</h2><button class="btn-secundair" onclick="startReflexRonde()">Start Nieuwe Ronde</button><button id="reflex-btn" class="reflex-btn" onmousedown="klikReflex(event)" ontouchstart="klikReflex(event)">Wacht...</button><div id="reflex-leaderboard" style="display:none; background:white; border-radius:12px; padding:15px; margin-top:20px; text-align:left; box-shadow: 0 4px 10px rgba(0,0,0,0.1);"></div></div></div></div>
     <div id="modal-mexen" class="game-modal"><button class="btn-sluit-modal" onclick="sluitGame('modal-mexen')">⬅ Terug</button><div class="container"><div class="card" style="text-align: center; background: #2c3e50; color: white;"><h2>🎲 Virtueel Mexen</h2><div style="display: flex; justify-content: center; gap: 20px;"><div id="mex-d1" class="dice-box">?</div><div id="mex-d2" class="dice-box">?</div></div><button class="btn-primair" style="background-color: #f1c40f; color: #000;" onclick="gooiMexen()">ROLLEN!</button></div></div></div>
 
+    <!-- QUIPLASH MODAL -->
     <div id="modal-quiplash" class="game-modal">
         <button class="btn-sluit-modal" onclick="sluitGame('modal-quiplash')">⬅ Terug</button>
         <div class="container">
@@ -226,6 +219,7 @@
         </div>
     </div>
 
+    <!-- 1. VLOER IS LAVA -->
     <div id="modal-lava" class="game-modal" style="background-color: #ff3b30; color: white;">
         <button class="btn-sluit-modal" style="color:white; border-color:white;" onclick="sluitGame('modal-lava')">⬅ Terug</button>
         <div class="container" style="text-align: center; margin-top:50px;">
@@ -244,6 +238,7 @@
         </div>
     </div>
 
+    <!-- 2. SHAKE IT -->
     <div id="modal-shake" class="game-modal" style="background-color: #007aff; color: white;">
         <button class="btn-sluit-modal" style="color:white; border-color:white;" onclick="sluitGame('modal-shake')">⬅ Terug</button>
         <div class="container" style="text-align: center; margin-top:50px;">
@@ -263,47 +258,14 @@
         </div>
     </div>
 
-    <div id="modal-asm" class="game-modal">
-        <button class="btn-sluit-modal" onclick="sluitGame('modal-asm')">⬅ Terug</button>
-        <div class="container">
-            <div class="card" style="text-align: center; background: #1c1c1e; color: white;">
-                <h2 style="color: #ff3b30;">💀 Adt, Shot, Mix</h2>
-                <div id="asm-start-ui">
-                    <p style="color:#a1a1aa; font-size:14px;">Trek 3 willekeurige slachtoffers uit de groep en bekrachtig het keiharde oordeel.</p>
-                    <button class="btn-primair" style="background-color: #ff3b30; margin-top:20px;" onclick="startASM()">Kies 3 Slachtoffers</button>
-                </div>
-                <div id="asm-actief-ui" style="display:none; text-align:left;">
-                    <p style="color:#a1a1aa; text-align:center;">Verdeel de straffen over de 3 gekozen personen!</p>
-                    <div style="margin-bottom:15px; background:rgba(255,255,255,0.05); padding:10px; border-radius:8px;">
-                        <b style="color:#ff3b30;">🍺 WIE KRIJGT DE ADT:</b>
-                        <select id="asm-adt" style="box-sizing:border-box; width:100%; padding:10px; border-radius:8px; margin-top:5px; font-size:16px;"></select>
-                    </div>
-                    <div style="margin-bottom:15px; background:rgba(255,255,255,0.05); padding:10px; border-radius:8px;">
-                        <b style="color:#ff9500;">🥃 WIE KRIJGT DE SHOT:</b>
-                        <select id="asm-shot" style="box-sizing:border-box; width:100%; padding:10px; border-radius:8px; margin-top:5px; font-size:16px;"></select>
-                    </div>
-                    <div style="margin-bottom:15px; background:rgba(255,255,255,0.05); padding:10px; border-radius:8px;">
-                        <b style="color:#34c759;">🍹 WIE KRIJGT DE MIX:</b>
-                        <select id="asm-mix" style="box-sizing:border-box; width:100%; padding:10px; border-radius:8px; margin-top:5px; font-size:16px;"></select>
-                    </div>
-                    <button class="btn-primair" style="background-color: #007aff; margin-top:10px;" onclick="bevestigASM()">Bekrachtig Oordeel!</button>
-                </div>
-                <div id="asm-resultaat-ui" style="display:none; margin-top:20px; text-align:center; background:#2c2c2e; padding:20px; border-radius:10px;">
-                </div>
-            </div>
-        </div>
-    </div>
-
-
     <div class="bottom-nav" id="bottom-nav">
         <div class="nav-item active" onclick="wisselPagina('page-scorebord', this)"><span class="nav-icon">📝</span>Scores</div>
         <div class="nav-item" onclick="wisselPagina('page-games', this)"><span class="nav-icon">🕹️</span>Games</div>
         <div class="nav-item" onclick="wisselPagina('page-missies', this)"><span class="nav-icon">🎯</span>Missies</div>
         <div class="nav-item" onclick="wisselPagina('page-kaart', this)"><span class="nav-icon">🗺️</span>Kaart</div>
         <div class="nav-item" onclick="wisselPagina('page-stats', this)"><span class="nav-icon">📊</span>Stats</div>
-        <div class="nav-item" onclick="wisselPagina('page-quotes', this)"><span class="nav-icon">💬</span>Quotes</div>
     </div>
 
-    <script src="app.js?v=23"></script>
+    <script src="app.js?v=24"></script>
 </body>
 </html>
