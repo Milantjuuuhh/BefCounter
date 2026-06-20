@@ -13,9 +13,13 @@
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     
-    <link rel="stylesheet" href="style.css?v=11">
+    <link rel="stylesheet" href="style.css?v=14">
+    
+    <!-- FIREBASE SCRIPTS -->
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+    <!-- DEZE REGEL MISTE HIERONDER! -->
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-messaging.js"></script>
 </head>
 <body>
 
@@ -146,12 +150,19 @@
         </div>
     </div>
 
+    <!-- MODALS -->
     <div id="modal-bom" class="game-modal"><button class="btn-sluit-modal" onclick="sluitGame('modal-bom')">⬅ Terug</button><div class="container"><div class="card" id="bom-card" style="background: #1c1c1e; color: white;"><h2 style="color: #ff3b30;">💣 De Tijdbom</h2><div id="bom-idle-ui"><button class="btn-primair" style="background-color: #ff3b30;" onclick="startTijdbom()">💥 Start de Bom!</button></div><div id="bom-active-ui" style="display: none; text-align: center;"><span style="font-size: 50px;">🧨</span><h3 id="bom-status-tekst">Bom is bij ...</h3><button id="btn-gooi-door" class="btn-primair" style="background-color: #ff9500; display: none;" onclick="gooiBomDoor()">GOOI DOOR!!</button></div></div></div></div>
+    
     <div id="modal-rad" class="game-modal"><button class="btn-sluit-modal" onclick="sluitGame('modal-rad')">⬅ Terug</button><div class="container"><div class="card"><h2>Rad van Fortuin<span class="coin-badge">🪙 <span class="coin-weergave-class">0</span></span></h2><div id="rad-box"><span id="rad-uitkomst">Druk op Draai!</span></div><button class="btn-primair" style="background-color: #34c759;" onclick="draaiRad()">🎰 DRAAI (Kosten: 1 Coin)</button></div></div></div>
+    
     <div id="modal-bingo" class="game-modal"><button class="btn-sluit-modal" onclick="sluitGame('modal-bingo')">⬅ Terug</button><div class="container"><div class="card"><h2>🌴 Ibiza Bingo</h2><div id="bingo-grid" class="bingo-grid"></div></div></div></div>
+    
     <div id="modal-sjaak" class="game-modal"><button class="btn-sluit-modal" onclick="sluitGame('modal-sjaak')">⬅ Terug</button><div class="container"><div class="card" style="text-align: center; background: #000; color: white;"><h2 style="color: #ff3b30;">👉 Wie is de Sjaak?</h2><div style="background: #1c1c1e; padding: 20px; border-radius: 10px;"><strong id="sjaak-vraag" style="font-size: 20px; color: #ff9500;">Start!</strong></div><div id="sjaak-timer" style="font-size: 60px; font-weight: 900; margin: 20px 0;">5</div><button class="btn-primair" style="background-color: #34c759;" onclick="startSjaakGame()">Vraag & Start Timer</button></div></div></div>
+    
     <div id="modal-hogerlager" class="game-modal"><button class="btn-sluit-modal" onclick="sluitGame('modal-hogerlager')">⬅ Terug</button><div class="container"><div class="card" style="text-align: center;"><h2>Hoger of Lager<span class="coin-badge">🪙 <span class="coin-weergave-class">0</span></span></h2><div style="background: #f2f2f7; padding: 30px; font-size: 80px; font-weight: 900;"><span id="hl-getal">?</span></div><input type="number" id="hl-inzet" value="1" min="1" style="text-align: center; font-size: 20px; width: 100px; display: inline-block;"><div style="display: flex; gap: 10px;"><button class="btn-primair" style="background-color: #ff3b30; flex: 1;" onclick="speelHogerLager('lager')">🔽 LAGER</button><button class="btn-primair" style="background-color: #34c759; flex: 1;" onclick="speelHogerLager('hoger')">🔼 HOGER</button></div></div></div></div>
-    <div id="modal-reflex" class="game-modal"><button class="btn-sluit-modal" onclick="sluitGame('modal-reflex')">⬅ Terug</button><div class="container"><div class="card" style="text-align: center; background: #e5e5ea;"><h2>⚡ Reflex Roulette</h2><button class="btn-secundair" onclick="startReflexRonde()">Start Nieuwe Ronde</button><button id="reflex-btn" class="reflex-btn" onmousedown="klikReflex(event)" ontouchstart="klikReflex(event)">Wacht...</button><div id="reflex-leaderboard" style="display:none; background:white; border-radius:12px; padding:15px; margin-top:20px; text-align:left; box-shadow: 0 4px 10px rgba(0,0,0,0.1);"></div></div></div></div>
+    
+    <div id="modal-reflex" class="game-modal"><button class="btn-sluit-modal" onclick="sluitGame('modal-reflex')">⬅ Terug</button><div class="container"><div class="card" style="text-align: center; background: #e5e5ea;"><h2>⚡ Reflex Roulette</h2><button class="btn-secundair" onclick="startReflexRonde()">Start Nieuwe Ronde</button><button id="reflex-btn" class="reflex-btn" onmousedown="klikReflex(event)" ontouchstart="klikReflex(event)">Wacht...</button><div id="reflex-leaderboard" style="text-align: left; background: white; padding: 15px; border-radius: 10px; display: none;"></div></div></div></div>
+    
     <div id="modal-mexen" class="game-modal"><button class="btn-sluit-modal" onclick="sluitGame('modal-mexen')">⬅ Terug</button><div class="container"><div class="card" style="text-align: center; background: #2c3e50; color: white;"><h2>🎲 Virtueel Mexen</h2><div style="display: flex; justify-content: center; gap: 20px;"><div id="mex-d1" class="dice-box">?</div><div id="mex-d2" class="dice-box">?</div></div><button class="btn-primair" style="background-color: #f1c40f; color: #000;" onclick="gooiMexen()">ROLLEN!</button></div></div></div>
 
     <div class="bottom-nav" id="bottom-nav">
@@ -162,6 +173,7 @@
         <div class="nav-item" onclick="wisselPagina('page-stats', this)"><span class="nav-icon">📊</span>Stats</div>
     </div>
 
-    <script src="app.js?v=15"></script>
+    <!-- Zorg dat we app.js inladen! -->
+    <script src="app.js?v=14"></script>
 </body>
 </html>
