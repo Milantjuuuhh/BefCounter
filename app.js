@@ -27,7 +27,6 @@ if ('serviceWorker' in navigator) {
     }); 
 }
 
-// Toegevoegd: toonAlert zodat je altijd een bevestiging in beeld krijgt als je hem start!
 function setupPushNotificaties(toonAlert = false) {
     if (!messaging) {
         if(toonAlert) alert("Push notificaties worden niet ondersteund. Zorg dat je op iOS de app aan je Beginscherm hebt toegevoegd!");
@@ -189,7 +188,7 @@ function startApp() {
     document.getElementById('ingelogde-naam').innerText = currentUser;
     document.getElementById('display-groepscode').innerText = currentGroup;
 
-    setupPushNotificaties(); // Probeert het stil op de achtergrond (werkt op Android/PC)
+    setupPushNotificaties(); // Probeert het stil op de achtergrond
     bouwLiveScorebord();
     luisterNaarLiveFeed();
     luisterNaarTijdbom();
@@ -203,6 +202,7 @@ function startApp() {
 // ==========================================
 let sessieCheckInterval = null;
 let actieveDrinkSessieTijd = 0;
+let drinkSessieStarter = ""; // Houdt bij wie de webhook mag afvuren
 
 function toggleDrinkSessie() {
     if ("vibrate" in navigator) navigator.vibrate(50);
@@ -211,8 +211,7 @@ function toggleDrinkSessie() {
         let isActief = doc.exists && doc.data().actief;
         
         if (!isActief) {
-            // FORCEER NOTIFICATIES + ALERT ZODRA IEMAND DE SESSIE START
-            setupPushNotificaties(true);
+            setupPushNotificaties(true); // Activeer alert & push
             
             let wachttijd = Math.floor(Math.random() * (15 * 60 * 1000)) + (5 * 60 * 1000);
             db.collection('groepen').doc(currentGroup).collection('sessie').doc('status').set({
@@ -239,10 +238,33 @@ function toggleDrinkSessie() {
 }
 
 function forceerSessieAtje() {
-    db.collection('groepen').doc(currentGroup).collection('sessie').doc('status').update({
-        volgende_atje: Date.now() - 5000
-    }).then(() => {
-        checkDrinkSessieTijd();
+    let slachtoffer = spelersLijst.length > 0 ? spelersLijst[Math.floor(Math.random() * spelersLijst.length)] : currentUser;
+    let bericht = `🚨 TEST ALARM! De Drink Sessie wijst aan... ${slachtoffer.toUpperCase()} moet adten! 🍻`;
+    
+    stuurNaarFeed(bericht);
+    if ("vibrate" in navigator) navigator.vibrate([200, 100, 200, 100, 500, 100, 500]);
+    
+    let tokensGevonden = 0;
+    const MAKE_WEBHOOK_URL = "https://hook.eu1.make.com/iydcsfjwnlx3147b29w38texvyhgrr62";
+    
+    db.collection('groepen').doc(currentGroup).collection('scores').get().then(snap => {
+        snap.forEach(doc => {
+            if (doc.data().push_token) {
+                tokensGevonden++;
+                fetch(MAKE_WEBHOOK_URL, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ token: doc.data().push_token, titel: "🍻 ATJE TREKKEN!", bericht: bericht })
+                }).catch(e => console.log(e));
+            }
+        });
+        
+        // Waarschuwing als er niks verstuurd wordt!
+        if (tokensGevonden === 0) {
+            alert("Er is geen enkel Push-Token in de database gevonden. Klik eerst allemaal op de blauwe knop 'Zet Meldingen Aan'!");
+        } else {
+            console.log("Test Webhook met succes afgeschoten naar Make.com!");
+        }
     });
 }
 
@@ -255,6 +277,8 @@ function luisterNaarDrinkSessie() {
         
         if (doc.exists && doc.data().actief) {
             actieveDrinkSessieTijd = doc.data().volgende_atje;
+            drinkSessieStarter = doc.data().starter; // Update de actieve host
+            
             btn.innerHTML = "🛑 Stop Drink Sessie & GPS";
             btn.style.backgroundColor = "#ff3b30";
             if(timerUI) timerUI.style.display = "block";
@@ -275,6 +299,7 @@ function luisterNaarDrinkSessie() {
             if (!sessieCheckInterval) sessieCheckInterval = setInterval(checkDrinkSessieTijd, 5000);
         } else {
             actieveDrinkSessieTijd = 0;
+            drinkSessieStarter = "";
             btn.innerHTML = "🍻 Start Drink Sessie!";
             btn.style.backgroundColor = "#ff9500";
             if(timerUI) timerUI.style.display = "none";
@@ -301,6 +326,9 @@ setInterval(() => {
 
 function checkDrinkSessieTijd() {
     if (!actieveDrinkSessieTijd || Date.now() < actieveDrinkSessieTijd) return;
+    
+    // ALLEEN DE STARTER STUURT DE PUSH. Dit voorkomt dat 5 telefoons tegelijk Make.com spammen!
+    if (drinkSessieStarter !== currentUser) return;
     
     actieveDrinkSessieTijd = Date.now() + 99999999; 
     let nieuweWachttijd = Math.floor(Math.random() * (15 * 60 * 1000)) + (5 * 60 * 1000);
