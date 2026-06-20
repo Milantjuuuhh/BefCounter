@@ -9,9 +9,7 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore();
 
-// ==========================================
-// PUSH NOTIFICATIES & TOESTEMMINGEN
-// ==========================================
+// PUSH NOTIFICATIES SETUP
 let messaging = null;
 try {
     if (typeof firebase.messaging === "function" && firebase.messaging.isSupported()) {
@@ -64,9 +62,6 @@ function vraagLocatieToestemming() {
     }
 }
 
-// ==========================================
-// GLOBALE VARIABELEN
-// ==========================================
 let currentUser = localStorage.getItem('bef_user');
 let currentGroup = localStorage.getItem('bef_group');
 let unsubscribeScores = null;
@@ -941,7 +936,7 @@ function gooiMexen() {
 }
 
 // ==========================================
-// KAART
+// KAART CLUSTERING & AUTO-ZOOM
 // ==========================================
 function initKaart() {
     if (!worldMap) {
@@ -956,21 +951,27 @@ function initKaart() {
             snap.forEach(doc => {
                 const data = doc.data(); 
                 if(data.lat && data.lng) {
-                    const s = `${data.naam}_${data.lat.toFixed(4)}_${data.lng.toFixed(4)}`;
-                    if (!groepen[s]) groepen[s] = { naam: data.naam, lat: data.lat, lng: data.lng, acties: {} };
-                    groepen[s].acties[data.actie] = (groepen[s].acties[data.actie] || 0) + 1;
+                    // Cluster door af te ronden op ~100 meter
+                    const s = `${data.lat.toFixed(3)}_${data.lng.toFixed(3)}`;
+                    if (!groepen[s]) groepen[s] = { lat: data.lat, lng: data.lng, personen: {} };
+                    if (!groepen[s].personen[data.naam]) groepen[s].personen[data.naam] = {};
+                    groepen[s].personen[data.naam][data.actie] = (groepen[s].personen[data.naam][data.actie] || 0) + 1;
                 }
             });
             
             Object.values(groepen).forEach(g => {
-                let pc = `<b>${g.naam}</b><br>`;
+                let pc = "";
                 let ta = 0;
-                let he = "🍺";
+                let he = "📍";
                 
-                Object.entries(g.acties).forEach(([a, n]) => { 
-                    pc += `${a}: ${n}x<br>`; 
-                    ta += n; 
-                    he = a.split(' ')[0]; 
+                Object.entries(g.personen).forEach(([naam, acties]) => { 
+                    pc += `<b style="text-transform:capitalize; color:#007aff;">${naam}</b><br>`; 
+                    Object.entries(acties).forEach(([a, n]) => { 
+                        pc += `${a}: ${n}x<br>`; 
+                        ta += n; 
+                        he = a.split(' ')[0]; // Pakt de emoji van de actie
+                    });
+                    pc += `<div style="height:8px;"></div>`; 
                 });
                 
                 const icon = L.divIcon({ 
