@@ -200,6 +200,9 @@ let actieveDrinkSessieTijd = 0;
 function toggleDrinkSessie() {
     if ("vibrate" in navigator) navigator.vibrate(50);
     
+    // SETUP NOTIFICATIES ZODRA ER GEKLIKT WORDT
+    setupPushNotificaties();
+    
     db.collection('groepen').doc(currentGroup).collection('sessie').doc('status').get().then(doc => {
         let isActief = doc.exists && doc.data().actief;
         
