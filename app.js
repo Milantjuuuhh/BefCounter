@@ -9,7 +9,6 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore();
 
-// PUSH NOTIFICATIES SETUP
 let messaging = null;
 try {
     if (typeof firebase.messaging === "function" && firebase.messaging.isSupported()) {
@@ -134,9 +133,6 @@ document.body.addEventListener('touchstart', function() {
 
 bepaalScherm();
 
-// ==========================================
-// BASIS NAVIGATIE & AUTH
-// ==========================================
 function bepaalScherm() {
     document.getElementById('auth-container').style.display = 'block';
     document.getElementById('auth-scherm').style.display = 'none';
@@ -200,7 +196,7 @@ function startApp() {
     document.getElementById('ingelogde-naam').innerText = currentUser;
     document.getElementById('display-groepscode').innerText = currentGroup;
 
-    setupPushNotificaties(); // Probeert het stil op de achtergrond
+    setupPushNotificaties(); 
     bouwLiveScorebord();
     luisterNaarLiveFeed();
     luisterNaarTijdbom();
@@ -209,9 +205,6 @@ function startApp() {
     luisterNaarReflex();
 }
 
-// ==========================================
-// DRINK SESSIE LOGICA (TIMER & PUSH)
-// ==========================================
 let sessieCheckInterval = null;
 let actieveDrinkSessieTijd = 0;
 let drinkSessieStarter = "";
@@ -235,7 +228,6 @@ function toggleDrinkSessie() {
             
             vakantieModus = true;
             if ("geolocation" in navigator) {
-                // We slaan niet meer expliciet "📍 Locatie Update" op de kaart op.
                 navigator.geolocation.getCurrentPosition(() => {}, () => {});
             }
         } else {
@@ -376,7 +368,12 @@ function pasScoreAan(categorie, bedrag, emojiNaam) {
     if (vakantieModus && "geolocation" in navigator) {
         navigator.geolocation.getCurrentPosition((pos) => {
             db.collection('groepen').doc(currentGroup).collection('locaties').add({ 
-                naam: currentUser, actie: emojiNaam, lat: pos.coords.latitude, lng: pos.coords.longitude, tijd: new Date().toISOString() 
+                naam: currentUser, 
+                actie: emojiNaam, 
+                bedrag: bedrag,
+                lat: pos.coords.latitude, 
+                lng: pos.coords.longitude, 
+                tijd: new Date().toISOString() 
             });
             stuurNaarFeed(startBericht);
         }, () => stuurNaarFeed(startBericht));
@@ -951,11 +948,14 @@ function initKaart() {
             snap.forEach(doc => {
                 const data = doc.data(); 
                 if(data.lat && data.lng) {
-                    // Cluster door af te ronden op ~100 meter
-                    const s = `${data.lat.toFixed(3)}_${data.lng.toFixed(3)}`;
+                    // Groter grid (ongeveer 1.1 km) zodat alles in de buurt samenvoegt
+                    const s = `${data.lat.toFixed(2)}_${data.lng.toFixed(2)}`;
                     if (!groepen[s]) groepen[s] = { lat: data.lat, lng: data.lng, personen: {} };
                     if (!groepen[s].personen[data.naam]) groepen[s].personen[data.naam] = {};
-                    groepen[s].personen[data.naam][data.actie] = (groepen[s].personen[data.naam][data.actie] || 0) + 1;
+                    
+                    // Zorgt dat een min-klik er netjes af gaat
+                    let val = data.bedrag !== undefined ? data.bedrag : 1;
+                    groepen[s].personen[data.naam][data.actie] = (groepen[s].personen[data.naam][data.actie] || 0) + val;
                 }
             });
             
@@ -965,31 +965,41 @@ function initKaart() {
                 let he = "📍";
                 
                 Object.entries(g.personen).forEach(([naam, acties]) => { 
-                    pc += `<b style="text-transform:capitalize; color:#007aff;">${naam}</b><br>`; 
+                    let heeftPunten = false;
+                    let pStr = `<b style="text-transform:capitalize; color:#007aff;">${naam}</b><br>`;
+                    
                     Object.entries(acties).forEach(([a, n]) => { 
-                        pc += `${a}: ${n}x<br>`; 
-                        ta += n; 
-                        he = a.split(' ')[0]; // Pakt de emoji van de actie
+                        if (n > 0) { // Alleen tonen als het boven 0 is
+                            pStr += `${a}: ${n}x<br>`; 
+                            ta += n; 
+                            he = a.split(' ')[0]; 
+                            heeftPunten = true;
+                        }
                     });
-                    pc += `<div style="height:8px;"></div>`; 
+                    if (heeftPunten) {
+                        pc += pStr + `<div style="height:8px;"></div>`;
+                    }
                 });
                 
-                const icon = L.divIcon({ 
-                    html: `<div class="custom-maps-marker-wrapper" style="width:52px;height:52px;"><span style="font-size:34px;">${he}</span><span style="position:absolute;top:-6px;right:-6px;background:#ff3b30;color:white;font-size:13px;font-weight:900;border-radius:50%;width:22px;height:22px;display:flex;align-items:center;justify-content:center;border:2px solid white;">${ta}</span></div>`, 
-                    className: '', 
-                    iconSize: [52,52], 
-                    iconAnchor: [26,26] 
-                });
-                
-                const marker = L.marker([g.lat, g.lng], { icon: icon }).bindPopup(pc);
-                
-                // DE AUTO-ZOOM FUNCTIE OP EEN MARKER
-                marker.on('click', function(e) {
-                    worldMap.flyTo(e.latlng, 16, { animate: true });
-                });
+                // Icon alleen tekenen als er daadwerkelijk acties > 0 zijn in dit gebied
+                if (ta > 0) {
+                    const icon = L.divIcon({ 
+                        html: `<div class="custom-maps-marker-wrapper" style="width:52px;height:52px;"><span style="font-size:34px;">${he}</span><span style="position:absolute;top:-6px;right:-6px;background:#ff3b30;color:white;font-size:13px;font-weight:900;border-radius:50%;width:22px;height:22px;display:flex;align-items:center;justify-content:center;border:2px solid white;">${ta}</span></div>`, 
+                        className: '', 
+                        iconSize: [52,52], 
+                        iconAnchor: [26,26] 
+                    });
+                    
+                    const marker = L.marker([g.lat, g.lng], { icon: icon }).bindPopup(pc);
+                    
+                    // Zoom the camera on click
+                    marker.on('click', function(e) {
+                        worldMap.flyTo(e.latlng, 16, { animate: true });
+                    });
 
-                marker.addTo(worldMap); 
-                mapMarkers.push(marker);
+                    marker.addTo(worldMap); 
+                    mapMarkers.push(marker);
+                }
             });
         });
     } else {
