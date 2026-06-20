@@ -13,7 +13,7 @@
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     
-    <link rel="stylesheet" href="style.css?v=13">
+    <link rel="stylesheet" href="style.css?v=11">
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
 </head>
@@ -22,7 +22,6 @@
     <audio id="notificatie-geluid" src="https://www.soundjay.com/buttons/sounds/button-09.mp3" preload="auto"></audio>
     <div id="live-ticker" onclick="this.style.display='none'"></div>
 
-    <!-- FULLSCREEN SWASI OVERLAY -->
     <div id="swasi-overlay">
         <h2 id="swasi-instructie" style="color: white; position: absolute; top: 15%; width: 100%; text-align: center; pointer-events: none; opacity: 0.8; font-size: 22px;">Plaats allemaal 1 vinger...</h2>
         <div id="swasi-countdown" style="display: none;">3</div>
@@ -56,13 +55,9 @@
         </div>
     </div>
 
-    <!-- Hoofd Applicatie Schermen -->
     <div id="app-scherm" class="container">
 
-        <!-- PAGINA 1: SCOREBORD -->
         <div id="page-scorebord" class="page active">
-
-            <!-- VERNIEUWDE TABEL -->
             <div class="table-wrapper">
                 <table id="score-tabel"></table>
             </div>
@@ -82,7 +77,6 @@
             </div>
         </div>
 
-        <!-- PAGINA 2: GAMES (OVERZICHT ICONEN) -->
         <div id="page-games" class="page">
             <h2 style="margin-left: 10px;">Selecteer een Game</h2>
             <div class="games-grid">
@@ -113,7 +107,6 @@
             </div>
         </div>
 
-        <!-- PAGINA 3: MISSIES -->
         <div id="page-missies" class="page">
             
             <div class="card">
@@ -123,14 +116,8 @@
                 <p id="drink-sessie-timer-tekst" style="font-size: 18px; font-weight: 900; color: #ff3b30; text-align: center; margin-top: 15px; display: none;">
                     ⏰ Volgende Atje over: 00:00
                 </p>
-
-                <!-- DE NIEUWE MELDINGEN KNOP -->
-                <button onclick="setupPushNotificaties()" style="width:100%; padding:15px; background:#007aff; border:none; border-radius:10px; color:white; font-weight:bold; font-size:16px; margin-top:15px; box-shadow: 0 4px 10px rgba(0,122,255,0.3); cursor: pointer;">
-                    🔔 Zet Meldingen Aan op deze Telefoon
-                </button>
-
-                <button id="btn-skip-timer" onclick="forceerSessieAtje()" style="display:none; width:100%; padding:15px; background:#ff3b30; border:none; border-radius:10px; color:white; font-weight:bold; font-size:16px; margin-top:10px; box-shadow: 0 4px 10px rgba(255,59,48,0.3); cursor: pointer;">
-                    ⏩ Skip Timer
+                <button id="btn-skip-timer" onclick="forceerSessieAtje()" style="display:none; width:100%; padding:15px; background:#ff3b30; border:none; border-radius:10px; color:white; font-weight:bold; font-size:16px; margin-top:15px; box-shadow: 0 4px 10px rgba(255,59,48,0.3); cursor: pointer;">
+                    ⏩ Skip Timer (Test Push)
                 </button>
                 <p style="font-size: 13px; color: #666; text-align: center; margin-top: 10px; margin-bottom: 0;">Wijst elke 5-20 min een slachtoffer aan voor een Atje én activeert direct de GPS tracker!</p>
             </div>
@@ -157,7 +144,6 @@
             </div>
         </div>
 
-        <!-- PAGINA 4: WERELDKAART -->
         <div id="page-kaart" class="page">
             <div class="card" style="padding: 15px 10px;">
                 <h2>Interactieve Kaart 📍</h2>
@@ -166,7 +152,6 @@
             </div>
         </div>
 
-        <!-- PAGINA 5: STATISTIEKEN -->
         <div id="page-stats" class="page">
             <div class="card">
                 <h2>Kater-Voorspeller 🤮</h2>
@@ -190,8 +175,6 @@
         </div>
     </div>
 
-    <!-- FULLSCREEN MODALS VOOR DE GAMES -->
-    
     <div id="modal-bom" class="game-modal">
         <button class="btn-sluit-modal" onclick="sluitGame('modal-bom')">⬅ Terug naar overzicht</button>
         <div class="container">
@@ -308,7 +291,6 @@
         </div>
     </div>
 
-    <!-- Navigatiebalk -->
     <div class="bottom-nav" id="bottom-nav">
         <div class="nav-item active" onclick="wisselPagina('page-scorebord', this)"><span class="nav-icon">📝</span>Scores</div>
         <div class="nav-item" onclick="wisselPagina('page-games', this)"><span class="nav-icon">🕹️</span>Games</div>
@@ -317,6 +299,6 @@
         <div class="nav-item" onclick="wisselPagina('page-stats', this)"><span class="nav-icon">📊</span>Stats</div>
     </div>
 
-    <script src="app.js?v=13"></script>
+    <script src="app.js?v=12"></script>
 </body>
 </html>
