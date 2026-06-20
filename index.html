@@ -13,7 +13,7 @@
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     
-    <link rel="stylesheet" href="style.css?v=20">
+    <link rel="stylesheet" href="style.css?v=22">
     
     <!-- FIREBASE SCRIPTS -->
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
@@ -91,6 +91,8 @@
                 <div class="game-icon" onclick="openGame('modal-hogerlager'); initHogerLager();"><span class="g-emoji">🃏</span><span>Hoger of Lager</span></div>
                 <div class="game-icon" onclick="openGame('modal-reflex')"><span class="g-emoji">⚡</span><span>Reflex Roulette</span></div>
                 <div class="game-icon" onclick="openGame('modal-mexen')"><span class="g-emoji">🎲</span><span>Virtueel Mexen</span></div>
+                <!-- QUIPLASH KNOP TOEGEVOEGD -->
+                <div class="game-icon" onclick="openGame('modal-quiplash')"><span class="g-emoji">🤐</span><span>Quiplash</span></div>
             </div>
         </div>
 
@@ -157,24 +159,17 @@
         </div>
     </div>
 
+    <!-- MODALS / GAMES -->
+    
     <div id="modal-instellingen" class="game-modal">
         <button class="btn-sluit-modal" onclick="sluitGame('modal-instellingen')">⬅ Terug</button>
         <div class="container">
             <div class="card" style="text-align: center;">
                 <h2>⚙️ Instellingen</h2>
                 <p style="font-size: 14px; color: #666; margin-top: 0; margin-bottom: 20px;">Beheer hier je toestemmingen en account.</p>
-                
-                <button onclick="setupPushNotificaties(true)" style="width:100%; padding:15px; background:#007aff; border:none; border-radius:10px; color:white; font-weight:bold; font-size:16px; margin-bottom:15px; box-shadow: 0 4px 10px rgba(0,122,255,0.3); cursor: pointer;">
-                    🔔 Zet Meldingen Aan
-                </button>
-                
-                <button onclick="vraagLocatieToestemming()" style="width:100%; padding:15px; background:#34c759; border:none; border-radius:10px; color:white; font-weight:bold; font-size:16px; margin-bottom: 30px; box-shadow: 0 4px 10px rgba(52,199,89,0.3); cursor: pointer;">
-                    📍 Geef Locatie Toegang
-                </button>
-
-                <button onclick="uitloggen()" style="width:100%; padding:15px; background:#ff3b30; border:none; border-radius:10px; color:white; font-weight:bold; font-size:16px; box-shadow: 0 4px 10px rgba(255,59,48,0.3); cursor: pointer;">
-                    🚪 Log Uit
-                </button>
+                <button onclick="setupPushNotificaties(true)" style="width:100%; padding:15px; background:#007aff; border:none; border-radius:10px; color:white; font-weight:bold; font-size:16px; margin-bottom:15px; box-shadow: 0 4px 10px rgba(0,122,255,0.3); cursor: pointer;">🔔 Zet Meldingen Aan</button>
+                <button onclick="vraagLocatieToestemming()" style="width:100%; padding:15px; background:#34c759; border:none; border-radius:10px; color:white; font-weight:bold; font-size:16px; margin-bottom: 30px; box-shadow: 0 4px 10px rgba(52,199,89,0.3); cursor: pointer;">📍 Geef Locatie Toegang</button>
+                <button onclick="uitloggen()" style="width:100%; padding:15px; background:#ff3b30; border:none; border-radius:10px; color:white; font-weight:bold; font-size:16px; box-shadow: 0 4px 10px rgba(255,59,48,0.3); cursor: pointer;">🚪 Log Uit</button>
             </div>
         </div>
     </div>
@@ -187,6 +182,44 @@
     <div id="modal-reflex" class="game-modal"><button class="btn-sluit-modal" onclick="sluitGame('modal-reflex')">⬅ Terug</button><div class="container"><div class="card" style="text-align: center; background: #e5e5ea;"><h2>⚡ Reflex Roulette</h2><button class="btn-secundair" onclick="startReflexRonde()">Start Nieuwe Ronde</button><button id="reflex-btn" class="reflex-btn" onmousedown="klikReflex(event)" ontouchstart="klikReflex(event)">Wacht...</button><div id="reflex-leaderboard" style="display:none; background:white; border-radius:12px; padding:15px; margin-top:20px; text-align:left; box-shadow: 0 4px 10px rgba(0,0,0,0.1);"></div></div></div></div>
     <div id="modal-mexen" class="game-modal"><button class="btn-sluit-modal" onclick="sluitGame('modal-mexen')">⬅ Terug</button><div class="container"><div class="card" style="text-align: center; background: #2c3e50; color: white;"><h2>🎲 Virtueel Mexen</h2><div style="display: flex; justify-content: center; gap: 20px;"><div id="mex-d1" class="dice-box">?</div><div id="mex-d2" class="dice-box">?</div></div><button class="btn-primair" style="background-color: #f1c40f; color: #000;" onclick="gooiMexen()">ROLLEN!</button></div></div></div>
 
+    <!-- QUIPLASH MODAL -->
+    <div id="modal-quiplash" class="game-modal">
+        <button class="btn-sluit-modal" onclick="sluitGame('modal-quiplash')">⬅ Terug</button>
+        <div class="container">
+            <div class="card" style="text-align: center; background: #2c2c2e; color: white;">
+                <h2 style="color: #af52de; border-bottom: 1px solid #444;">🤐 Quiplash</h2>
+                
+                <div id="ql-wachten">
+                    <p style="font-size:14px; color:#a1a1aa;">Beantwoord de vraag zo grof en grappig mogelijk. Daarna stemt iedereen op het beste antwoord!</p>
+                    <button class="btn-primair" style="background-color: #af52de; font-size:18px; padding:20px;" onclick="startQuiplashRonde()">Start Nieuwe Ronde</button>
+                </div>
+
+                <div id="ql-antwoorden" style="display:none;">
+                    <h3 id="ql-vraag-tekst" style="color: #ff9500; font-size:20px; margin-top:10px;"></h3>
+                    <textarea id="ql-invoer" rows="3" placeholder="Typ je antwoord hier..." style="width:100%; margin-top:15px; padding:10px; border-radius:8px; font-size:16px; color:black; font-family:inherit;"></textarea>
+                    <button class="btn-primair" style="background-color: #34c759;" onclick="verstuurQuiplashAntwoord()">Antwoord Indienen</button>
+                    <p id="ql-status-antwoorden" style="font-size:14px; color:#a1a1aa; margin-top:15px; font-weight:bold;"></p>
+                    <button id="btn-ql-forceer-stemmen" class="btn-secundair" style="display:none; background-color:#ff3b30; margin-top:15px;" onclick="startQuiplashStemmen()">Iedereen heeft geantwoord (Ga naar Stemmen)</button>
+                </div>
+
+                <div id="ql-stemmen" style="display:none;">
+                    <h3 id="ql-vraag-stemmen" style="color: #ff9500; font-size:20px; margin-top:10px;"></h3>
+                    <p style="font-size:14px; color:#a1a1aa;">Stem op het beste antwoord! (Je kunt niet op jezelf stemmen)</p>
+                    <div id="ql-stem-lijst" style="display:flex; flex-direction:column; gap:10px; margin-top:15px;"></div>
+                    <p id="ql-status-stemmen" style="font-size:14px; color:#a1a1aa; margin-top:15px; font-weight:bold;"></p>
+                    <button id="btn-ql-forceer-resultaat" class="btn-secundair" style="display:none; background-color:#ff3b30; margin-top:15px;" onclick="toonQuiplashResultaten()">Laat de uitslag zien!</button>
+                </div>
+
+                <div id="ql-resultaten" style="display:none;">
+                    <h3 id="ql-vraag-resultaat" style="color: #ff9500; font-size:20px; margin-top:10px;"></h3>
+                    <div id="ql-uitslag-lijst" style="display:flex; flex-direction:column; gap:10px; text-align:left; margin-top:15px;"></div>
+                    <button class="btn-primair" style="background-color: #af52de; margin-top:20px; font-size:18px; padding:15px;" onclick="startQuiplashRonde()">Volgende Vraag</button>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
     <div class="bottom-nav" id="bottom-nav">
         <div class="nav-item active" onclick="wisselPagina('page-scorebord', this)"><span class="nav-icon">📝</span>Scores</div>
         <div class="nav-item" onclick="wisselPagina('page-games', this)"><span class="nav-icon">🕹️</span>Games</div>
@@ -196,6 +229,6 @@
     </div>
 
     <!-- Script inladen met nieuwe versie -->
-    <script src="app.js?v=20"></script>
+    <script src="app.js?v=22"></script>
 </body>
 </html>
