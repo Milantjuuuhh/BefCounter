@@ -255,7 +255,6 @@ function bouwLiveScorebord() {
 
             grafiekNamen.push(naam.charAt(0).toUpperCase() + naam.slice(1)); grafiekData.push(b + m + sh);
             
-            // DE BUG IS HIER GEFIXT: katerKans is nu consequent gespeld in plaats van kKans
             let katerKans = Math.max(0, Math.min(99, 5 + (b * 4) + (m * 12) + (sh * 15) + (ko * 30)));
             let kleur = katerKans >= 75 ? "#ff3b30" : katerKans >= 40 ? "#ff9500" : "#34c759";
             
@@ -456,14 +455,22 @@ function initKaart() {
 }
 
 // ==========================================
-// VLOER IS LAVA
+// VLOER IS LAVA LOGICA
 // ==========================================
-let lavaStartTijd = 0;
+let lavaRonde = 0;
+let lavaGroenTijd = 0;
+let lavaGeklikt = false;
+let lavaInterval = null;
 let lavaBezig = false;
 
 function startLava() {
+    let delay = Math.floor(Math.random() * 4000) + 2000;
     db.collection('groepen').doc(currentGroup).collection('games').doc('lava').set({
-        actief: true, start: Date.now(), scores: {}, host: currentUser
+        ronde: Date.now(),
+        lava_tijd: Date.now() + delay,
+        scores: {},
+        host: currentUser,
+        klaar: false
     });
     stuurNaarFeed(`🌋 VLOER IS LAVA gestart door ${currentUser.toUpperCase()}!`);
 }
@@ -472,33 +479,63 @@ function luisterNaarLava() {
     db.collection('groepen').doc(currentGroup).collection('games').doc('lava').onSnapshot(doc => {
         if(!doc.exists) return;
         let d = doc.data();
-        if(d.actief) {
+        let ronde = d.ronde || 0;
+        let lavaTijd = d.lava_tijd || 0;
+
+        if(ronde !== lavaRonde) {
+            lavaRonde = ronde;
+            lavaGroenTijd = lavaTijd;
+            lavaGeklikt = false;
+            lavaBezig = true;
+            
             openGame('modal-lava');
             document.getElementById('lava-start-ui').style.display = 'none';
-            document.getElementById('lava-actief-ui').style.display = 'block';
+            document.getElementById('lava-wacht-ui').style.display = 'block';
+            document.getElementById('lava-actief-ui').style.display = 'none';
             document.getElementById('lava-resultaat-ui').style.display = 'none';
-            document.getElementById('lava-status').innerText = "Aan het meten...";
             document.getElementById('lava-stop-btn').style.display = (d.host === currentUser) ? 'inline-block' : 'none';
             
-            lavaStartTijd = d.start;
-            lavaBezig = true;
             window.addEventListener('deviceorientation', checkLavaOrientatie);
-            if ("vibrate" in navigator) navigator.vibrate([500, 200, 500]);
-        } else if (!d.actief && d.start) {
+            
+            clearInterval(lavaInterval);
+            lavaInterval = setInterval(() => {
+                if (Date.now() >= lavaGroenTijd && !lavaGeklikt) {
+                    document.getElementById('lava-wacht-ui').style.display = 'none';
+                    document.getElementById('lava-actief-ui').style.display = 'block';
+                    document.getElementById('modal-lava').style.backgroundColor = '#ff3b30'; // Rood!
+                    if ("vibrate" in navigator) navigator.vibrate([500, 200, 500]);
+                } else if (Date.now() < lavaGroenTijd) {
+                    document.getElementById('modal-lava').style.backgroundColor = '#ff9500'; // Oranje/Wachten
+                }
+            }, 50);
+        }
+        
+        if(d.klaar) {
             lavaBezig = false;
             window.removeEventListener('deviceorientation', checkLavaOrientatie);
+            clearInterval(lavaInterval);
+            document.getElementById('modal-lava').style.backgroundColor = '#1c1c1e'; // Reset background
             document.getElementById('lava-start-ui').style.display = 'block';
+            document.getElementById('lava-wacht-ui').style.display = 'none';
             document.getElementById('lava-actief-ui').style.display = 'none';
             document.getElementById('lava-resultaat-ui').style.display = 'block';
+            document.getElementById('lava-stop-btn').style.display = 'none';
             
-            let html = "<h3>Uitslag:</h3><ol style='padding-left:20px; font-size:18px;'>";
+            let html = "<h3 style='color:#ff3b30; margin-top:0;'>Uitslag:</h3><ol style='padding-left:20px; font-size:18px;'>";
             let arr = [];
             for(let sp in d.scores) arr.push({n:sp, t: d.scores[sp]});
             spelersLijst.forEach(sp => { if(d.scores[sp] === undefined) arr.push({n:sp, t: 99999999}); });
-            arr.sort((a,b) => a.t - b.t);
+            
+            arr.sort((a,b) => {
+                if(a.t === 'TE VROEG') return 1;
+                if(b.t === 'TE VROEG') return -1;
+                return a.t - b.t;
+            });
+
             arr.forEach((x, i) => {
-                let tijdWeergave = x.t === 99999999 ? "<span style='color:#ff3b30;'>DOOD</span>" : (x.t/1000).toFixed(2) + "s";
-                html += `<li style="margin-bottom:5px;"><b>${x.n.toUpperCase()}</b>: ${tijdWeergave} ${i === arr.length-1 ? '💀' : ''}</li>`;
+                let tijdWeergave = x.t === 99999999 ? "<span style='color:#ff3b30;'>DOOD 💀</span>" : (x.t === 'TE VROEG' ? "<span style='color:#ff9500;'>TE VROEG!</span>" : (x.t/1000).toFixed(2) + "s");
+                let icoon = (i === arr.length-1 && x.t !== 99999999 && x.t !== 'TE VROEG') ? '💀' : '';
+                html += `<li style="margin-bottom:5px;"><b>${x.n.toUpperCase()}</b>: ${tijdWeergave} ${icoon}</li>`;
             });
             document.getElementById('lava-resultaat-ui').innerHTML = html + "</ol>";
         }
@@ -506,25 +543,32 @@ function luisterNaarLava() {
 }
 
 function checkLavaOrientatie(e) {
-    if(!lavaBezig) return;
+    if(!lavaBezig || lavaGeklikt) return;
     let flat = (Math.abs(e.beta) < 15 || Math.abs(e.beta) > 165) && Math.abs(e.gamma) < 15;
     if(flat) {
-        lavaBezig = false;
-        window.removeEventListener('deviceorientation', checkLavaOrientatie);
-        let reactieTijd = Date.now() - lavaStartTijd;
-        let afgerondeTijd = (reactieTijd/1000).toFixed(2); 
-        document.getElementById('lava-status').innerHTML = `✅ Veilig!<br>Tijd: ${afgerondeTijd}s`;
-        document.getElementById('lava-status').style.color = "#34c759";
+        lavaGeklikt = true;
+        let isTeVroeg = Date.now() < lavaGroenTijd;
+        let reactieTijd = isTeVroeg ? 'TE VROEG' : Date.now() - lavaGroenTijd;
+        
+        if(isTeVroeg) {
+            document.getElementById('lava-wacht-ui').innerHTML = `<h1 style="font-size:40px; color:white;">TE VROEG!</h1><p style="color:white; font-size:18px;">Straf atje voor jou!</p>`;
+        } else {
+            document.getElementById('lava-status').innerHTML = `✅ Veilig!<br>Tijd: ${(reactieTijd/1000).toFixed(2)}s`;
+            document.getElementById('lava-status').style.color = "#34c759";
+        }
+
         db.collection('groepen').doc(currentGroup).collection('games').doc('lava').set({
             scores: { [currentUser]: reactieTijd }
         }, {merge:true});
     }
 }
 
-function stopLava() { db.collection('groepen').doc(currentGroup).collection('games').doc('lava').update({actief: false}); }
+function stopLava() {
+    db.collection('groepen').doc(currentGroup).collection('games').doc('lava').update({klaar: true});
+}
 
 // ==========================================
-// SHAKE IT!
+// SHAKE IT LOGICA
 // ==========================================
 let shakeTimerInterval = null;
 let shakeScore = 0;
@@ -588,7 +632,7 @@ function luisterNaarShake() {
 
             let s1 = d.scores[d.p1] || 0;
             let s2 = d.scores[d.p2] || 0;
-            let html = `<h3 style="margin-bottom:10px;">Uitslag</h3><p style="margin:5px 0;"><b>${d.p1.toUpperCase()}:</b> ${s1} Kracht</p><p style="margin:5px 0;"><b>${d.p2.toUpperCase()}:</b> ${s2} Kracht</p>`;
+            let html = `<h3 style="margin-bottom:10px; margin-top:0;">Uitslag</h3><p style="margin:5px 0;"><b>${d.p1.toUpperCase()}:</b> ${s1} Kracht</p><p style="margin:5px 0;"><b>${d.p2.toUpperCase()}:</b> ${s2} Kracht</p>`;
             if(s1 > s2) html += `<h2 style="color:#34c759; margin-top:15px;">🏆 ${d.p1.toUpperCase()} WINT!</h2>`;
             else if (s2 > s1) html += `<h2 style="color:#34c759; margin-top:15px;">🏆 ${d.p2.toUpperCase()} WINT!</h2>`;
             else html += `<h2 style="color:#ffcc00; margin-top:15px;">Gelijkspel!</h2>`;
@@ -610,8 +654,9 @@ function handleShake(e) {
     let acc = e.accelerationIncludingGravity || e.acceleration;
     if(acc) {
         let kracht = Math.abs(acc.x) + Math.abs(acc.y) + Math.abs(acc.z);
-        if(kracht > 15) { 
-            shakeScore += (kracht / 10);
+        // Trek zwaartekracht (~10) er ongeveer vanaf, en tel op
+        if(kracht > 12) { 
+            shakeScore += (kracht - 10);
             document.getElementById('shake-score').innerText = Math.floor(shakeScore);
         }
     }
@@ -710,10 +755,14 @@ function luisterNaarQuiplash() {
             stemLijst.innerHTML = '';
             
             let ansArr = Object.entries(qlAntwoorden).map(([naam, antw]) => ({naam, antw})).sort(() => 0.5 - Math.random());
-            ansArr.forEach(item => {
+            ansArr.forEach((item, index) => {
                 let btn = document.createElement('button');
-                btn.className = 'btn-primair';
-                btn.style.backgroundColor = (qlStemmen[currentUser] === item.naam) ? '#34c759' : '#007aff';
+                btn.className = 'ql-btn-stem';
+                btn.style.animationDelay = (0.1 * index) + "s";
+                if (qlStemmen[currentUser] === item.naam) {
+                    btn.style.backgroundColor = '#34c759';
+                    btn.style.borderColor = '#34c759';
+                }
                 btn.innerText = item.antw;
                 btn.disabled = (qlStemmen[currentUser] != null || item.naam === currentUser);
                 btn.onclick = () => { if(item.naam !== currentUser) stemOpQuiplash(item.naam); };
@@ -733,10 +782,11 @@ function luisterNaarQuiplash() {
             let resArr = Object.entries(qlAntwoorden).map(([naam, antw]) => ({naam, antw, stemmen: scores[naam] || 0}));
             resArr.sort((a, b) => b.stemmen - a.stemmen);
 
-            resArr.forEach((item) => {
+            resArr.forEach((item, index) => {
                 let p = document.createElement('div');
-                p.style.backgroundColor = '#1c1c1e'; p.style.padding = '10px'; p.style.borderRadius = '8px'; p.style.marginBottom = '5px';
-                p.innerHTML = `<b>${item.naam.toUpperCase()}</b> (${item.stemmen} stemmen)<br><span style="color:#a1a1aa;">"${item.antw}"</span>`;
+                p.className = "ql-result-item";
+                p.style.animationDelay = (0.2 * index) + "s";
+                p.innerHTML = `<b style="color:#af52de; font-size:18px;">${item.naam.toUpperCase()}</b> <span style="color:#34c759; font-weight:bold;">(${item.stemmen} stemmen)</span><br><span style="color:#fff; font-size:20px; line-height:1.5;">"${item.antw}"</span>`;
                 resLijst.appendChild(p);
             });
         }
