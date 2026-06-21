@@ -123,7 +123,7 @@ function joinSpecifiekeGroep(code) { db.collection('groepen').doc(code).collecti
 
 function startApp() {
     document.getElementById('app-scherm').style.display = 'block'; document.getElementById('bottom-nav').style.display = 'flex'; document.getElementById('header-controls').style.display = 'flex'; document.getElementById('ingelogde-naam').innerText = currentUser; document.getElementById('display-groepscode').innerText = currentGroup;
-    setupPushNotificaties(); bouwLiveScorebord(); luisterNaarLiveFeed(); luisterNaarTijdbom(); luisterNaarCoopMissie(); luisterNaarDrinkSessie(); luisterNaarReflex(); luisterNaarQuiplash(); luisterNaarLava(); luisterNaarShake(); luisterNaarASM(); luisterNaarQuotes();
+    setupPushNotificaties(); bouwLiveScorebord(); luisterNaarLiveFeed(); luisterNaarTijdbom(); luisterNaarCoopMissie(); luisterNaarDrinkSessie(); luisterNaarReflex(); luisterNaarQuiplash(); luisterNaarLava(); luisterNaarShake();
 }
 
 let sessieCheckInterval = null, actieveDrinkSessieTijd = 0, drinkSessieStarter = "";
@@ -254,16 +254,22 @@ function bouwLiveScorebord() {
             if(b > statMaxBier) { statMaxBier = b; statMaxBierNaam = naam; } if(ra > statMaxRaggen) { statMaxRaggen = ra; statMaxRaggenNaam = naam; } if(r > statMaxSjaak) { statMaxSjaak = r; statMaxSjaakNaam = naam; } if(ko > statMaxKots) { statMaxKots = ko; statMaxKotsNaam = naam; }
 
             grafiekNamen.push(naam.charAt(0).toUpperCase() + naam.slice(1)); grafiekData.push(b + m + sh);
-            let kKans = Math.max(0, Math.min(99, 5 + (b * 4) + (m * 12) + (sh * 15) + (ko * 30)));
+            
+            // DE BUG IS HIER GEFIXT: katerKans is nu consequent gespeld in plaats van kKans
+            let katerKans = Math.max(0, Math.min(99, 5 + (b * 4) + (m * 12) + (sh * 15) + (ko * 30)));
             let kleur = katerKans >= 75 ? "#ff3b30" : katerKans >= 40 ? "#ff9500" : "#34c759";
+            
             katerHtml += `<div class="kater-regel"><div class="kater-header"><span>${naam}</span><span>${katerKans}%</span></div><div class="kater-bar-bg"><div class="kater-bar-fill" style="width: ${katerKans}%; background-color: ${kleur};"></div></div></div>`;
             html += `<tr><td class="naam-kolom">${naam}</td><td>${b}</td><td>${m}</td><td>${sh}</td><td>${k}</td><td>${r}</td><td>${ra}</td><td>${ko}</td><td>${sl}</td><td class="totaal-kolom">${persoonTotaal}</td><td><button class="btn-verwijder" onclick="verwijderSpeler('${naam}')">X</button></td></tr>`;
         });
 
         html += `<tr class="totaal-rij"><td style="text-align:left; padding-left:10px;">Totaal</td><td>${somBier}</td><td>${somMix}</td><td>${somShot}</td><td>${somKiss}</td><td>${somReject}</td><td>${somRaggen}</td><td>${somKotsen}</td><td>${somSleutel}</td><td class="totaal-kolom">${somAlles}</td><td></td></tr>`;
         document.getElementById('score-tabel').innerHTML = html; document.getElementById('kater-container').innerHTML = katerHtml;
-        document.getElementById('stats-container').innerHTML = `<div class="stat-rij"><span>🍺 Koning Pils</span> <span class="stat-naam">${statMaxBierNaam} (${statMaxBier})</span></div><div class="stat-rij"><span>🚀 Meest Geragd</span> <span class="stat-naam">${statMaxRaggenNaam} (${statMaxRaggen})</span></div><div class="stat-rij"><span>🤮 Meeste Kots</span> <span class="stat-naam">${statMaxKotsNaam} (${statMaxKots})</span></div><div class="stat-rij"><span>💔 Grootste Sjaak</span> <span class="stat-naam">${statMaxSjaakNaam} (${statMaxSjaak})</span></div>`;
-        tekenGrafieken(somBier, somMix, somShot, somKiss, somReject, somRaggen, somKotsen, somSleutel, grafiekNamen, grafiekData);
+        
+        try {
+            document.getElementById('stats-container').innerHTML = `<div class="stat-rij"><span>🍺 Koning Pils</span> <span class="stat-naam">${statMaxBierNaam} (${statMaxBier})</span></div><div class="stat-rij"><span>🚀 Meest Geragd</span> <span class="stat-naam">${statMaxRaggenNaam} (${statMaxRaggen})</span></div><div class="stat-rij"><span>🤮 Meeste Kots</span> <span class="stat-naam">${statMaxKotsNaam} (${statMaxKots})</span></div><div class="stat-rij"><span>💔 Grootste Sjaak</span> <span class="stat-naam">${statMaxSjaakNaam} (${statMaxSjaak})</span></div>`;
+            tekenGrafieken(somBier, somMix, somShot, somKiss, somReject, somRaggen, somKotsen, somSleutel, grafiekNamen, grafiekData);
+        } catch (err) { console.error("Fout bij laden statistieken: ", err); }
     });
 }
 
@@ -282,17 +288,31 @@ function luisterNaarLiveFeed() {
 }
 
 function tekenGrafieken(b, m, sh, k, r, ra, ko, sl, namen, drankjes) {
-    if (pieChartInstance) pieChartInstance.destroy();
-    let pieCtx = document.getElementById('groepPieChart');
-    if(pieCtx) { pieChartInstance = new Chart(pieCtx, { type: 'pie', data: { labels: ['Bier','Mix','Shotje','Kiss','Reject','Raggen', 'Kotsen', 'Sleutel'], datasets: [{ data: [b,m,sh,k,r,ra,ko,sl], backgroundColor: ['#f1c40f','#9b59b6','#e17055','#ff7675','#636e72','#ffeaa7','#16a085','#bdc3c7'] }] }, options: { responsive: true, maintainAspectRatio: false } }); }
-    if (barChartInstance) barChartInstance.destroy();
-    let barCtx = document.getElementById('spelerBarChart');
-    if(barCtx) { barChartInstance = new Chart(barCtx, { type: 'bar', data: { labels: namen, datasets: [{ label: 'Drankjes', data: drankjes, backgroundColor: '#007aff' }] }, options: { responsive: true, maintainAspectRatio: false } }); }
+    try {
+        if (typeof Chart === 'undefined') return; 
+        if (pieChartInstance) pieChartInstance.destroy();
+        let pieCtx = document.getElementById('groepPieChart');
+        if(pieCtx) { pieChartInstance = new Chart(pieCtx, { type: 'pie', data: { labels: ['Bier','Mix','Shotje','Kiss','Reject','Raggen', 'Kotsen', 'Sleutel'], datasets: [{ data: [b,m,sh,k,r,ra,ko,sl], backgroundColor: ['#f1c40f','#9b59b6','#e17055','#ff7675','#636e72','#ffeaa7','#16a085','#bdc3c7'] }] }, options: { responsive: true, maintainAspectRatio: false } }); }
+        if (barChartInstance) barChartInstance.destroy();
+        let barCtx = document.getElementById('spelerBarChart');
+        if(barCtx) { barChartInstance = new Chart(barCtx, { type: 'bar', data: { labels: namen, datasets: [{ label: 'Drankjes', data: drankjes, backgroundColor: '#007aff' }] }, options: { responsive: true, maintainAspectRatio: false } }); }
+    } catch (err) { console.error("Fout bij tekenen grafieken:", err); }
 }
 
 function beheerMissiesEnBingo(data) {
-    if (!data.geheime_missie) { db.collection('groepen').doc(currentGroup).collection('scores').doc(currentUser).set({ geheime_missie: genereerNieuweMissie() }, { merge: true }); } else { const mt = document.getElementById('geheime-missie-tekst'); if(mt) mt.innerText = data.geheime_missie; }
-    if (!data.bingo_kaart) { let nieuweKaart = genereerBingoKaart(); db.collection('groepen').doc(currentGroup).collection('scores').doc(currentUser).set({ bingo_kaart: nieuweKaart, bingo_status: [false,false,false,false,false,false,false,false,false], bingo_gehaald: false }, { merge: true }); } else { mijnBingoKaart = data.bingo_kaart; mijnBingoStatus = data.bingo_status || [false,false,false,false,false,false,false,false,false]; renderBingoGrid(data.bingo_gehaald); }
+    try {
+        if (!data.geheime_missie) { 
+            let nwMissie = genereerNieuweMissie();
+            db.collection('groepen').doc(currentGroup).collection('scores').doc(currentUser).set({ geheime_missie: nwMissie }, { merge: true }); 
+            const mt = document.getElementById('geheime-missie-tekst'); if(mt) mt.innerText = nwMissie;
+        } else { 
+            const mt = document.getElementById('geheime-missie-tekst'); if(mt) mt.innerText = data.geheime_missie; 
+        }
+    } catch(err) { console.error("Fout in Secret Assassin:", err); }
+    
+    try {
+        if (!data.bingo_kaart) { db.collection('groepen').doc(currentGroup).collection('scores').doc(currentUser).set({ bingo_kaart: genereerBingoKaart(), bingo_status: [false,false,false,false,false,false,false,false,false], bingo_gehaald: false }, { merge: true }); } else { mijnBingoKaart = data.bingo_kaart; mijnBingoStatus = data.bingo_status || [false,false,false,false,false,false,false,false,false]; renderBingoGrid(data.bingo_gehaald); }
+    } catch(err) { console.error("Fout in Bingo:", err); }
 }
 
 function voltooiGeheimeMissie() {
@@ -327,39 +347,6 @@ setInterval(() => {
     document.querySelectorAll('.coop-timer-text').forEach(el => el.innerText = `Nog ${h}:${m}:${s} geldig vandaag`);
 }, 1000);
 
-// ==========================================
-// QUOTES (WALL OF SHAME)
-// ==========================================
-function voegQuoteToe() {
-    let input = document.getElementById('quote-input');
-    let txt = input.value.trim();
-    if(!txt) return;
-    
-    db.collection('groepen').doc(currentGroup).collection('quotes').add({
-        tekst: txt, toegevoegdDoor: currentUser, tijd: Date.now()
-    });
-    input.value = "";
-    stuurNaarFeed(`💬 Nieuwe Quote geplaatst door ${currentUser.toUpperCase()}!`);
-}
-
-function luisterNaarQuotes() {
-    db.collection('groepen').doc(currentGroup).collection('quotes').orderBy('tijd', 'desc').limit(25).onSnapshot(snap => {
-        let lijst = document.getElementById('quotes-lijst');
-        if(!lijst) return;
-        lijst.innerHTML = "";
-        snap.forEach(doc => {
-            let d = doc.data();
-            let div = document.createElement('div');
-            div.style.backgroundColor = '#fff'; div.style.padding = '15px'; div.style.borderRadius = '10px'; div.style.boxShadow = "0 2px 5px rgba(0,0,0,0.05)";
-            div.innerHTML = `<p style="font-size:18px; font-weight:bold; margin:0 0 10px 0; color:#1c1c1e;">"${d.tekst}"</p><p style="font-size:12px; color:#8e8e93; margin:0;">Toegevoegd door ${d.toegevoegdDoor} - ${new Date(d.tijd).toLocaleTimeString()}</p>`;
-            lijst.appendChild(div);
-        });
-    });
-}
-
-// ==========================================
-// SWASI
-// ==========================================
 let actieveSwasiTouches = {}, swasiKleuren = ['#007aff', '#34c759', '#ff9500', '#af52de', '#5856d6', '#ff2d55', '#f1c40f', '#00c7be'], swasiKleurIndex = 0, swasiTimer = null, swasiAfteller = null, swasiBezig = false;
 function startSwasi() { let swasiOverlay = document.getElementById('swasi-overlay'); swasiOverlay.style.display = 'block'; document.getElementById('swasi-instructie').style.display = 'block'; document.getElementById('swasi-instructie').innerText = "Plaats allemaal 1 vinger op het scherm..."; document.getElementById('swasi-countdown').style.display = 'none'; document.getElementById('swasi-sluit-btn').style.display = 'none'; actieveSwasiTouches = {}; swasiKleurIndex = 0; swasiBezig = true; document.body.style.overflow = 'hidden'; swasiOverlay.addEventListener('touchstart', handleTouchStart, {passive: false}); swasiOverlay.addEventListener('touchmove', handleTouchMove, {passive: false}); swasiOverlay.addEventListener('touchend', handleTouchEnd); swasiOverlay.addEventListener('touchcancel', handleTouchEnd); }
 function stopSwasi() { let swasiOverlay = document.getElementById('swasi-overlay'); swasiOverlay.style.display = 'none'; document.body.style.overflow = ''; clearTimeout(swasiTimer); clearInterval(swasiAfteller); swasiBezig = false; Object.values(actieveSwasiTouches).forEach(c => c.remove()); actieveSwasiTouches = {}; swasiOverlay.removeEventListener('touchstart', handleTouchStart); swasiOverlay.removeEventListener('touchmove', handleTouchMove); swasiOverlay.removeEventListener('touchend', handleTouchEnd); swasiOverlay.removeEventListener('touchcancel', handleTouchEnd); }
@@ -369,9 +356,6 @@ function handleTouchEnd(e) { if (!swasiBezig) return; for (let i = 0; i < e.chan
 function checkSwasiTimer() { clearTimeout(swasiTimer); clearInterval(swasiAfteller); document.getElementById('swasi-countdown').style.display = 'none'; let keys = Object.keys(actieveSwasiTouches); if (keys.length > 1) { document.getElementById('swasi-instructie').style.display = 'none'; document.getElementById('swasi-countdown').style.display = 'block'; let count = 3; document.getElementById('swasi-countdown').innerText = count; swasiAfteller = setInterval(() => { count--; if (count > 0) { document.getElementById('swasi-countdown').innerText = count; } else { clearInterval(swasiAfteller); document.getElementById('swasi-countdown').style.display = 'none'; kiesSwasiWinnaar(keys); } }, 1000); } else if (keys.length === 1) { document.getElementById('swasi-instructie').style.display = 'block'; document.getElementById('swasi-instructie').innerText = "Wacht op meer vingers..."; } else { document.getElementById('swasi-instructie').style.display = 'block'; document.getElementById('swasi-instructie').innerText = "Plaats allemaal 1 vinger..."; swasiKleurIndex = 0; } }
 function kiesSwasiWinnaar(keys) { swasiBezig = false; if ("vibrate" in navigator) navigator.vibrate([100, 50, 100, 50, 300]); let winnerId = keys[Math.floor(Math.random() * keys.length)]; keys.forEach(id => { let circle = actieveSwasiTouches[id]; if (id == winnerId) { circle.classList.add('winner'); } else { circle.classList.add('loser'); } }); document.getElementById('swasi-sluit-btn').style.display = 'block'; }
 
-// ==========================================
-// TIJDBOM
-// ==========================================
 function startTijdbom() { if (spelersLijst.length < 2) return alert("Minimaal 2 spelers nodig."); let randomSpeler = spelersLijst[Math.floor(Math.random() * spelersLijst.length)]; let ontplofTijd = Date.now() + (Math.floor(Math.random() * 45000) + 30000); db.collection('groepen').doc(currentGroup).collection('tijdbom').doc('status').set({ actief: true, houder: randomSpeler, eindTijdUnix: ontplofTijd }); stuurNaarFeed(`💣 TIJDBOM GESTART! Hij ligt nu bij ${randomSpeler.toUpperCase()}!`); }
 function gooiBomDoor() { let andereSpelers = spelersLijst.filter(n => n !== currentUser); let slachtoffer = andereSpelers[Math.floor(Math.random() * andereSpelers.length)]; if ("vibrate" in navigator) navigator.vibrate(50); db.collection('groepen').doc(currentGroup).collection('tijdbom').doc('status').set({ houder: slachtoffer }, { merge: true }); }
 function luisterNaarTijdbom() {
@@ -386,9 +370,6 @@ function luisterNaarTijdbom() {
     setInterval(() => { db.collection('groepen').doc(currentGroup).collection('tijdbom').doc('status').get().then(doc => { if (doc.exists && doc.data().actief && doc.data().houder === currentUser && Date.now() >= doc.data().eindTijdUnix) { db.collection('groepen').doc(currentGroup).collection('tijdbom').doc('status').set({ actief: false }); pasScoreAan('raggen', -3, '💥 BOM ONTPLOFT'); alert("KABOEM! -3 Punten!"); } }); }, 1000);
 }
 
-// ==========================================
-// RAD VAN FORTUIN
-// ==========================================
 function draaiRad() {
     if (isSpinning) return; if ((mijnTotalePunten - mijnGedraaideSpins) <= 0) return alert("Je hebt 0 coins!");
     isSpinning = true; if ("vibrate" in navigator) navigator.vibrate(50);
@@ -402,9 +383,6 @@ function draaiRad() {
 function updateCoinWeergave() { const coins = Math.max(0, mijnTotalePunten - mijnGedraaideSpins); document.querySelectorAll('.coin-weergave-class').forEach(el => el.innerText = coins); }
 function verwijderSpeler(naam) { if (confirm(`Verwijder ${naam}?`)) db.collection('groepen').doc(currentGroup).collection('scores').doc(naam).delete(); }
 
-// ==========================================
-// SJAAK
-// ==========================================
 const sjaakVragen = ["Wie kotst vanavond als eerste?", "Wie regelt er vannacht de minste actie?", "Wie verliest er als eerste zijn telefoon of sleutels?", "Wie is morgen de grootste jankerd met een kater?", "Wie betaalt zonder zeuren de volgende ronde?", "Wie doet de domste uitspraak vanavond?", "Wie is de slechtste leugenaar van de groep?", "Wie durft er nu het minst een atje te trekken?"];
 let sjaakInterval = null;
 function startSjaakVraag() { clearInterval(sjaakInterval); document.getElementById('sjaak-timer').innerText = "5"; document.getElementById('sjaak-vraag').innerText = sjaakVragen[Math.floor(Math.random() * sjaakVragen.length)]; }
@@ -413,9 +391,6 @@ function startSjaakGame() {
     sjaakInterval = setInterval(() => { count--; timerUI.innerText = count; if(count <= 0) { clearInterval(sjaakInterval); timerUI.innerText = "👉 WIE IS HET?!"; if ("vibrate" in navigator) navigator.vibrate([300, 100, 300]); } }, 1000);
 }
 
-// ==========================================
-// HOGER LAGER
-// ==========================================
 let hlHuidig = 5;
 function initHogerLager() { hlHuidig = Math.floor(Math.random() * 10) + 1; document.getElementById('hl-getal').innerText = hlHuidig; }
 function speelHogerLager(keuze) {
@@ -428,9 +403,6 @@ function speelHogerLager(keuze) {
     else { let straf = Math.abs(nieuw - hlHuidig) || 1; alert(`FOUT! Het was ${nieuw}. Jij neemt nu ${straf} grote slokken! 🥃`); stuurNaarFeed(`🃏 Casino: ${currentUser.toUpperCase()} verloor met Hoger/Lager en moet ${straf} slokken nemen!`); } hlHuidig = nieuw;
 }
 
-// ==========================================
-// REFLEX
-// ==========================================
 let huidigeReflexRonde = 0, reflexGroenTijd = 0, reflexGeklikt = false, reflexInterval = null;
 function luisterNaarReflex() {
     db.collection('groepen').doc(currentGroup).collection('games').doc('reflex').onSnapshot(doc => {
@@ -448,14 +420,8 @@ function luisterNaarReflex() {
 function startReflexRonde() { let delay = Math.floor(Math.random() * 4000) + 2000; db.collection('groepen').doc(currentGroup).collection('games').doc('reflex').set({ ronde: Date.now(), groen_tijd: Date.now() + delay, scores: {} }); stuurNaarFeed(`⚡ Reflex Roulette is GESTART door ${currentUser.toUpperCase()}!`); }
 function klikReflex(e) { if (e) e.preventDefault(); if (reflexGeklikt || !huidigeReflexRonde) return; reflexGeklikt = true; let isTeVroeg = Date.now() < reflexGroenTijd; let tijdScore = isTeVroeg ? 'TE VROEG' : Date.now() - reflexGroenTijd; if (isTeVroeg) { stuurNaarFeed(`⚡ Reflex: ${currentUser.toUpperCase()} was TE VROEG en neemt een atje!`); alert("TE VROEG! Straf Atje voor jou! 🥃"); if ("vibrate" in navigator) navigator.vibrate([200, 100, 200]); } const btn = document.getElementById('reflex-btn'); if (btn) { btn.innerText = 'Geklikt!'; btn.style.backgroundColor = '#8e8e93'; } db.collection('groepen').doc(currentGroup).collection('games').doc('reflex').set({ scores: { [currentUser]: tijdScore } }, { merge: true }); }
 
-// ==========================================
-// MEXEN
-// ==========================================
 function gooiMexen() { let d1 = Math.floor(Math.random() * 6) + 1; let d2 = Math.floor(Math.random() * 6) + 1; document.getElementById('mex-d1').innerText = d1; document.getElementById('mex-d2').innerText = d2; let score = Math.max(d1, d2).toString() + Math.min(d1, d2).toString(); let extraText = ""; if (score === "21") { extraText = " 🚨 MEX! IEDEREEN DRINKEN!!"; if ("vibrate" in navigator) navigator.vibrate([200, 100, 200]); } else if (d1 === d2) { extraText = " (Honderden!)"; } stuurNaarFeed(`🎲 Mexen: ${currentUser.toUpperCase()} gooide ${score}${extraText}`); }
 
-// ==========================================
-// KAART CLUSTERING & AUTO-ZOOM
-// ==========================================
 function initKaart() {
     if (!worldMap) {
         worldMap = L.map('map').setView([45.0, 5.0], 4); L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(worldMap);
@@ -490,7 +456,7 @@ function initKaart() {
 }
 
 // ==========================================
-// 1. VLOER IS LAVA
+// VLOER IS LAVA
 // ==========================================
 let lavaStartTijd = 0;
 let lavaBezig = false;
@@ -546,7 +512,8 @@ function checkLavaOrientatie(e) {
         lavaBezig = false;
         window.removeEventListener('deviceorientation', checkLavaOrientatie);
         let reactieTijd = Date.now() - lavaStartTijd;
-        document.getElementById('lava-status').innerHTML = `✅ Veilig!<br>Tijd: ${(reactieTijd/1000).toFixed(2)}s`;
+        let afgerondeTijd = (reactieTijd/1000).toFixed(2); 
+        document.getElementById('lava-status').innerHTML = `✅ Veilig!<br>Tijd: ${afgerondeTijd}s`;
         document.getElementById('lava-status').style.color = "#34c759";
         db.collection('groepen').doc(currentGroup).collection('games').doc('lava').set({
             scores: { [currentUser]: reactieTijd }
@@ -554,12 +521,10 @@ function checkLavaOrientatie(e) {
     }
 }
 
-function stopLava() {
-    db.collection('groepen').doc(currentGroup).collection('games').doc('lava').update({actief: false});
-}
+function stopLava() { db.collection('groepen').doc(currentGroup).collection('games').doc('lava').update({actief: false}); }
 
 // ==========================================
-// 2. SHAKE IT!
+// SHAKE IT!
 // ==========================================
 let shakeTimerInterval = null;
 let shakeScore = 0;
@@ -650,68 +615,6 @@ function handleShake(e) {
             document.getElementById('shake-score').innerText = Math.floor(shakeScore);
         }
     }
-}
-
-// ==========================================
-// 3. ADT SHOT MIX
-// ==========================================
-let asmSlachtoffers = [];
-
-function startASM() {
-    if(spelersLijst.length < 3) return alert("Minimaal 3 spelers nodig voor dit spel!");
-    let shuffled = [...spelersLijst].sort(() => 0.5 - Math.random());
-    asmSlachtoffers = shuffled.slice(0, 3);
-    
-    db.collection('groepen').doc(currentGroup).collection('games').doc('asm').set({
-        fase: 'actief', host: currentUser, s: asmSlachtoffers
-    });
-}
-
-function luisterNaarASM() {
-    db.collection('groepen').doc(currentGroup).collection('games').doc('asm').onSnapshot(doc => {
-        if(!doc.exists) return;
-        let d = doc.data();
-        if(d.fase === 'actief') {
-            openGame('modal-asm');
-            document.getElementById('asm-start-ui').style.display = 'none';
-            document.getElementById('asm-actief-ui').style.display = (d.host === currentUser) ? 'block' : 'none';
-            document.getElementById('asm-resultaat-ui').style.display = 'block';
-            document.getElementById('asm-resultaat-ui').innerHTML = (d.host === currentUser) ? '' : `<p style="font-size:18px;">De rechter (<b>${d.host.toUpperCase()}</b>) is een oordeel aan het vellen over:<br><br><span style="color:#ff3b30; font-weight:bold; font-size:22px;">${d.s.join('<br>')}</span></p>`;
-            
-            if(d.host === currentUser) {
-                let htmlOpts = `<option value="">-- Kies iemand --</option>` + d.s.map(x => `<option value="${x}">${x.toUpperCase()}</option>`).join('');
-                document.getElementById('asm-adt').innerHTML = htmlOpts;
-                document.getElementById('asm-shot').innerHTML = htmlOpts;
-                document.getElementById('asm-mix').innerHTML = htmlOpts;
-            }
-        } else if (d.fase === 'klaar') {
-            document.getElementById('asm-actief-ui').style.display = 'none';
-            document.getElementById('asm-start-ui').style.display = 'block';
-            document.getElementById('asm-resultaat-ui').style.display = 'block';
-            document.getElementById('asm-resultaat-ui').innerHTML = `
-                <h3 style="color:#ff3b30; margin-bottom:10px; font-size:22px;">🍺 ADT:<br> ${d.oordeel.adt.toUpperCase()}</h3>
-                <h3 style="color:#ff9500; margin-bottom:10px; font-size:22px;">🥃 SHOT:<br> ${d.oordeel.shot.toUpperCase()}</h3>
-                <h3 style="color:#34c759; margin-bottom:10px; font-size:22px;">🍹 MIX:<br> ${d.oordeel.mix.toUpperCase()}</h3>
-            `;
-        }
-    });
-}
-
-function bevestigASM() {
-    let a = document.getElementById('asm-adt').value;
-    let s = document.getElementById('asm-shot').value;
-    let m = document.getElementById('asm-mix').value;
-    
-    if(!a || !s || !m) return alert("Je moet iedereen een straf geven!");
-    
-    let unique = new Set([a, s, m]);
-    if(unique.size !== 3) return alert("Je mag elke straf maar 1 keer uitdelen aan een uniek persoon!");
-    
-    db.collection('groepen').doc(currentGroup).collection('games').doc('asm').set({
-        fase: 'klaar', oordeel: { adt: a, shot: s, mix: m }
-    }, {merge:true});
-    
-    stuurNaarFeed(`💀 OORDEEL GEVALLEN! Adt: ${a.toUpperCase()}, Shot: ${s.toUpperCase()}, Mix: ${m.toUpperCase()}`);
 }
 
 // ==========================================
