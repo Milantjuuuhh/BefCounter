@@ -10,14 +10,14 @@ firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore();
 
 let messaging = null;
-try { if (typeof firebase.messaging === "function" && firebase.messaging.isSupported()) { messaging = firebase.messaging(); } } catch (error) { console.log("Geen push ondersteuning"); }
+try { if (typeof firebase.messaging === "function" && firebase.messaging.isSupported()) { messaging = firebase.messaging(); } } catch (error) {}
 if ('serviceWorker' in navigator) { navigator.serviceWorker.register('sw.js').then((reg) => { if (messaging) { messaging.useServiceWorker(reg); } }); }
 
 function setupPushNotificaties(toonAlert = false) {
     if (!messaging) { if(toonAlert) alert("Push notificaties worden niet ondersteund."); return; }
     messaging.requestPermission().then(() => { return messaging.getToken({ vapidKey: "BMfkVb0XKUWAPQ8HnB_79f1bvyB05Q-DSnkgzSvzfSN9n_ADzgW1FpAFJim8ftNfTeHA5BkUTJ1B-YhKIOyDL9k" }); }).then((token) => {
         if (token && currentUser) { db.collection('groepen').doc(currentGroup).collection('scores').doc(currentUser).set({ push_token: token }, { merge: true }); if(toonAlert) alert("✅ Meldingen staan AAN!"); }
-    }).catch((err) => { if(toonAlert) alert("❌ Meldingen geweigerd."); });
+    }).catch((err) => { if(toonAlert) alert("❌ Meldingen geweigerd. Zet ze aan in de Instellingen van je telefoon/Safari!"); });
 }
 
 function vraagLocatieToestemming() {
@@ -34,10 +34,11 @@ let unsubscribeScores = null, unsubscribeFeed = null, unsubscribeBom = null;
 let mijnTotalePunten = 0, mijnGedraaideSpins = 0, isSpinning = false, vakantieModus = false, spelersLijst = []; 
 let worldMap = null, mapMarkers = [], pieChartInstance = null, barChartInstance = null, mijnBingoKaart = [], mijnBingoStatus = [];
 
-// SCROLL FIX
-function openGame(gameId) { document.getElementById(gameId).classList.add('active'); document.body.classList.add('modal-open'); }
+// SCROLL & GAME FIXES
+function openGame(gameId) { document.getElementById(gameId).classList.add('active'); document.body.classList.add('modal-open'); window.scrollTo(0,0); }
 function sluitGame(gameId) { document.getElementById(gameId).classList.remove('active'); document.body.classList.remove('modal-open'); }
 function openInstellingen() { openGame('modal-instellingen'); document.getElementById('instellingen-groepscode').innerText = currentGroup; laadArchiefLijst(); }
+function bevestigNoodstop(gameNaam) { if(confirm("Weet je zeker dat je het spel voor iedereen wilt stoppen en resetten?")) resetGameLobby(gameNaam); }
 
 const coopMissies = [{ titel: "Drink 100 Pils met de groep", doel: 100, types: ['bier'] }, { titel: "Verzamel samen 30 Kiss acties", doel: 30, types: ['kiss'] }, { titel: "Deel 50 Shotjes/Mixjes uit", doel: 50, types: ['mix', 'shotje'] }, { titel: "Incasseer 20 Rejects", doel: 20, types: ['rejection'] }, { titel: "Wordt 5x vol Geragd", doel: 5, types: ['raggen'] }, { titel: "150 Drankjes Totaal", doel: 150, types: ['bier', 'mix', 'shotje'] }];
 let actieveCoopMissie = null;
@@ -54,7 +55,7 @@ function bepaalScherm() {
     document.getElementById('auth-container').style.display = 'block'; document.getElementById('auth-scherm').style.display = 'none'; document.getElementById('lobby-scherm').style.display = 'none'; document.getElementById('app-scherm').style.display = 'none'; document.getElementById('header-controls').style.display = 'none'; document.getElementById('bottom-nav').style.display = 'none';
     if (!currentUser) { document.getElementById('auth-scherm').style.display = 'block'; } else if (!currentGroup) { document.getElementById('lobby-gebruikersnaam').innerText = currentUser; document.getElementById('lobby-scherm').style.display = 'block'; } else { document.getElementById('auth-container').style.display = 'none'; startApp(); }
 }
-function wisselPagina(paginaId, navItemElement) { document.querySelectorAll('.page').forEach(page => page.classList.remove('active')); document.getElementById(paginaId).classList.add('active'); document.querySelectorAll('.nav-item').forEach(item => item.classList.remove('active')); navItemElement.classList.add('active'); if (paginaId === 'page-kaart') setTimeout(() => initKaart(), 100); }
+function wisselPagina(paginaId, navItemElement) { document.querySelectorAll('.page').forEach(page => page.classList.remove('active')); document.getElementById(paginaId).classList.add('active'); document.querySelectorAll('.nav-item').forEach(item => item.classList.remove('active')); navItemElement.classList.add('active'); if (paginaId === 'page-kaart') setTimeout(() => initKaart(), 100); window.scrollTo(0,0); }
 function registreer() { const naam = document.getElementById('auth-naam').value.trim().toLowerCase(); const ww = document.getElementById('auth-wachtwoord').value; if (!naam || !ww) return alert('Vul alles in!'); db.collection('gebruikers').doc(naam).get().then((doc) => { if (doc.exists) alert('Naam bezet!'); else { db.collection('gebruikers').doc(naam).set({ wachtwoord: ww }).then(() => { localStorage.setItem('bef_user', naam); currentUser = naam; bepaalScherm(); }); } }); }
 function login() { const naam = document.getElementById('auth-naam').value.trim().toLowerCase(); const ww = document.getElementById('auth-wachtwoord').value; db.collection('gebruikers').doc(naam).get().then((doc) => { if (!doc.exists || doc.data().wachtwoord !== ww) alert('Onjuist!'); else { localStorage.setItem('bef_user', naam); currentUser = naam; bepaalScherm(); } }); }
 function uitloggen() { localStorage.clear(); location.reload(); }
@@ -65,7 +66,12 @@ function joinSpecifiekeGroep(code) { db.collection('groepen').doc(code).collecti
 function startApp() {
     document.getElementById('app-scherm').style.display = 'block'; document.getElementById('bottom-nav').style.display = 'flex'; document.getElementById('header-controls').style.display = 'flex'; document.getElementById('ingelogde-naam').innerText = currentUser;
     setupPushNotificaties(); bouwLiveScorebord(); luisterNaarLiveFeed(); luisterNaarTijdbom(); luisterNaarCoopMissie(); luisterNaarDrinkSessie(); 
-    luisterNaarGameLobby('reflex'); luisterNaarQuiplash(); luisterNaarLava(); luisterNaarShake(); laadScorritoLijsten();
+    luisterNaarGameLobby('reflex'); luisterNaarReflex(); 
+    luisterNaarGameLobby('quiplash'); luisterNaarQuiplash(); 
+    luisterNaarGameLobby('lava'); luisterNaarLava(); 
+    luisterNaarGameLobby('shake'); luisterNaarShake();
+    luisterNaarGameLobby('sjaak'); luisterNaarSjaak();
+    laadScorritoLijsten();
 }
 
 let sessieCheckInterval = null, actieveDrinkSessieTijd = 0, drinkSessieStarter = "";
@@ -83,19 +89,14 @@ function toggleDrinkSessie() {
         }
     });
 }
-
 function forceerSessieAtje() {
     let nieuweWachttijd = Math.floor(Math.random() * (15 * 60 * 1000)) + (5 * 60 * 1000); let slachtoffer = spelersLijst.length > 0 ? spelersLijst[Math.floor(Math.random() * spelersLijst.length)] : currentUser;
     db.collection('groepen').doc(currentGroup).collection('sessie').doc('status').update({ volgende_atje: Date.now() + nieuweWachttijd, huidig_slachtoffer: slachtoffer, wacht_op_atje: true });
     let bericht = `🚨 SKIP TIMER! De Drink Sessie wijst direct aan... ${slachtoffer.toUpperCase()} moet NU een atje trekken! 🍻`;
     stuurNaarFeed(bericht); if ("vibrate" in navigator) navigator.vibrate([200, 100, 200, 100, 500, 100, 500]);
     const MAKE_WEBHOOK_URL = "https://hook.eu1.make.com/iydcsfjwnlx3147b29w38texvyhgrr62";
-    db.collection('groepen').doc(currentGroup).collection('scores').get().then(snap => {
-        let tokensGevonden = 0; snap.forEach(doc => { if (doc.data().push_token) { tokensGevonden++; fetch(MAKE_WEBHOOK_URL, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ token: doc.data().push_token, titel: "🍻 ATJE TREKKEN!", bericht: bericht }) }).catch(e => console.log(e)); } });
-        if (tokensGevonden === 0) { alert("❌ Er is geen enkel Push-Token in de database gevonden. Klik in de Instellingen op 'Zet Meldingen Aan'!"); }
-    });
+    db.collection('groepen').doc(currentGroup).collection('scores').get().then(snap => { let tokensGevonden = 0; snap.forEach(doc => { if (doc.data().push_token) { tokensGevonden++; fetch(MAKE_WEBHOOK_URL, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ token: doc.data().push_token, titel: "🍻 ATJE TREKKEN!", bericht: bericht }) }).catch(e => console.log(e)); } }); });
 }
-
 function luisterNaarDrinkSessie() {
     db.collection('groepen').doc(currentGroup).collection('sessie').doc('status').onSnapshot(doc => {
         const btn = document.getElementById('btn-drink-sessie'); const timerUI = document.getElementById('drink-sessie-timer-tekst'); const btnSkip = document.getElementById('btn-skip-timer');
@@ -113,7 +114,6 @@ function luisterNaarDrinkSessie() {
         }
     });
 }
-
 function bevestigAtje() { db.collection('groepen').doc(currentGroup).collection('sessie').doc('status').update({ wacht_op_atje: false, huidig_slachtoffer: "" }); pasScoreAan('bier', 1, '🍻 Straf Atje'); document.getElementById('atje-overlay').style.display = 'none'; }
 setInterval(() => {
     if (actieveDrinkSessieTijd > 0) {
@@ -121,7 +121,6 @@ setInterval(() => {
         if (diff > 0) { let m = Math.floor(diff / 60000).toString().padStart(2, '0'); let s = Math.floor((diff % 60000) / 1000).toString().padStart(2, '0'); if(timerUI) timerUI.innerText = `⏰ Volgende Atje over: ${m}:${s}`; } else { if(timerUI) timerUI.innerText = "🚨 ALARM! SLACHTOFFER WORDT GEKOZEN..."; }
     }
 }, 1000);
-
 function checkDrinkSessieTijd() {
     if (!actieveDrinkSessieTijd || Date.now() < actieveDrinkSessieTijd) return; if (drinkSessieStarter !== currentUser) return;
     let nieuweWachttijd = Math.floor(Math.random() * (15 * 60 * 1000)) + (5 * 60 * 1000); let slachtoffer = spelersLijst.length > 0 ? spelersLijst[Math.floor(Math.random() * spelersLijst.length)] : currentUser;
@@ -181,7 +180,6 @@ function luisterNaarLiveFeed() {
         setTimeout(() => { if(ticker) ticker.style.display = 'none'; }, 5000);
     });
 }
-
 function tekenGrafieken(b, m, sh, k, r, ra, ko, sl, namen, drankjes) {
     try {
         if (typeof Chart === 'undefined') return; 
@@ -194,7 +192,6 @@ function beheerMissiesEnBingo(data) {
     try { if (!data.geheime_missie) { let nwMissie = genereerNieuweMissie(); db.collection('groepen').doc(currentGroup).collection('scores').doc(currentUser).set({ geheime_missie: nwMissie }, { merge: true }); const mt = document.getElementById('geheime-missie-tekst'); if(mt) mt.innerText = nwMissie; } else { const mt = document.getElementById('geheime-missie-tekst'); if(mt) mt.innerText = data.geheime_missie; } } catch(err) {}
     try { if (!data.bingo_kaart) { db.collection('groepen').doc(currentGroup).collection('scores').doc(currentUser).set({ bingo_kaart: genereerBingoKaart(), bingo_status: [false,false,false,false,false,false,false,false,false], bingo_gehaald: false }, { merge: true }); } else { mijnBingoKaart = data.bingo_kaart; mijnBingoStatus = data.bingo_status || [false,false,false,false,false,false,false,false,false]; renderBingoGrid(data.bingo_gehaald); } } catch(err) {}
 }
-
 function voltooiGeheimeMissie() { if (confirm("Echt uitgevoerd? Bij liegen moet je adten!")) { pasScoreAan('raggen', 3, '🥷 Geheime Missie'); db.collection('groepen').doc(currentGroup).collection('scores').doc(currentUser).set({ geheime_missie: genereerNieuweMissie() }, { merge: true }); alert("+3 Punten verdiend!"); } }
 function skipGeheimeMissie() { let coins = Math.max(0, mijnTotalePunten - mijnGedraaideSpins); if (coins < 1) return alert("Je hebt minimaal 1 Coin nodig om te skippen!"); if (confirm("Wil je 1 Coin inleveren om een nieuwe missie te krijgen?")) { db.collection('groepen').doc(currentGroup).collection('scores').doc(currentUser).set({ spins: firebase.firestore.FieldValue.increment(1), geheime_missie: genereerNieuweMissie() }, { merge: true }); stuurNaarFeed(`🥷 ${currentUser.toUpperCase()} was te laf en heeft zijn missie geskipt!`); } }
 
@@ -239,22 +236,25 @@ function draaiRad() {
     if (isSpinning) return; if ((mijnTotalePunten - mijnGedraaideSpins) <= 0) return alert("Je hebt 0 coins!");
     isSpinning = true; if ("vibrate" in navigator) navigator.vibrate(50);
     db.collection('groepen').doc(currentGroup).collection('scores').doc(currentUser).set({ spins: firebase.firestore.FieldValue.increment(1) }, { merge: true });
-    let draaiCounter = 0; const interval = setInterval(() => {
+    
+    let draaiCounter = 0; 
+    const box = document.getElementById('rad-box');
+    const interval = setInterval(() => {
         const basisRadOpties = ["🍻 Atje!", "🥃 Shotje!", "👉 Deel 2 slokken uit", "🎯 [SPELER] adt!", "💧 Drink water (Laf)", "🔄 Wissel drankje", "🚀 Raggen punt!", "🍻 IEDEREEN ADTEN!"];
-        let temp = basisRadOpties[Math.floor(Math.random() * basisRadOpties.length)]; document.getElementById('rad-uitkomst').innerText = temp.replace("[SPELER]","iemand");
-        if (++draaiCounter > 20) { clearInterval(interval); let andereSpelers = spelersLijst.filter(n=>n!==currentUser); let slachtoffer = andereSpelers.length > 0 ? andereSpelers[Math.floor(Math.random()*andereSpelers.length)] : "iemand"; let eind = basisRadOpties[Math.floor(Math.random() * basisRadOpties.length)].replace("[SPELER]", slachtoffer); document.getElementById('rad-uitkomst').innerText = eind; stuurNaarFeed(`🎡 RAD: ${currentUser.toUpperCase()} draaide: "${eind}"`); isSpinning = false; }
+        let temp = basisRadOpties[Math.floor(Math.random() * basisRadOpties.length)]; document.getElementById('rad-uitkomst').innerText = temp.replace("[SPELER]","iemand"); 
+        
+        box.style.background = (draaiCounter % 2 === 0) ? "linear-gradient(135deg, #34c759, #30b050)" : "linear-gradient(135deg, #ff9500, #ff2d55)";
+        
+        if (++draaiCounter > 20) { 
+            clearInterval(interval); let andereSpelers = spelersLijst.filter(n=>n!==currentUser); let slachtoffer = andereSpelers.length > 0 ? andereSpelers[Math.floor(Math.random()*andereSpelers.length)] : "iemand"; let eind = basisRadOpties[Math.floor(Math.random() * basisRadOpties.length)].replace("[SPELER]", slachtoffer); 
+            document.getElementById('rad-uitkomst').innerText = eind; 
+            box.style.background = "linear-gradient(135deg, #007aff, #0056b3)"; 
+            stuurNaarFeed(`🎡 RAD: ${currentUser.toUpperCase()} draaide: "${eind}"`); isSpinning = false; 
+        }
     }, 100);
 }
 function updateCoinWeergave() { const coins = Math.max(0, mijnTotalePunten - mijnGedraaideSpins); document.querySelectorAll('.coin-weergave-class').forEach(el => el.innerText = coins); }
 function verwijderSpeler(naam) { if (confirm(`Verwijder ${naam}?`)) db.collection('groepen').doc(currentGroup).collection('scores').doc(naam).delete(); }
-
-const sjaakVragen = ["Wie kotst vanavond als eerste?", "Wie regelt er vannacht de minste actie?", "Wie verliest er als eerste zijn telefoon of sleutels?", "Wie is morgen de grootste jankerd met een kater?", "Wie betaalt zonder zeuren de volgende ronde?", "Wie doet de domste uitspraak vanavond?", "Wie is de slechtste leugenaar van de groep?", "Wie durft er nu het minst een atje te trekken?"];
-let sjaakInterval = null;
-function startSjaakVraag() { clearInterval(sjaakInterval); document.getElementById('sjaak-timer').innerText = "5"; document.getElementById('sjaak-vraag').innerText = sjaakVragen[Math.floor(Math.random() * sjaakVragen.length)]; }
-function startSjaakGame() {
-    startSjaakVraag(); let count = 5; const timerUI = document.getElementById('sjaak-timer'); if ("vibrate" in navigator) navigator.vibrate(50);
-    sjaakInterval = setInterval(() => { count--; timerUI.innerText = count; if(count <= 0) { clearInterval(sjaakInterval); timerUI.innerText = "👉 WIE IS HET?!"; if ("vibrate" in navigator) navigator.vibrate([300, 100, 300]); } }, 1000);
-}
 
 let hlHuidig = 5;
 function initHogerLager() { hlHuidig = Math.floor(Math.random() * 10) + 1; document.getElementById('hl-getal').innerText = hlHuidig; }
@@ -310,7 +310,11 @@ function laadScorritoLijsten() {
     let htmlOpts = `<option value="">-- Kies iemand --</option>` + spelersLijst.map(x => `<option value="${x}">${x.toUpperCase()}</option>`).join('');
     ['scor-pils', 'scor-raggen', 'scor-sjaak', 'scor-kots', 'scor-kiss', 'scor-shotje', 'scor-sleutel', 'scor-out'].forEach(id => {
         let el = document.getElementById(id);
-        if(el && el.innerHTML.indexOf('<option') === -1) el.innerHTML = htmlOpts; // vul alleen als leeg
+        if(el) {
+            let currentVal = el.value;
+            el.innerHTML = htmlOpts;
+            el.value = currentVal;
+        }
     });
 
     db.collection('groepen').doc(currentGroup).collection('scorrito').onSnapshot(snap => {
@@ -334,15 +338,9 @@ function laadScorritoLijsten() {
 
 function slaScorritoOp() {
     let d = {
-        pils: document.getElementById('scor-pils').value,
-        raggen: document.getElementById('scor-raggen').value,
-        sjaak: document.getElementById('scor-sjaak').value,
-        kots: document.getElementById('scor-kots').value,
-        kiss: document.getElementById('scor-kiss').value,
-        shotje: document.getElementById('scor-shotje').value,
-        sleutel: document.getElementById('scor-sleutel').value,
-        out: document.getElementById('scor-out').value,
-        tijd: Date.now()
+        pils: document.getElementById('scor-pils').value, raggen: document.getElementById('scor-raggen').value, sjaak: document.getElementById('scor-sjaak').value,
+        kots: document.getElementById('scor-kots').value, kiss: document.getElementById('scor-kiss').value, shotje: document.getElementById('scor-shotje').value,
+        sleutel: document.getElementById('scor-sleutel').value, out: document.getElementById('scor-out').value, tijd: Date.now()
     };
     if(Object.values(d).some(v => v === "")) return alert("Vul alle 8 voorspellingen in!");
     
@@ -357,7 +355,7 @@ function slaVakantieOp() {
     let tot = document.getElementById('archief-tot').value;
     
     if(!naam || !van || !tot) return alert("Vul een naam én beide datums in.");
-    if(!confirm("WEET JE DIT ZEKER? Alle huidige scores worden gereset naar 0!")) return;
+    if(!confirm("WEET JE DIT ZEKER? Alle huidige scores én alle Scorrito voorspellingen worden gereset naar 0!")) return;
 
     db.collection('groepen').doc(currentGroup).collection('scores').get().then(snap => {
         let batch = db.batch();
@@ -368,15 +366,19 @@ function slaVakantieOp() {
             let refHuidig = db.collection('groepen').doc(currentGroup).collection('scores').doc(doc.id);
             batch.update(refHuidig, { bier:0, mix:0, shotje:0, kiss:0, rejection:0, raggen:0, kotsen:0, sleutel:0, spins:0 });
         });
-        
         let metaRef = db.collection('groepen').doc(currentGroup).collection('archief').doc(naam);
         batch.set(metaRef, { naam: naam, van: van, tot: tot, datum_opgeslagen: Date.now() });
 
         return batch.commit();
     }).then(() => {
-        db.collection('groepen').doc(currentGroup).collection('archief').doc('_lijst').set({
-            namen: firebase.firestore.FieldValue.arrayUnion(naam)
-        }, {merge:true});
+        // Reset SCORRITO also
+        db.collection('groepen').doc(currentGroup).collection('scorrito').get().then(snapScor => {
+            let batch2 = db.batch();
+            snapScor.forEach(sDoc => { batch2.delete(sDoc.ref); });
+            return batch2.commit();
+        });
+    }).then(() => {
+        db.collection('groepen').doc(currentGroup).collection('archief').doc('_lijst').set({ namen: firebase.firestore.FieldValue.arrayUnion(naam) }, {merge:true});
         alert("✅ Vakantie succesvol gearchiveerd en scores gereset!");
         document.getElementById('archief-naam').value = ""; document.getElementById('archief-van').value = ""; document.getElementById('archief-tot').value = "";
     });
@@ -399,9 +401,7 @@ function bekijkArchief() {
     
     db.collection('groepen').doc(currentGroup).collection('archief').doc(naam).get().then(docMeta => {
         let dInfo = "";
-        if(docMeta.exists && docMeta.data().van) {
-            dInfo = `(${docMeta.data().van} / ${docMeta.data().tot})`;
-        }
+        if(docMeta.exists && docMeta.data().van) { dInfo = `(${docMeta.data().van} tot ${docMeta.data().tot})`; }
         
         db.collection('groepen').doc(currentGroup).collection('archief').doc(naam).collection('scores').get().then(snap => {
             let html = `<tr><th style="text-align:left; padding-left:10px;">Wie</th><th>🍺</th><th>🍹</th><th>🥃</th><th>😘</th><th>💔</th><th>🚀</th><th>🤮</th><th>🔑</th><th class="totaal-kolom">Tot</th></tr>`;
@@ -419,29 +419,31 @@ function bekijkArchief() {
     });
 }
 
+function verwijderArchief() {
+    let naam = document.getElementById('archief-select').value;
+    if(!naam) return alert("Selecteer eerst een archief uit de lijst.");
+    if(confirm("Weet je ZEKER dat je dit archief voor altijd wilt verwijderen? Dit kan niet ongedaan worden!")) {
+        db.collection('groepen').doc(currentGroup).collection('archief').doc('_lijst').update({ namen: firebase.firestore.FieldValue.arrayRemove(naam) });
+        db.collection('groepen').doc(currentGroup).collection('archief').doc(naam).delete();
+        alert("🗑️ Archief verwijderd!");
+        document.getElementById('archief-select').value = "";
+    }
+}
+
 // ==========================================
 // GAME LOBBY SYSTEEM (ALGEMENE FUNCTIES)
 // ==========================================
 function startLobby(gameNaam) {
-    db.collection('groepen').doc(currentGroup).collection('games').doc(gameNaam).set({
-        fase: 'lobby', host: currentUser, spelers: [currentUser], actief: false, klaar: false
-    });
+    db.collection('groepen').doc(currentGroup).collection('games').doc(gameNaam).set({ fase: 'lobby', host: currentUser, spelers: [currentUser], actief: false, klaar: false });
 }
-
 function joinGame(gameNaam) {
-    db.collection('groepen').doc(currentGroup).collection('games').doc(gameNaam).update({
-        spelers: firebase.firestore.FieldValue.arrayUnion(currentUser)
-    });
+    db.collection('groepen').doc(currentGroup).collection('games').doc(gameNaam).update({ spelers: firebase.firestore.FieldValue.arrayUnion(currentUser) });
 }
-
 function verlaatGame(gameNaam) {
     db.collection('groepen').doc(currentGroup).collection('games').doc(gameNaam).get().then(doc => {
         if(doc.exists) {
-            if(doc.data().host === currentUser) {
-                db.collection('groepen').doc(currentGroup).collection('games').doc(gameNaam).update({fase: 'wachten', spelers: []});
-            } else {
-                db.collection('groepen').doc(currentGroup).collection('games').doc(gameNaam).update({ spelers: firebase.firestore.FieldValue.arrayRemove(currentUser) });
-            }
+            if(doc.data().host === currentUser) { db.collection('groepen').doc(currentGroup).collection('games').doc(gameNaam).update({fase: 'wachten', spelers: []}); } 
+            else { db.collection('groepen').doc(currentGroup).collection('games').doc(gameNaam).update({ spelers: firebase.firestore.FieldValue.arrayRemove(currentUser) }); }
         }
     });
 }
@@ -466,7 +468,96 @@ function luisterNaarGameLobby(gameNaam) {
             if(lijstEl) lijstEl.innerHTML = spelers.map(s => `<span class="lobby-speler-badge">${s}</span>`).join('');
             if(joinBtn) joinBtn.style.display = spelers.includes(currentUser) ? 'none' : 'inline-block';
             if(startBtn) startBtn.style.display = (d.host === currentUser && spelers.length > 1) ? 'inline-block' : 'none';
+        } else {
+            if(wachtEl) wachtEl.style.display = 'none';
+            if(lobbyEl) lobbyEl.style.display = 'none';
         }
+    });
+}
+
+function resetGameLobby(gameNaam) {
+    db.collection('groepen').doc(currentGroup).collection('games').doc(gameNaam).set({ fase: 'wachten', host: "", spelers: [], actief: false, klaar: false });
+}
+
+// ==========================================
+// WIE IS DE SJAAK LOGICA (FULLSCREEN)
+// ==========================================
+const sjaakVragen = [
+    "Wie kotst vanavond als eerste?", "Wie regelt er vannacht de minste actie?", 
+    "Wie verliest er als eerste zijn telefoon of sleutels?", "Wie is morgen de grootste jankerd met een kater?", 
+    "Wie betaalt zonder zeuren de volgende ronde?", "Wie doet de domste uitspraak vanavond?", 
+    "Wie is de slechtste leugenaar van de groep?", "Wie durft er nu het minst een atje te trekken?"
+];
+
+function startSjaakRonde() {
+    let vr = sjaakVragen[Math.floor(Math.random() * sjaakVragen.length)];
+    db.collection('groepen').doc(currentGroup).collection('games').doc('sjaak').update({ fase: 'actief', vraag: vr, stemmen: {} });
+    stuurNaarFeed(`👉 WIE IS DE SJAAK gestart door ${currentUser.toUpperCase()}!`);
+}
+
+function luisterNaarSjaak() {
+    luisterNaarGameLobby('sjaak');
+    db.collection('groepen').doc(currentGroup).collection('games').doc('sjaak').onSnapshot(doc => {
+        if(!doc.exists) return; let d = doc.data(); let spelers = d.spelers || [];
+        
+        let uiActief = document.getElementById('sjaak-actief');
+        let uiResultaat = document.getElementById('sjaak-resultaat');
+        
+        if (d.fase === 'wachten' || d.fase === 'lobby') {
+            uiActief.style.display = 'none'; uiResultaat.style.display = 'none';
+        } else if (d.fase === 'actief') {
+            uiActief.style.display = 'block'; uiResultaat.style.display = 'none';
+            document.getElementById('sjaak-vraag-tekst').innerText = d.vraag;
+            document.getElementById('sjaak-status').innerText = `${Object.keys(d.stemmen || {}).length} van de ${spelers.length} stemmen binnen.`;
+            document.getElementById('btn-sjaak-forceer').style.display = (d.host === currentUser) ? 'inline-block' : 'none';
+            
+            let knoppenBox = document.getElementById('sjaak-stem-knoppen');
+            knoppenBox.innerHTML = '';
+            
+            if (!spelers.includes(currentUser) || (d.stemmen && d.stemmen[currentUser])) {
+                knoppenBox.innerHTML = `<h2 style="color:#34c759;">✅ Stem ontvangen!</h2>`;
+            } else {
+                spelers.forEach((s, idx) => {
+                    let btn = document.createElement('button');
+                    btn.className = 'ql-btn-stem'; btn.style.animationDelay = (0.1 * idx) + "s";
+                    btn.innerText = `👉 ${s.toUpperCase()}`;
+                    btn.onclick = () => { db.collection('groepen').doc(currentGroup).collection('games').doc('sjaak').set({ stemmen: { [currentUser]: s } }, {merge:true}); };
+                    knoppenBox.appendChild(btn);
+                });
+            }
+
+            if(Object.keys(d.stemmen || {}).length === spelers.length && spelers.length > 0 && d.host === currentUser) { eindigeSjaakRonde(); }
+
+        } else if (d.fase === 'resultaat') {
+            uiActief.style.display = 'none'; uiResultaat.style.display = 'block';
+            document.getElementById('sjaak-resultaat-vraag').innerText = d.vraag;
+            document.getElementById('btn-sjaak-volgende').style.display = (d.host === currentUser) ? 'inline-block' : 'none';
+
+            let scores = {}; Object.values(d.stemmen || {}).forEach(gestemdOp => { scores[gestemdOp] = (scores[gestemdOp] || 0) + 1; });
+            let resLijst = document.getElementById('sjaak-uitslag-lijst'); resLijst.innerHTML = '';
+            
+            let resArr = Object.entries(scores).map(([naam, stemmen]) => ({naam, stemmen}));
+            resArr.sort((a, b) => b.stemmen - a.stemmen);
+
+            resArr.forEach((item, index) => {
+                let p = document.createElement('div'); p.className = "ql-result-item"; p.style.animationDelay = (0.2 * index) + "s";
+                p.innerHTML = `<b style="color:#ff3b30;">${item.naam.toUpperCase()}</b>: ${item.stemmen} stem(men) ${index===0?'🎯':''}`;
+                resLijst.appendChild(p);
+            });
+        }
+    });
+}
+
+function eindigeSjaakRonde() {
+    db.collection('groepen').doc(currentGroup).collection('games').doc('sjaak').get().then(doc => {
+        let d = doc.data(); let scores = {}; let maxStemmen = 0; let winnaars = [];
+        Object.values(d.stemmen || {}).forEach(gestemdOp => { scores[gestemdOp] = (scores[gestemdOp] || 0) + 1; if(scores[gestemdOp] > maxStemmen) maxStemmen = scores[gestemdOp]; });
+        Object.keys(scores).forEach(naam => { if(scores[naam] === maxStemmen) winnaars.push(naam); });
+        
+        winnaars.forEach(w => { db.collection('groepen').doc(currentGroup).collection('scores').doc(w).set({ rejection: firebase.firestore.FieldValue.increment(1) }, {merge: true}); });
+        if(winnaars.length > 0) stuurNaarFeed(`👉 SJAAK: ${winnaars.join(' & ').toUpperCase()} is de sjaak en krijgt +1 Reject! Drinken!`);
+        
+        db.collection('groepen').doc(currentGroup).collection('games').doc('sjaak').update({ fase: 'resultaat' });
     });
 }
 
@@ -474,40 +565,26 @@ function luisterNaarGameLobby(gameNaam) {
 // VLOER IS LAVA LOGICA
 // ==========================================
 let lavaRonde = 0; let lavaGroenTijd = 0; let lavaGeklikt = false; let lavaInterval = null; let lavaBezig = false;
-
 function startLavaRonde() {
     let delay = Math.floor(Math.random() * 4000) + 2000;
-    db.collection('groepen').doc(currentGroup).collection('games').doc('lava').update({
-        fase: 'actief', ronde: Date.now(), lava_tijd: Date.now() + delay, scores: {}
-    });
+    db.collection('groepen').doc(currentGroup).collection('games').doc('lava').update({ fase: 'actief', ronde: Date.now(), lava_tijd: Date.now() + delay, scores: {} });
     stuurNaarFeed(`🌋 VLOER IS LAVA gestart door ${currentUser.toUpperCase()}!`);
 }
-
 function luisterNaarLava() {
     luisterNaarGameLobby('lava');
     db.collection('groepen').doc(currentGroup).collection('games').doc('lava').onSnapshot(doc => {
         if(!doc.exists) return; let d = doc.data(); let ronde = d.ronde || 0; let lavaTijd = d.lava_tijd || 0; let spelers = d.spelers || [];
 
         if(d.fase === 'lobby' || d.fase === 'wachten') {
-            document.getElementById('lava-wacht-ui').style.display = 'none';
-            document.getElementById('lava-actief-ui').style.display = 'none';
-            document.getElementById('lava-resultaat-ui').style.display = 'none';
-            document.getElementById('lava-nieuw-btn').style.display = 'none';
-            document.getElementById('modal-lava').style.backgroundColor = '#1c1c1e';
-            lavaBezig = false;
+            document.getElementById('lava-wacht-ui').style.display = 'none'; document.getElementById('lava-actief-ui').style.display = 'none'; document.getElementById('lava-resultaat-ui').style.display = 'none'; document.getElementById('modal-lava').style.backgroundColor = '#1c1c1e'; lavaBezig = false;
         } 
         else if (d.fase === 'actief') {
-            document.getElementById('lava-lobby').style.display = 'none';
-            document.getElementById('lava-wachten').style.display = 'none';
-            
             if(ronde !== lavaRonde) {
                 lavaRonde = ronde; lavaGroenTijd = lavaTijd; lavaGeklikt = false;
                 if(spelers.includes(currentUser)) { lavaBezig = true; window.addEventListener('deviceorientation', checkLavaOrientatie); }
-                
                 document.getElementById('lava-wacht-ui').style.display = spelers.includes(currentUser) ? 'block' : 'none';
                 document.getElementById('lava-wacht-ui').innerHTML = spelers.includes(currentUser) ? `<h1 style="font-size: 40px; margin-top:30px; color:white;">WACHT...</h1><p style="font-size: 18px;">Hou je telefoon vast. Nog NIET platleggen!</p>` : `<h1 style="font-size: 40px; color:white; margin-top:40px;">Kijk mee!</h1>`;
-                document.getElementById('lava-actief-ui').style.display = 'none';
-                document.getElementById('lava-resultaat-ui').style.display = 'none';
+                document.getElementById('lava-actief-ui').style.display = 'none'; document.getElementById('lava-resultaat-ui').style.display = 'none';
                 
                 clearInterval(lavaInterval);
                 lavaInterval = setInterval(() => {
@@ -516,36 +593,27 @@ function luisterNaarLava() {
                         if(spelers.includes(currentUser)) document.getElementById('lava-actief-ui').style.display = 'block';
                         document.getElementById('modal-lava').style.backgroundColor = '#ff3b30';
                         if ("vibrate" in navigator && spelers.includes(currentUser)) navigator.vibrate([500, 200, 500]);
-                    } else if (Date.now() < lavaGroenTijd) {
-                        document.getElementById('modal-lava').style.backgroundColor = '#ff9500';
-                    }
+                    } else if (Date.now() < lavaGroenTijd) { document.getElementById('modal-lava').style.backgroundColor = '#ff9500'; }
                 }, 50);
             }
         }
         else if (d.fase === 'resultaat') {
             lavaBezig = false; window.removeEventListener('deviceorientation', checkLavaOrientatie); clearInterval(lavaInterval);
             document.getElementById('modal-lava').style.backgroundColor = '#1c1c1e';
-            document.getElementById('lava-wacht-ui').style.display = 'none';
-            document.getElementById('lava-actief-ui').style.display = 'none';
-            document.getElementById('lava-resultaat-ui').style.display = 'block';
-            document.getElementById('lava-nieuw-btn').style.display = (d.host === currentUser) ? 'inline-block' : 'none';
+            document.getElementById('lava-wacht-ui').style.display = 'none'; document.getElementById('lava-actief-ui').style.display = 'none'; document.getElementById('lava-resultaat-ui').style.display = 'block';
             
             let html = "<h3 style='color:#ff3b30; margin-top:0;'>Uitslag:</h3><ol style='padding-left:20px; font-size:18px;'>";
-            let arr = [];
-            for(let sp in d.scores) arr.push({n:sp, t: d.scores[sp]});
+            let arr = []; for(let sp in d.scores) arr.push({n:sp, t: d.scores[sp]});
             spelers.forEach(sp => { if(d.scores[sp] === undefined) arr.push({n:sp, t: 99999999}); });
             arr.sort((a,b) => { if(a.t === 'TE VROEG') return 1; if(b.t === 'TE VROEG') return -1; return a.t - b.t; });
-
             arr.forEach((x, i) => {
                 let tijdWeergave = x.t === 99999999 ? "<span style='color:#ff3b30;'>DOOD 💀</span>" : (x.t === 'TE VROEG' ? "<span style='color:#ff9500;'>TE VROEG!</span>" : (x.t/1000).toFixed(2) + "s");
-                let icoon = (i === arr.length-1 && x.t !== 99999999 && x.t !== 'TE VROEG') ? '💀' : '';
-                html += `<li style="margin-bottom:5px;"><b>${x.n.toUpperCase()}</b>: ${tijdWeergave} ${icoon}</li>`;
+                let icoon = (i === arr.length-1 && x.t !== 99999999 && x.t !== 'TE VROEG') ? '💀' : ''; html += `<li style="margin-bottom:5px;"><b>${x.n.toUpperCase()}</b>: ${tijdWeergave} ${icoon}</li>`;
             });
             document.getElementById('lava-resultaat-ui').innerHTML = html + "</ol>";
         }
     });
 }
-
 function checkLavaOrientatie(e) {
     if(!lavaBezig || lavaGeklikt) return;
     let flat = (Math.abs(e.beta) < 15 || Math.abs(e.beta) > 165) && Math.abs(e.gamma) < 15;
@@ -554,14 +622,7 @@ function checkLavaOrientatie(e) {
         if(isTeVroeg) { document.getElementById('lava-wacht-ui').innerHTML = `<h1 style="font-size:40px; color:white;">TE VROEG!</h1><p style="color:white; font-size:18px;">Straf atje voor jou!</p>`; } 
         else { document.getElementById('lava-status').innerHTML = `✅ Veilig!<br>Tijd: ${(reactieTijd/1000).toFixed(2)}s`; document.getElementById('lava-status').style.color = "#34c759"; }
         db.collection('groepen').doc(currentGroup).collection('games').doc('lava').set({ scores: { [currentUser]: reactieTijd } }, {merge:true});
-        
-        // Check of we naar uitslag kunnen (auto-advance)
-        db.collection('groepen').doc(currentGroup).collection('games').doc('lava').get().then(doc => {
-            let d = doc.data();
-            if(Object.keys(d.scores).length >= d.spelers.length) {
-                db.collection('groepen').doc(currentGroup).collection('games').doc('lava').update({fase: 'resultaat'});
-            }
-        });
+        db.collection('groepen').doc(currentGroup).collection('games').doc('lava').get().then(doc => { if(Object.keys(doc.data().scores).length >= doc.data().spelers.length) { db.collection('groepen').doc(currentGroup).collection('games').doc('lava').update({fase: 'resultaat'}); } });
     }
 }
 
@@ -569,87 +630,40 @@ function checkLavaOrientatie(e) {
 // SHAKE IT LOGICA
 // ==========================================
 let shakeTimerInterval = null; let shakeScore = 0; let shakeBezig = false; let shakeLastX = null, shakeLastY = null, shakeLastZ = null;
-
 function startShakeRonde() {
-    let spelers = [];
-    document.querySelectorAll('#shake-spelers-lijst .lobby-speler-badge').forEach(el => spelers.push(el.innerText.toLowerCase()));
+    let spelers = []; document.querySelectorAll('#shake-spelers-lijst .lobby-speler-badge').forEach(el => spelers.push(el.innerText.toLowerCase()));
     if(spelers.length < 2) return alert("Minimaal 2 spelers in de lobby nodig.");
-    let p1 = spelers[Math.floor(Math.random()*spelers.length)];
-    let over = spelers.filter(x => x !== p1);
-    let p2 = over[Math.floor(Math.random()*over.length)];
-    
-    db.collection('groepen').doc(currentGroup).collection('games').doc('shake').update({
-        fase: 'actief', eindTijd: Date.now() + 10000, p1: p1, p2: p2, scores: { [p1]:0, [p2]:0 }
-    });
-    stuurNaarFeed(`📳 SHAKE DUEL: ${p1.toUpperCase()} VS ${p2.toUpperCase()}!`);
+    let p1 = spelers[Math.floor(Math.random()*spelers.length)]; let over = spelers.filter(x => x !== p1); let p2 = over[Math.floor(Math.random()*over.length)];
+    db.collection('groepen').doc(currentGroup).collection('games').doc('shake').update({ fase: 'actief', eindTijd: Date.now() + 10000, p1: p1, p2: p2, scores: { [p1]:0, [p2]:0 } }); stuurNaarFeed(`📳 SHAKE DUEL: ${p1.toUpperCase()} VS ${p2.toUpperCase()}!`);
 }
-
 function luisterNaarShake() {
     luisterNaarGameLobby('shake');
     db.collection('groepen').doc(currentGroup).collection('games').doc('shake').onSnapshot(doc => {
         if(!doc.exists) return; let d = doc.data();
-
-        if(d.fase === 'lobby' || d.fase === 'wachten') {
-            document.getElementById('shake-actief-ui').style.display = 'none';
-            document.getElementById('shake-resultaat-ui').style.display = 'none';
-            document.getElementById('shake-nieuw-btn').style.display = 'none';
-            shakeBezig = false; clearInterval(shakeTimerInterval);
-        }
+        if(d.fase === 'lobby' || d.fase === 'wachten') { document.getElementById('shake-actief-ui').style.display = 'none'; document.getElementById('shake-resultaat-ui').style.display = 'none'; shakeBezig = false; clearInterval(shakeTimerInterval); }
         else if(d.fase === 'actief') {
-            document.getElementById('shake-lobby').style.display = 'none';
-            document.getElementById('shake-wachten').style.display = 'none';
-            document.getElementById('shake-actief-ui').style.display = 'block';
-            document.getElementById('shake-resultaat-ui').style.display = 'none';
-            document.getElementById('shake-spelers-tekst').innerText = `${d.p1.toUpperCase()} VS ${d.p2.toUpperCase()}`;
-            
-            if(currentUser === d.p1 || currentUser === d.p2) {
-                shakeScore = 0; shakeLastX = null; shakeLastY = null; shakeLastZ = null; shakeBezig = true;
-                window.addEventListener('devicemotion', handleShake);
-                document.getElementById('shake-score').innerText = "0";
-            } else { document.getElementById('shake-score').innerText = "Kijk hoe ze schudden!"; }
-
+            document.getElementById('shake-actief-ui').style.display = 'block'; document.getElementById('shake-resultaat-ui').style.display = 'none'; document.getElementById('shake-spelers-tekst').innerText = `${d.p1.toUpperCase()} VS ${d.p2.toUpperCase()}`;
+            if(currentUser === d.p1 || currentUser === d.p2) { shakeScore = 0; shakeLastX = null; shakeLastY = null; shakeLastZ = null; shakeBezig = true; window.addEventListener('devicemotion', handleShake); document.getElementById('shake-score').innerText = "0"; } else { document.getElementById('shake-score').innerText = "Kijk hoe ze schudden!"; }
             clearInterval(shakeTimerInterval);
             shakeTimerInterval = setInterval(() => {
-                let rest = Math.max(0, Math.ceil((d.eindTijd - Date.now())/1000));
-                document.getElementById('shake-timer').innerText = rest;
-                
-                if(shakeBezig) {
-                    db.collection('groepen').doc(currentGroup).collection('games').doc('shake').set({ scores: { [currentUser]: Math.floor(shakeScore) } }, {merge:true});
-                }
-
-                if(rest <= 0) {
-                    clearInterval(shakeTimerInterval); shakeBezig = false; window.removeEventListener('devicemotion', handleShake);
-                    document.getElementById('shake-timer').innerText = "Berekent...";
-                    if(d.host === currentUser) {
-                        setTimeout(() => { db.collection('groepen').doc(currentGroup).collection('games').doc('shake').update({fase: 'resultaat'}); }, 1500);
-                    }
-                }
+                let rest = Math.max(0, Math.ceil((d.eindTijd - Date.now())/1000)); document.getElementById('shake-timer').innerText = rest;
+                if(shakeBezig) { db.collection('groepen').doc(currentGroup).collection('games').doc('shake').set({ scores: { [currentUser]: Math.floor(shakeScore) } }, {merge:true}); }
+                if(rest <= 0) { clearInterval(shakeTimerInterval); shakeBezig = false; window.removeEventListener('devicemotion', handleShake); document.getElementById('shake-timer').innerText = "Berekent..."; if(d.host === currentUser) { setTimeout(() => { db.collection('groepen').doc(currentGroup).collection('games').doc('shake').update({fase: 'resultaat'}); }, 1500); } }
             }, 1000);
-
         } else if(d.fase === 'resultaat') {
             clearInterval(shakeTimerInterval); shakeBezig = false; window.removeEventListener('devicemotion', handleShake);
-            document.getElementById('shake-actief-ui').style.display = 'none';
-            document.getElementById('shake-resultaat-ui').style.display = 'block';
-            document.getElementById('shake-nieuw-btn').style.display = (d.host === currentUser) ? 'inline-block' : 'none';
-
+            document.getElementById('shake-actief-ui').style.display = 'none'; document.getElementById('shake-resultaat-ui').style.display = 'block';
             let s1 = d.scores[d.p1] || 0; let s2 = d.scores[d.p2] || 0;
             let html = `<h3 style="margin-bottom:10px; margin-top:0;">Uitslag</h3><p style="margin:5px 0;"><b>${d.p1.toUpperCase()}:</b> ${s1} Kracht</p><p style="margin:5px 0;"><b>${d.p2.toUpperCase()}:</b> ${s2} Kracht</p>`;
-            if(s1 > s2) html += `<h2 style="color:#34c759; margin-top:15px;">🏆 ${d.p1.toUpperCase()} WINT!</h2>`;
-            else if (s2 > s1) html += `<h2 style="color:#34c759; margin-top:15px;">🏆 ${d.p2.toUpperCase()} WINT!</h2>`;
-            else html += `<h2 style="color:#ffcc00; margin-top:15px;">Gelijkspel!</h2>`;
+            if(s1 > s2) html += `<h2 style="color:#34c759; margin-top:15px;">🏆 ${d.p1.toUpperCase()} WINT!</h2>`; else if (s2 > s1) html += `<h2 style="color:#34c759; margin-top:15px;">🏆 ${d.p2.toUpperCase()} WINT!</h2>`; else html += `<h2 style="color:#ffcc00; margin-top:15px;">Gelijkspel!</h2>`;
             document.getElementById('shake-resultaat-ui').innerHTML = html;
         }
     });
 }
-
 function handleShake(e) {
-    if(!shakeBezig) return;
-    let acc = e.accelerationIncludingGravity || e.acceleration;
-    if(!acc) return;
+    if(!shakeBezig) return; let acc = e.accelerationIncludingGravity || e.acceleration; if(!acc) return;
     if(shakeLastX === null) { shakeLastX = acc.x; shakeLastY = acc.y; shakeLastZ = acc.z; return; }
-    
-    let deltaX = Math.abs(acc.x - shakeLastX); let deltaY = Math.abs(acc.y - shakeLastY); let deltaZ = Math.abs(acc.z - shakeLastZ);
-    let delta = deltaX + deltaY + deltaZ;
+    let deltaX = Math.abs(acc.x - shakeLastX); let deltaY = Math.abs(acc.y - shakeLastY); let deltaZ = Math.abs(acc.z - shakeLastZ); let delta = deltaX + deltaY + deltaZ;
     if(delta > 15) { shakeScore += delta; document.getElementById('shake-score').innerText = Math.floor(shakeScore); }
     shakeLastX = acc.x; shakeLastY = acc.y; shakeLastZ = acc.z;
 }
@@ -658,37 +672,19 @@ function handleShake(e) {
 // REFLEX LOGICA 
 // ==========================================
 let huidigeReflexRonde = 0, reflexGroenTijd = 0, reflexGeklikt = false, reflexInterval = null;
-
-function startReflexRonde() {
-    let delay = Math.floor(Math.random() * 4000) + 2000;
-    db.collection('groepen').doc(currentGroup).collection('games').doc('reflex').update({
-        fase: 'actief', ronde: Date.now(), groen_tijd: Date.now() + delay, scores: {}
-    });
-    stuurNaarFeed(`⚡ Reflex Roulette is GESTART door ${currentUser.toUpperCase()}!`);
-}
-
+function startReflexRonde() { let delay = Math.floor(Math.random() * 4000) + 2000; db.collection('groepen').doc(currentGroup).collection('games').doc('reflex').update({ fase: 'actief', ronde: Date.now(), groen_tijd: Date.now() + delay, scores: {} }); stuurNaarFeed(`⚡ Reflex Roulette is GESTART door ${currentUser.toUpperCase()}!`); }
 function luisterNaarReflex() {
     luisterNaarGameLobby('reflex');
     db.collection('groepen').doc(currentGroup).collection('games').doc('reflex').onSnapshot(doc => {
-        if (!doc.exists) return; let d = doc.data(); let ronde = d.ronde || 0; let groen = d.groen_tijd || 0; let scores = d.scores || {};
+        if (!doc.exists) return; let d = doc.data(); let ronde = d.ronde || 0; let groen = d.groen_tijd || 0; let scores = d.scores || {}; let spelers = d.spelers || [];
         const btn = document.getElementById('reflex-btn'); const lb = document.getElementById('reflex-leaderboard');
-        let spelers = d.spelers || [];
-
-        if(d.fase === 'lobby' || d.fase === 'wachten') {
-            document.getElementById('reflex-actief').style.display = 'none';
-            document.getElementById('btn-reflex-nieuw').style.display = 'none';
-            clearInterval(reflexInterval);
-        } else if (d.fase === 'actief') {
-            document.getElementById('reflex-lobby').style.display = 'none';
-            document.getElementById('reflex-wachten').style.display = 'none';
+        if(d.fase === 'lobby' || d.fase === 'wachten') { document.getElementById('reflex-actief').style.display = 'none'; clearInterval(reflexInterval); } 
+        else if (d.fase === 'actief') {
             document.getElementById('reflex-actief').style.display = 'block';
-            document.getElementById('btn-reflex-nieuw').style.display = (d.host === currentUser) ? 'inline-block' : 'none';
-
             if (ronde !== huidigeReflexRonde) { 
                 huidigeReflexRonde = ronde; reflexGroenTijd = groen; reflexGeklikt = false; 
                 if(btn) { btn.style.backgroundColor = '#ff3b30'; btn.innerText = 'Wacht...'; btn.disabled = !spelers.includes(currentUser); } 
-                clearInterval(reflexInterval); 
-                reflexInterval = setInterval(() => { if (Date.now() >= reflexGroenTijd && btn && btn.style.backgroundColor !== 'rgb(52, 199, 89)' && !reflexGeklikt) { btn.style.backgroundColor = '#34c759'; btn.innerText = 'KLIK NU!'; } }, 50); 
+                clearInterval(reflexInterval); reflexInterval = setInterval(() => { if (Date.now() >= reflexGroenTijd && btn && btn.style.backgroundColor !== 'rgb(52, 199, 89)' && !reflexGeklikt) { btn.style.backgroundColor = '#34c759'; btn.innerText = 'KLIK NU!'; } }, 50); 
             }
             if (Object.keys(scores).length > 0 && lb) {
                 lb.style.display = 'block'; let arr = []; for (let speler in scores) { arr.push({ naam: speler, tijd: scores[speler] }); }
@@ -701,155 +697,67 @@ function luisterNaarReflex() {
 }
 function klikReflex(e) { if (e) e.preventDefault(); if (reflexGeklikt || !huidigeReflexRonde) return; reflexGeklikt = true; let isTeVroeg = Date.now() < reflexGroenTijd; let tijdScore = isTeVroeg ? 'TE VROEG' : Date.now() - reflexGroenTijd; if (isTeVroeg) { stuurNaarFeed(`⚡ Reflex: ${currentUser.toUpperCase()} was TE VROEG en neemt een atje!`); alert("TE VROEG! Straf Atje voor jou! 🥃"); if ("vibrate" in navigator) navigator.vibrate([200, 100, 200]); } const btn = document.getElementById('reflex-btn'); if (btn) { btn.innerText = 'Geklikt!'; btn.style.backgroundColor = '#8e8e93'; } db.collection('groepen').doc(currentGroup).collection('games').doc('reflex').set({ scores: { [currentUser]: tijdScore } }, { merge: true }); }
 
-
 // ==========================================
 // QUIPLASH LOGICA
 // ==========================================
 let qlHuidigeVraag = ""; let qlFase = "wachten"; let qlAntwoorden = {}; let qlStemmen = {};
-
 const quiplashVragenArray = [
-    "De echte reden waarom [SPELER] nog steeds single is, is ___.",
-    "Wat vind je als je een blacklight schijnt op de slaapkamer van [SPELER]?",
-    "Het ergste om te horen vlak nadat je de daad hebt verricht is ___.",
-    "Waarom is [SPELER] gisteravond uit de kroeg gezet?",
-    "Het minst succesvolle condoom-merk heet: ___.",
-    "Wat is de zwaar bewaakte, geheime fetisj van [SPELER]?",
-    "Je bent op een date, alles gaat perfect totdat je date begint te praten over ___.",
-    "Wat staat er op de stiekeme OnlyFans pagina van [SPELER]?",
-    "Wat is het aller ranzigste dat [SPELER] ooit in zijn mond heeft gestopt?",
-    "De dokter had slecht nieuws. [SPELER] is zojuist gediagnosticeerd met chronische ___.",
-    "Wat is de absolute favoriete zoekterm van [SPELER] op de hub?",
-    "Als [SPELER] een superkracht had, zou het de kracht zijn om ___ te verpesten.",
-    "Wat roept [SPELER] per ongeluk tijdens de seks?",
-    "Het allerslechtste excuus van [SPELER] om niet te hoeven adten is ___.",
-    "Wat is de echte reden dat de ouders van [SPELER] diep teleurgesteld in hem zijn?",
-    "Je weet dat het een waardeloze afterparty is als [SPELER] begint over ___.",
-    "Wat verbergt [SPELER] diep achterin zijn nachtkastje?",
-    "Als de browsergeschiedenis van [SPELER] uitlekt, moet hij direct de bak in voor ___.",
-    "Wat is het laatste dat door het hoofd van [SPELER] ging voordat hij out ging op de vloer?",
-    "Het nieuwe parfum van [SPELER] ruikt naar zweet, schaamte en ___.",
-    "Waarom mag [SPELER] absoluut niet meer in het lokale zwembad komen?",
-    "Wat is de ultieme, gigantische red flag van [SPELER]?",
-    "Wat was de daadwerkelijke oorzaak van de scheiding van de ouders van [SPELER]?",
-    "Het allersmerigste dat je na een wilde nacht onder je nagels kunt vinden is ___.",
-    "Wat is het meest beschamende wat [SPELER] heeft gedaan voor een gratis lauw biertje?",
-    "Wat doet [SPELER] als hij denkt dat niemand kijkt?",
-    "Het ergste wat je kan vinden in de koelkast van [SPELER] de ochtend na het stappen is ___.",
-    "Als [SPELER] een SOA was, welke zou hij dan zijn en waarom?",
-    "Waarom begint [SPELER] altijd spontaan te zweten als hij een politieauto ziet?",
-    "Wat is de titel van de autobiografie van [SPELER]?",
-    "De slechtste openingszin die [SPELER] ooit heeft gebruikt (en die faalde) is ___.",
-    "Wat is het eerste wat [SPELER] doet als hij alleen thuis is?",
-    "Het ergste cadeau dat [SPELER] ooit aan een scharrel heeft gegeven is ___.",
-    "Als [SPELER] sterft, wat staat er dan op zijn grafsteen?",
-    "Wat is de echte reden dat [SPELER] is ontslagen bij zijn vorige bijbaan?",
-    "Wat is het vreemdste object dat artsen uit het lichaam van [SPELER] hebben moeten verwijderen?",
-    "Waarom huilt [SPELER] zichzelf elke avond in slaap?",
-    "Wat is de grootste leugen op het Tinder profiel van [SPELER]?",
-    "Als [SPELER] een seksspeeltje was, hoe zou hij dan heten en wat doet het?",
-    "Wat is het smerigste dat [SPELER] ooit van de grond heeft gegeten in de kroeg?",
-    "Waar is [SPELER] daadwerkelijk bang voor in het donker?",
-    "Hoe heeft [SPELER] dat litteken op die ongemakkelijke plek gekregen?",
-    "Wat is de meest trieste gedachte die [SPELER] had tijdens een onenightstand?",
-    "Wat is het geheime wapen van [SPELER] in bed (dat eigenlijk super zielig is)?",
-    "Wat zou de reden zijn dat [SPELER] ooit op Opsporing Verzocht komt?",
-    "Wat is de meest walgelijke gewoonte van [SPELER] op de wc?",
-    "Wat is het donkerste geheim dat [SPELER] voor zijn vrienden achterhoudt?",
-    "Wat is het pijnlijkste compliment dat [SPELER] ooit heeft gekregen?",
-    "Als [SPELER] een geurkaars zou uitbrengen, welke geur zou dat dan zijn?",
-    "Waarom eindigt elke relatie van [SPELER] in een drama met huilbuien en ___?"
+    "De echte reden waarom [SPELER] nog steeds single is, is ___.", "Wat vind je als je een blacklight schijnt op de slaapkamer van [SPELER]?", "Het ergste om te horen vlak nadat je de daad hebt verricht is ___.", "Waarom is [SPELER] gisteravond uit de kroeg gezet?", "Het minst succesvolle condoom-merk heet: ___.", "Wat is de zwaar bewaakte, geheime fetisj van [SPELER]?", "Je bent op een date, alles gaat perfect totdat je date begint te praten over ___.", "Wat staat er op de stiekeme OnlyFans pagina van [SPELER]?", "Wat is het aller ranzigste dat [SPELER] ooit in zijn mond heeft gestopt?", "De dokter had slecht nieuws. [SPELER] is zojuist gediagnosticeerd met chronische ___.", "Wat is de absolute favoriete zoekterm van [SPELER] op de hub?", "Als [SPELER] een superkracht had, zou het de kracht zijn om ___ te verpesten.", "Wat roept [SPELER] per ongeluk tijdens de seks?", "Het allerslechtste excuus van [SPELER] om niet te hoeven adten is ___.", "Wat is de echte reden dat de ouders van [SPELER] diep teleurgesteld in hem zijn?", "Je weet dat het een waardeloze afterparty is als [SPELER] begint over ___.", "Wat verbergt [SPELER] diep achterin zijn nachtkastje?", "Als de browsergeschiedenis van [SPELER] uitlekt, moet hij direct de bak in voor ___.", "Wat is het laatste dat door het hoofd van [SPELER] ging voordat hij out ging op de vloer?", "Het nieuwe parfum van [SPELER] ruikt naar zweet, schaamte en ___.", "Waarom mag [SPELER] absoluut niet meer in het lokale zwembad komen?", "Wat is de ultieme, gigantische red flag van [SPELER]?", "Wat was de daadwerkelijke oorzaak van de scheiding van de ouders van [SPELER]?", "Het allersmerigste dat je na een wilde nacht onder je nagels kunt vinden is ___.", "Wat is het meest beschamende wat [SPELER] heeft gedaan voor een gratis lauw biertje?", "Wat doet [SPELER] als hij denkt dat niemand kijkt?", "Het ergste wat je kan vinden in de koelkast van [SPELER] de ochtend na het stappen is ___.", "Als [SPELER] een SOA was, welke zou hij dan zijn en waarom?", "Waarom begint [SPELER] altijd spontaan te zweten als hij een politieauto ziet?", "Wat is de titel van de autobiografie van [SPELER]?", "De slechtste openingszin die [SPELER] ooit heeft gebruikt (en die faalde) is ___.", "Wat is het eerste wat [SPELER] doet als hij alleen thuis is?", "Het ergste cadeau dat [SPELER] ooit aan een scharrel heeft gegeven is ___.", "Als [SPELER] sterft, wat staat er dan op zijn grafsteen?", "Wat is de echte reden dat [SPELER] is ontslagen bij zijn vorige bijbaan?", "Wat is het vreemdste object dat artsen uit het lichaam van [SPELER] hebben moeten verwijderen?", "Waarom huilt [SPELER] zichzelf elke avond in slaap?", "Wat is de grootste leugen op het Tinder profiel van [SPELER]?", "Als [SPELER] een seksspeeltje was, hoe zou hij dan heten en wat doet het?", "Wat is het smerigste dat [SPELER] ooit van de grond heeft gegeten in de kroeg?", "Waar is [SPELER] daadwerkelijk bang voor in het donker?", "Hoe heeft [SPELER] dat litteken op die ongemakkelijke plek gekregen?", "Wat is de meest trieste gedachte die [SPELER] had tijdens een onenightstand?", "Wat is het geheime wapen van [SPELER] in bed (dat eigenlijk super zielig is)?", "Wat zou de reden zijn dat [SPELER] ooit op Opsporing Verzocht komt?", "Wat is de meest walgelijke gewoonte van [SPELER] op de wc?", "Wat is het donkerste geheim dat [SPELER] voor zijn vrienden achterhoudt?", "Wat is het pijnlijkste compliment dat [SPELER] ooit heeft gekregen?", "Als [SPELER] een geurkaars zou uitbrengen, welke geur zou dat dan zijn?", "Waarom eindigt elke relatie van [SPELER] in een drama met huilbuien en ___?"
 ];
-
-function bevestigNoodstop(gameNaam) {
-    if(confirm("Weet je zeker dat je het spel wilt annuleren en resetten?")) {
-        resetGameLobby(gameNaam);
-    }
-}
 
 function luisterNaarQuiplash() {
     luisterNaarGameLobby('quiplash');
     db.collection('groepen').doc(currentGroup).collection('games').doc('quiplash').onSnapshot(doc => {
-        if (!doc.exists) return;
-        const data = doc.data(); qlFase = data.fase || 'wachten'; qlHuidigeVraag = data.vraag || ''; qlAntwoorden = data.antwoorden || {}; qlStemmen = data.stemmen || {}; let qlSpelers = data.spelers || [];
+        if (!doc.exists) return; const data = doc.data(); qlFase = data.fase || 'wachten'; qlHuidigeVraag = data.vraag || ''; qlAntwoorden = data.antwoorden || {}; qlStemmen = data.stemmen || {}; let qlSpelers = data.spelers || [];
 
-        document.getElementById('ql-antwoorden').style.display = 'none';
-        document.getElementById('ql-stemmen').style.display = 'none';
-        document.getElementById('ql-resultaten').style.display = 'none';
+        document.getElementById('ql-antwoorden').style.display = 'none'; document.getElementById('ql-stemmen').style.display = 'none'; document.getElementById('ql-resultaten').style.display = 'none';
 
         if (qlFase === 'antwoorden') {
-            document.getElementById('ql-lobby').style.display = 'none'; document.getElementById('ql-wachten').style.display = 'none';
             document.getElementById('ql-antwoorden').style.display = 'block'; document.getElementById('ql-vraag-tekst').innerText = qlHuidigeVraag;
-            
-            if (!qlSpelers.includes(currentUser)) {
-                document.getElementById('ql-invoer-sectie').style.display = 'none'; document.getElementById('ql-ingevuld-sectie').style.display = 'block'; document.getElementById('ql-ingevuld-sectie').innerHTML = `<h2 style="color:#ff9500;">Je doet niet mee.</h2><p>Kijk mee op het scherm van de rest!</p>`;
-            } else if (qlAntwoorden[currentUser]) {
-                document.getElementById('ql-invoer-sectie').style.display = 'none'; document.getElementById('ql-ingevuld-sectie').style.display = 'block'; document.getElementById('ql-ingevuld-sectie').innerHTML = `<h2 style="color:#34c759; margin:0 0 10px 0;">✅ Antwoord Ingevuld!</h2><p style="color:#a1a1aa; margin:0;">Wachten op de trage rest...</p>`;
-            } else {
-                document.getElementById('ql-invoer-sectie').style.display = 'block'; document.getElementById('ql-ingevuld-sectie').style.display = 'none'; document.getElementById('ql-invoer').value = ''; 
-            }
-
+            if (!qlSpelers.includes(currentUser)) { document.getElementById('ql-invoer-sectie').style.display = 'none'; document.getElementById('ql-ingevuld-sectie').style.display = 'block'; document.getElementById('ql-ingevuld-sectie').innerHTML = `<h2 style="color:#ff9500;">Je doet niet mee.</h2><p>Kijk mee op het scherm van de rest!</p>`; } 
+            else if (qlAntwoorden[currentUser]) { document.getElementById('ql-invoer-sectie').style.display = 'none'; document.getElementById('ql-ingevuld-sectie').style.display = 'block'; document.getElementById('ql-ingevuld-sectie').innerHTML = `<h2 style="color:#34c759; margin:0 0 10px 0;">✅ Antwoord Ingevuld!</h2><p style="color:#a1a1aa; margin:0;">Wachten op de trage rest...</p>`; } 
+            else { document.getElementById('ql-invoer-sectie').style.display = 'block'; document.getElementById('ql-ingevuld-sectie').style.display = 'none'; document.getElementById('ql-invoer').value = ''; }
             document.getElementById('ql-status-antwoorden').innerText = `${Object.keys(qlAntwoorden).length} van de ${qlSpelers.length} antwoorden binnen.`;
             document.getElementById('btn-ql-forceer-stemmen').style.display = (data.host === currentUser) ? 'inline-block' : 'none';
-
             if(Object.keys(qlAntwoorden).length === qlSpelers.length && qlSpelers.length > 0 && data.host === currentUser) { startQuiplashStemmen(); }
-
         } else if (qlFase === 'stemmen') {
-            document.getElementById('ql-lobby').style.display = 'none'; document.getElementById('ql-wachten').style.display = 'none';
             document.getElementById('ql-stemmen').style.display = 'block'; document.getElementById('ql-vraag-stemmen').innerText = qlHuidigeVraag;
             document.getElementById('ql-status-stemmen').innerText = `${Object.keys(qlStemmen).length} van de ${qlSpelers.length} stemmen binnen.`;
             document.getElementById('btn-ql-forceer-resultaat').style.display = (data.host === currentUser) ? 'inline-block' : 'none';
 
             let stemLijst = document.getElementById('ql-stem-lijst'); stemLijst.innerHTML = '';
-            
-            if (!qlSpelers.includes(currentUser) || qlStemmen[currentUser]) {
-                stemLijst.innerHTML = `<h2 style="color:#34c759; margin-top:40px;">✅ Stem ontvangen!</h2>`;
-            } else {
+            if (!qlSpelers.includes(currentUser) || qlStemmen[currentUser]) { stemLijst.innerHTML = `<h2 style="color:#34c759; margin-top:40px;">✅ Stem ontvangen!</h2>`; } 
+            else {
                 let ansArr = Object.entries(qlAntwoorden).map(([naam, antw]) => ({naam, antw})).sort(() => 0.5 - Math.random());
                 ansArr.forEach((item, index) => {
                     let btn = document.createElement('button'); btn.className = 'ql-btn-stem'; btn.style.animationDelay = (0.1 * index) + "s";
                     btn.innerText = item.antw; btn.disabled = (item.naam === currentUser); 
-                    btn.onclick = () => { if(item.naam !== currentUser) stemOpQuiplash(item.naam); };
-                    stemLijst.appendChild(btn);
+                    btn.onclick = () => { if(item.naam !== currentUser) stemOpQuiplash(item.naam); }; stemLijst.appendChild(btn);
                 });
             }
-
             if(Object.keys(qlStemmen).length === qlSpelers.length && qlSpelers.length > 0 && data.host === currentUser) { toonQuiplashResultaten(); }
-
         } else if (qlFase === 'resultaat') {
-            document.getElementById('ql-lobby').style.display = 'none'; document.getElementById('ql-wachten').style.display = 'none';
             document.getElementById('ql-resultaten').style.display = 'block'; document.getElementById('ql-vraag-resultaat').innerText = qlHuidigeVraag;
             let resLijst = document.getElementById('ql-uitslag-lijst'); resLijst.innerHTML = ''; document.getElementById('btn-ql-volgende').style.display = (data.host === currentUser) ? 'inline-block' : 'none';
 
             let scores = {}; Object.values(qlStemmen).forEach(gestemdOp => { scores[gestemdOp] = (scores[gestemdOp] || 0) + 1; });
-            let resArr = Object.entries(qlAntwoorden).map(([naam, antw]) => ({naam, antw, stemmen: scores[naam] || 0}));
-            resArr.sort((a, b) => b.stemmen - a.stemmen);
-
+            let resArr = Object.entries(qlAntwoorden).map(([naam, antw]) => ({naam, antw, stemmen: scores[naam] || 0})); resArr.sort((a, b) => b.stemmen - a.stemmen);
             resArr.forEach((item, index) => {
                 let p = document.createElement('div'); p.className = "ql-result-item"; p.style.animationDelay = (0.2 * index) + "s";
-                p.innerHTML = `<b style="color:#af52de; font-size:18px;">${item.naam.toUpperCase()}</b> <span style="color:#34c759; font-weight:bold;">(${item.stemmen} stemmen)</span><br><span style="color:#fff; font-size:20px; line-height:1.5;">"${item.antw}"</span>`;
-                resLijst.appendChild(p);
+                p.innerHTML = `<b style="color:#af52de; font-size:18px;">${item.naam.toUpperCase()}</b> <span style="color:#34c759; font-weight:bold;">(${item.stemmen} stemmen)</span><br><span style="color:#fff; font-size:20px; line-height:1.5;">"${item.antw}"</span>`; resLijst.appendChild(p);
             });
         }
     });
 }
-
 function startQuiplashRonde() {
     let qlSpelers = []; document.querySelectorAll('#ql-lobby-spelers .lobby-speler-badge').forEach(el => qlSpelers.push(el.innerText.toLowerCase()));
     let randomSpeler = qlSpelers.length > 0 ? qlSpelers[Math.floor(Math.random() * qlSpelers.length)] : "iemand";
     let vr = quiplashVragenArray[Math.floor(Math.random() * quiplashVragenArray.length)].replace(/\[SPELER\]/g, randomSpeler.charAt(0).toUpperCase() + randomSpeler.slice(1));
-    
-    db.collection('groepen').doc(currentGroup).collection('games').doc('quiplash').update({ fase: 'antwoorden', vraag: vr, antwoorden: {}, stemmen: {} });
-    stuurNaarFeed(`🤐 Quiplash is GESTART! Vul je antwoorden in!`);
+    db.collection('groepen').doc(currentGroup).collection('games').doc('quiplash').update({ fase: 'antwoorden', vraag: vr, antwoorden: {}, stemmen: {} }); stuurNaarFeed(`🤐 Quiplash is GESTART! Vul je antwoorden in!`);
 }
-
-function verstuurQuiplashAntwoord() {
-    let v = document.getElementById('ql-invoer').value.trim(); if(!v) return alert("Vul iets in!");
-    db.collection('groepen').doc(currentGroup).collection('games').doc('quiplash').set({ antwoorden: { [currentUser]: v } }, {merge: true});
-}
-
+function verstuurQuiplashAntwoord() { let v = document.getElementById('ql-invoer').value.trim(); if(!v) return alert("Vul iets in!"); db.collection('groepen').doc(currentGroup).collection('games').doc('quiplash').set({ antwoorden: { [currentUser]: v } }, {merge: true}); }
 function startQuiplashStemmen() { db.collection('groepen').doc(currentGroup).collection('games').doc('quiplash').update({ fase: 'stemmen' }); }
 function stemOpQuiplash(opWie) { db.collection('groepen').doc(currentGroup).collection('games').doc('quiplash').set({ stemmen: { [currentUser]: opWie } }, {merge: true}); }
-
 function toonQuiplashResultaten() {
     let maxStemmen = 0; let winnaars = []; let scores = {};
     Object.values(qlStemmen).forEach(gestemdOp => { scores[gestemdOp] = (scores[gestemdOp] || 0) + 1; if(scores[gestemdOp] > maxStemmen) maxStemmen = scores[gestemdOp]; });
