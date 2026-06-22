@@ -123,7 +123,6 @@
         <div id="page-games" class="page">
             <h2 style="margin-left: 10px;">Selecteer een Game</h2>
             <div class="games-grid">
-                <!-- NIEUW: BORDSPEL -->
                 <div class="game-icon" onclick="openGame('modal-bordspel')"><span class="g-emoji">🗺️</span><span>Slotta's Bordspel</span></div>
                 <div class="game-icon" onclick="openGame('modal-bom')"><span class="g-emoji">💣</span><span>Tijdbom</span></div>
                 <div class="game-icon" onclick="openGame('modal-rad')"><span class="g-emoji">🎰</span><span>Rad v Fortuin</span></div>
@@ -209,7 +208,6 @@
 
     </div>
 
-    <!-- INSTELLINGEN & ARCHIEF -->
     <div id="modal-instellingen" class="game-modal">
         <button class="btn-sluit-modal" onclick="sluitGame('modal-instellingen')">⬅ Terug</button>
         <div class="container" style="padding-top: 60px;">
@@ -247,7 +245,6 @@
         </div>
     </div>
 
-    <!-- UITGEBREIDE VOORSPELLINGEN MODAL -->
     <div id="modal-scorrito" class="game-modal">
         <button class="btn-sluit-modal" onclick="sluitGame('modal-scorrito')">⬅ Terug</button>
         <div class="container" style="padding-top: 60px;">
@@ -266,7 +263,6 @@
 
                 <button class="btn-primair" style="background-color: #af52de;" onclick="slaScorritoOp()">Sla Voorspellingen Op</button>
             </div>
-            
             <div class="card">
                 <h2>Overzicht Groep</h2>
                 <div id="scorrito-overzicht" style="font-size:14px;">Laden...</div>
@@ -274,7 +270,6 @@
         </div>
     </div>
 
-    <!-- ARCHIEF WEERGAVE MODAL -->
     <div id="modal-archief-stats" class="game-modal">
         <button class="btn-sluit-modal" onclick="sluitGame('modal-archief-stats')">⬅ Terug</button>
         <div class="container" style="padding-top: 60px;">
@@ -288,67 +283,34 @@
         </div>
     </div>
 
-    <!-- TIJDBOM (FULLSCREEN DARK) -->
-    <div id="modal-bom" class="game-modal fullscreen-dark">
-        <button class="btn-sluit-modal" style="color:white; border-color:white; background:rgba(255,255,255,0.1);" onclick="sluitGame('modal-bom')">⬅ Terug</button>
-        <div class="container" style="padding-top: 60px; text-align:center;">
-            <div class="ql-titel" style="color:#ff3b30; animation:none; font-size:40px; margin-bottom:10px;">💣 De Tijdbom</div>
-            <div id="bom-idle-ui">
-                <p style="font-size:16px; color:#a1a1aa; margin-bottom:40px;">De bom ontploft ergens tussen de 30 en 75 seconden. Gooi hem snel door!</p>
-                <button class="ql-btn" style="border-color:#ff3b30; color:#ff3b30;" onclick="startTijdbom()">💥 Start de Bom!</button>
-            </div>
-            <div id="bom-active-ui" style="display: none; margin-top:30px;">
-                <span style="font-size: 80px; display:block; margin-bottom:20px; animation: qlPulse 0.5s infinite;">🧨</span>
-                <h3 id="bom-status-tekst" style="font-size:24px; color:white;">Bom is bij ...</h3>
-                <button id="btn-gooi-door" class="ql-btn" style="border-color:#ff9500; color:#ff9500; display: none; margin-top:20px;" onclick="gooiBomDoor()">GOOI DOOR!!</button>
-            </div>
-        </div>
-    </div>
+    <div id="modal-bom" class="game-modal fullscreen-dark"><button class="btn-sluit-modal" style="color:white; border-color:white; background:rgba(255,255,255,0.1);" onclick="sluitGame('modal-bom')">⬅ Terug</button><div class="container" style="padding-top: 60px; text-align:center;"><div class="ql-titel" style="color:#ff3b30; animation:none; font-size:40px; margin-bottom:10px;">💣 De Tijdbom</div><div id="bom-idle-ui"><p style="font-size:16px; color:#a1a1aa; margin-bottom:40px;">De bom ontploft ergens tussen de 30 en 75 seconden. Gooi hem snel door!</p><button class="ql-btn" style="border-color:#ff3b30; color:#ff3b30;" onclick="startTijdbom()">💥 Start de Bom!</button></div><div id="bom-active-ui" style="display: none; margin-top:30px;"><span style="font-size: 80px; display:block; margin-bottom:20px; animation: qlPulse 0.5s infinite;">🧨</span><h3 id="bom-status-tekst" style="font-size:24px; color:white;">Bom is bij ...</h3><button id="btn-gooi-door" class="ql-btn" style="border-color:#ff9500; color:#ff9500; display: none; margin-top:20px;" onclick="gooiBomDoor()">GOOI DOOR!!</button></div></div></div>
     
-    <!-- RAD VAN FORTUIN: OUDE LICHTE STIJL HERSTELD -->
-    <div id="modal-rad" class="game-modal">
-        <button class="btn-sluit-modal" onclick="sluitGame('modal-rad')">⬅ Terug</button>
-        <div class="container" style="padding-top: 60px;">
-            <div class="card">
-                <h2>Rad van Fortuin<span class="coin-badge">🪙 <span class="coin-weergave-class">0</span></span></h2>
-                <div id="rad-box" style="margin: 30px 0; display:flex; align-items:center; justify-content:center; border-radius:15px; background:linear-gradient(135deg, #007aff, #0056b3); padding:40px 20px; transition: background 0.1s;">
-                    <span id="rad-uitkomst" style="font-size: 28px; font-weight:900; color:white;">Druk op Draai!</span>
-                </div>
-                <button class="btn-primair" style="background-color: #34c759;" onclick="draaiRad()">🎰 DRAAI (Kosten: 1 Coin)</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- HOGER LAGER & MEXEN -->
+    <div id="modal-rad" class="game-modal"><button class="btn-sluit-modal" onclick="sluitGame('modal-rad')">⬅ Terug</button><div class="container" style="padding-top: 60px;"><div class="card"><h2>Rad van Fortuin<span class="coin-badge">🪙 <span class="coin-weergave-class">0</span></span></h2><div id="rad-box" style="margin: 30px 0; display:flex; align-items:center; justify-content:center; border-radius:15px; background:linear-gradient(135deg, #007aff, #0056b3); padding:40px 20px; transition: background 0.1s;"><span id="rad-uitkomst" style="font-size: 28px; font-weight:900; color:white;">Druk op Draai!</span></div><button class="btn-primair" style="background-color: #34c759;" onclick="draaiRad()">🎰 DRAAI (Kosten: 1 Coin)</button></div></div></div>
+    <div id="modal-bingo" class="game-modal"><button class="btn-sluit-modal" onclick="sluitGame('modal-bingo')">⬅ Terug</button><div class="container" style="padding-top: 60px;"><div class="card"><h2>🌴 Ibiza Bingo</h2><div id="bingo-grid" class="bingo-grid"></div></div></div></div>
     <div id="modal-hogerlager" class="game-modal"><button class="btn-sluit-modal" onclick="sluitGame('modal-hogerlager')">⬅ Terug</button><div class="container" style="padding-top: 60px;"><div class="card" style="text-align: center;"><h2>Hoger of Lager<span class="coin-badge">🪙 <span class="coin-weergave-class">0</span></span></h2><div style="background: #f2f2f7; padding: 30px; font-size: 80px; font-weight: 900;"><span id="hl-getal">?</span></div><input type="number" id="hl-inzet" value="1" min="1" style="text-align: center; font-size: 20px; width: 100px; display: inline-block;"><div style="display: flex; gap: 10px;"><button class="btn-primair" style="background-color: #ff3b30; flex: 1;" onclick="speelHogerLager('lager')">🔽 LAGER</button><button class="btn-primair" style="background-color: #34c759; flex: 1;" onclick="speelHogerLager('hoger')">🔼 HOGER</button></div></div></div></div>
     <div id="modal-mexen" class="game-modal"><button class="btn-sluit-modal" onclick="sluitGame('modal-mexen')">⬅ Terug</button><div class="container" style="padding-top: 60px;"><div class="card" style="text-align: center; background: #2c3e50; color: white;"><h2>🎲 Virtueel Mexen</h2><div style="display: flex; justify-content: center; gap: 20px; margin-bottom: 20px;"><div id="mex-d1" class="dice-box">?</div><div id="mex-d2" class="dice-box">?</div></div><button class="btn-primair" style="background-color: #f1c40f; color: #000; margin-bottom:15px;" onclick="gooiMexen()">ROLLEN!</button><p style="font-size:13px; color:#bdc3c7; line-height:1.4; text-align:left; background:rgba(0,0,0,0.2); padding:10px; border-radius:8px;"><b>Speluitleg:</b> Gooi om de beurt. Wie het laagst gooit, drinkt. Gooi je <b>21</b> (Mex)? Dan moet IEDEREEN drinken! Dubbel gegooid (bijv. 3+3) telt als <b>honderden</b> (300).</p></div></div></div>
 
-    <!-- WIE IS DE SJAAK? (FULLSCREEN + LOBBY + VOTE) -->
     <div id="modal-sjaak" class="game-modal fullscreen-dark">
         <button class="btn-sluit-modal" style="color:white; border-color:white; background:rgba(255,255,255,0.1);" onclick="verlaatGame('sjaak'); sluitGame('modal-sjaak')">⬅ Terug</button>
         <div class="container" style="text-align: center; padding-top:60px;">
             <h1 style="font-size: 60px; margin-bottom: 0;">👉</h1>
             <div class="ql-titel" style="color:#ff3b30; font-size:35px; animation:none; margin-top:0;">Wie is de Sjaak?</div>
-            
             <div id="sjaak-wachten">
                 <p style="font-size:16px; color:#a1a1aa; margin-bottom:30px;">Iedereen stemt blind op wie het beste bij de stelling past.</p>
                 <button class="ql-btn" style="border-color:#ff3b30; color:#ff3b30;" onclick="startLobby('sjaak')">Host Nieuwe Game</button>
             </div>
-            
             <div id="sjaak-lobby" class="lobby-box" style="display:none;">
                 <p>Klik op meedoen!</p>
                 <button class="ql-btn" id="btn-sjaak-join" style="border-color:#ff3b30; color:#ff3b30;" onclick="joinGame('sjaak')">Meedoen</button>
                 <div class="lobby-spelers" id="sjaak-spelers-lijst"></div>
                 <button class="ql-btn" id="btn-sjaak-start" style="display:none; border-color:#ff9500; color:#ff9500; margin-top:20px;" onclick="startSjaakRonde()">Start Spel ⏩</button>
             </div>
-            
             <div id="sjaak-actief" style="display:none; margin-top:20px;">
                 <div class="ql-vraag" id="sjaak-vraag-tekst" style="font-size:26px;"></div>
                 <div id="sjaak-stem-knoppen" style="display:flex; flex-direction:column; gap:10px;"></div>
                 <p id="sjaak-status" style="font-size:14px; color:#a1a1aa; margin-top:20px;"></p>
                 <button class="ql-btn" id="btn-sjaak-forceer" style="display:none; border-color:#ff3b30; color:#ff3b30; font-size:14px; margin-top:20px;" onclick="eindigeSjaakRonde()">Forceer Uitslag ⏩</button>
             </div>
-
             <div id="sjaak-resultaat" style="display:none; margin-top:20px;">
                 <div class="ql-vraag" id="sjaak-resultaat-vraag"></div>
                 <div id="sjaak-uitslag-lijst" style="margin-bottom:30px; font-size:20px;"></div>
@@ -357,11 +319,10 @@
         </div>
     </div>
 
-    <!-- REFLEX MET LOBBY -->
     <div id="modal-reflex" class="game-modal fullscreen-dark">
         <button class="btn-sluit-modal" style="color:white; border-color:white; background:rgba(255,255,255,0.1);" onclick="verlaatGame('reflex'); sluitGame('modal-reflex')">⬅ Terug</button>
         <div class="container" style="text-align: center; padding-top:60px;">
-            <div class="ql-titel" style="color:#00c7be; font-size:35px;">⚡ Reflex Roulette</div>
+            <div class="ql-titel" style="color:#00c7be; font-size:35px; animation:none; margin-top:0;">⚡ Reflex Roulette</div>
             <div id="reflex-wachten">
                 <button class="ql-btn" style="border-color:#00c7be; color:#00c7be;" onclick="startLobby('reflex')">Host Nieuwe Game</button>
             </div>
@@ -379,17 +340,14 @@
         </div>
     </div>
 
-    <!-- QUIPLASH MET LOBBY -->
     <div id="modal-quiplash" class="game-modal fullscreen-dark">
         <button class="btn-sluit-modal" style="color:white; border-color:white; background:rgba(255,255,255,0.1);" onclick="verlaatGame('quiplash'); sluitGame('modal-quiplash')">⬅ Terug</button>
-        
         <div class="container" style="max-width:600px; margin:0 auto; padding-top:60px; text-align:center;">
             <div id="quiplash-wachten">
                 <div class="ql-titel">QUIPLASH</div>
                 <p style="font-size:16px; color:#a1a1aa; margin-bottom:40px;">Beantwoord de vraag zo grof en grappig mogelijk. Daarna stemt iedereen op het beste antwoord!</p>
                 <button class="ql-btn anim-delay-1" onclick="startLobby('quiplash')">Host Nieuwe Game</button>
             </div>
-
             <div id="quiplash-lobby" style="display:none;" class="lobby-box">
                 <div class="ql-titel" style="font-size:30px; margin-top:0;">LOBBY</div>
                 <p style="font-size:14px; color:#a1a1aa; margin-bottom:20px;">Wachten tot iedereen in de lobby zit...</p>
@@ -397,7 +355,6 @@
                 <div class="lobby-spelers" id="quiplash-spelers-lijst"></div>
                 <button id="btn-quiplash-start" class="ql-btn anim-delay-2" style="display:none; margin-top:30px; border-color:#ff9500; color:#ff9500;" onclick="startQuiplashRonde()">Start Spel ⏩</button>
             </div>
-
             <div id="quiplash-actief" style="display:none;">
                 <div class="ql-titel" style="font-size:30px; margin-top:0;">JOUW BEURT</div>
                 <div class="ql-vraag" id="ql-vraag-tekst"></div>
@@ -412,7 +369,6 @@
                 <p id="ql-status-antwoorden" style="font-size:16px; color:#a1a1aa; margin-top:20px; font-weight:bold;"></p>
                 <button id="btn-ql-forceer-stemmen" class="ql-btn anim-delay-3" style="display:none; border-color:#ff3b30; color:#ff3b30; font-size:14px; margin-top:20px;" onclick="startQuiplashStemmen()">Forceer Volgende ⏩</button>
             </div>
-
             <div id="quiplash-stemmen" style="display:none;">
                 <div class="ql-titel" style="font-size:30px; margin-top:0;">STEMMEN</div>
                 <div class="ql-vraag" id="ql-vraag-stemmen"></div>
@@ -421,7 +377,6 @@
                 <p id="ql-status-stemmen" style="font-size:16px; color:#a1a1aa; margin-top:20px; font-weight:bold;"></p>
                 <button id="btn-ql-forceer-resultaat" class="ql-btn" style="display:none; border-color:#ff3b30; color:#ff3b30; font-size:14px; margin-top:20px;" onclick="toonQuiplashResultaten()">Forceer Uitslag ⏩</button>
             </div>
-
             <div id="quiplash-resultaat" style="display:none;">
                 <div class="ql-titel" style="font-size:30px; margin-top:0;">UITSLAG</div>
                 <div class="ql-vraag" id="ql-vraag-resultaat"></div>
@@ -431,71 +386,59 @@
         </div>
     </div>
 
-    <!-- LAVA MET LOBBY -->
     <div id="modal-lava" class="game-modal fullscreen-dark" style="transition: background-color 0.3s;">
         <button class="btn-sluit-modal" style="color:white; border-color:white; background:rgba(255,255,255,0.1);" onclick="verlaatGame('lava'); sluitGame('modal-lava')">⬅ Terug</button>
         <div class="container" style="text-align: center; margin-top:60px;">
             <h1 style="font-size: 60px; margin-bottom: 0;">🌋</h1>
             <div class="ql-titel" style="font-size:30px; color:#ff3b30; animation:none; margin-top:0;">De Vloer is Lava</div>
-            
             <div id="lava-wachten">
                 <p style="font-size:16px; color:#a1a1aa;">Als het scherm Rood kleurt, leg je zo snel mogelijk je telefoon plat op de tafel.</p>
                 <button class="ql-btn" style="border-color:#ff3b30; color:#ff3b30; margin-top:30px;" onclick="startLobby('lava')">Host Nieuwe Game</button>
             </div>
-
             <div id="lava-lobby" class="lobby-box" style="display:none;">
                 <p>Wie doet er mee met deze ronde Lava?</p>
                 <button class="ql-btn" id="btn-lava-join" style="border-color:#ff3b30; color:#ff3b30;" onclick="joinGame('lava')">Meedoen</button>
                 <div class="lobby-spelers" id="lava-spelers-lijst"></div>
                 <button class="ql-btn" id="btn-lava-start" style="display:none; border-color:#ff9500; color:#ff9500; margin-top:20px;" onclick="startLavaRonde()">🔥 START LAVA! ⏩</button>
             </div>
-            
             <div id="lava-wacht-ui" style="display:none;">
                 <h1 style="font-size: 40px; margin-top:30px; color:white;">WACHT...</h1>
                 <p style="font-size: 18px;">Hou je telefoon vast. Nog NIET platleggen!</p>
             </div>
-
             <div id="lava-actief-ui" style="display:none;">
                 <h1 style="font-size: 40px; margin-top:30px;">LEG HEM PLAT!!</h1>
                 <p id="lava-status" style="font-size: 20px; font-weight: bold; background:rgba(0,0,0,0.5); padding:15px; border-radius:10px;"></p>
             </div>
-
             <div id="lava-resultaat-ui" style="display:none; text-align:left; background:rgba(255,255,255,0.05); padding:20px; border-radius:10px;"></div>
             <button id="lava-nieuw-btn" class="ql-btn" style="display:none; border-color:#ff3b30; color:#ff3b30; margin-top:20px;" onclick="startLobby('lava')">Nieuw Spel</button>
         </div>
     </div>
 
-    <!-- SHAKE IT MET LOBBY -->
     <div id="modal-shake" class="game-modal fullscreen-dark" style="background-color: #007aff !important;">
         <button class="btn-sluit-modal" style="color:white; border-color:white; background:rgba(0,0,0,0.2);" onclick="verlaatGame('shake'); sluitGame('modal-shake')">⬅ Terug</button>
         <div class="container" style="text-align: center; margin-top:60px;">
             <h1 style="font-size: 60px; margin-bottom: 0;">📳</h1>
             <div class="ql-titel" style="font-size:30px; color:#fff; text-shadow:none; animation:none; margin-top:0;">Shake It!</div>
-            
             <div id="shake-wachten">
                 <button class="ql-btn" style="border-color:#fff; color:#fff; margin-top:30px; background:rgba(0,0,0,0.2);" onclick="startLobby('shake')">Host Nieuw Duel</button>
             </div>
-
             <div id="shake-lobby" class="lobby-box" style="display:none;">
                 <p>Klik op meedoen. De host kiest straks 2 willekeurige spelers uit de lobby voor een duel!</p>
                 <button class="ql-btn" id="btn-shake-join" style="border-color:#fff; color:#fff;" onclick="joinGame('shake')">Meedoen</button>
                 <div class="lobby-spelers" id="shake-spelers-lijst"></div>
                 <button class="ql-btn" id="btn-shake-start" style="display:none; border-color:#ffcc00; color:#ffcc00; margin-top:20px;" onclick="startShakeRonde()">Kies 2 Spelers & Start! ⏩</button>
             </div>
-
             <div id="shake-actief-ui" style="display:none;">
                 <h3 id="shake-spelers-tekst" style="background:rgba(0,0,0,0.3); padding:10px; border-radius:8px;"></h3>
                 <h1 style="font-size: 80px; margin: 20px 0;" id="shake-timer">10</h1>
                 <p style="font-size:18px; font-weight:bold;">G-Kracht Opgewekt:</p>
                 <h2 id="shake-score" style="font-size:50px; color:#ffcc00; margin:0;">0</h2>
             </div>
-
             <div id="shake-resultaat-ui" style="display:none; background:rgba(0,0,0,0.3); padding:20px; border-radius:10px; font-size:18px;"></div>
             <button id="shake-nieuw-btn" class="ql-btn" style="display:none; border-color:#fff; color:#fff; margin-top:20px; background:rgba(0,0,0,0.2);" onclick="startLobby('shake')">Nieuw Duel</button>
         </div>
     </div>
 
-    <!-- NIEUW: SLOTTA'S BORDSPEL -->
     <div id="modal-bordspel" class="game-modal fullscreen-dark" style="background-color: #111 !important;">
         <button class="btn-sluit-modal" style="color:white; border-color:white; background:rgba(255,255,255,0.1);" onclick="verlaatGame('bordspel'); sluitGame('modal-bordspel')">⬅ Terug</button>
         
@@ -517,31 +460,18 @@
             </div>
 
             <div id="bordspel-actief" style="display:none;">
-                
-                <!-- BORD HEADER: WIE IS AAN DE BEURT -->
                 <div style="background:rgba(255,255,255,0.05); border-radius:12px; padding:15px; margin-bottom:15px;">
                     <h3 style="margin:0; color:#a1a1aa; font-size:14px; text-transform:uppercase;">Aan de beurt:</h3>
                     <h2 id="bord-beurt-naam" style="margin:5px 0; font-size:28px; color:#af52de; text-transform:capitalize;">Laden...</h2>
-                    
                     <div id="bord-dobbel-sectie" style="margin-top:15px; display:none;">
                         <button class="ql-btn" style="border-color:#34c759; color:#34c759; margin-bottom:0; font-size:24px; padding:15px;" onclick="gooiDobbelsteenBordspel()">🎲 GOOIEN</button>
                     </div>
-                    
-                    <div id="bord-wacht-sectie" style="margin-top:15px; color:#ff9500; font-weight:bold; display:none;">
-                        Aan het wachten op worp...
-                    </div>
+                    <div id="bord-wacht-sectie" style="margin-top:15px; color:#ff9500; font-weight:bold; display:none;">Aan het wachten op worp...</div>
                 </div>
-
-                <!-- HET BORD ZELF (GRID) -->
-                <div class="bord-grid" id="bord-grid-container">
-                    <!-- Tegels worden dynamisch via JS getekend -->
-                </div>
-
+                <div class="bord-grid" id="bord-grid-container"></div>
             </div>
-
         </div>
 
-        <!-- OPDRACHT OVERLAY (POPT OP ALS IEMAND LANDT) -->
         <div id="bord-opdracht-overlay" style="display:none; position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(0,0,0,0.95); z-index:20000; text-align:center; color:white; padding: 20px; box-sizing:border-box; flex-direction:column; justify-content:center; align-items:center;">
             <div id="bord-dobbel-uitslag" style="font-size:80px; margin-bottom:20px; text-shadow: 0 0 20px rgba(255,255,255,0.5);">🎲</div>
             <h3 id="bord-opdracht-speler" style="color:#af52de; font-size:20px; text-transform:uppercase; margin:0;"></h3>
@@ -561,5 +491,6 @@
     </div>
 
     <script src="app.js?v=29"></script>
+    <script src="games.js"></script>
 </body>
 </html>
