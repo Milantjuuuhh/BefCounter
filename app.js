@@ -16,7 +16,7 @@ let currentUser = localStorage.getItem('bef_user');
 let currentGroup = localStorage.getItem('bef_group');
 let unsubscribeScores = null, unsubscribeFeed = null;
 let mijnTotalePunten = 0, mijnGedraaideSpins = 0;
-let isSpinning = false, vakantieModus = false, spelersLijst = []; 
+let vakantieModus = false, spelersLijst = []; 
 let worldMap = null, mapMarkers = [], pieChartInstance = null, barChartInstance = null;
 let mijnBingoKaart = [], mijnBingoStatus = [];
 
@@ -57,7 +57,6 @@ function vraagSensorToestemming() {
 function openGame(gameId) { document.getElementById(gameId).classList.add('active'); document.body.classList.add('modal-open'); window.scrollTo(0,0); }
 function sluitGame(gameId) { document.getElementById(gameId).classList.remove('active'); document.body.classList.remove('modal-open'); }
 function openInstellingen() { openGame('modal-instellingen'); document.getElementById('instellingen-groepscode').innerText = currentGroup; laadArchiefLijst(); }
-function bevestigNoodstop(gameNaam) { if(confirm("Weet je zeker dat je het spel voor iedereen wilt stoppen en resetten?")) { if(typeof resetGameLobby === 'function') resetGameLobby(gameNaam); } }
 
 bepaalScherm();
 
@@ -165,18 +164,10 @@ function checkDrinkSessieTijd() {
 function pasScoreAan(categorie, bedrag, emojiNaam) {
     if ("vibrate" in navigator) navigator.vibrate(50);
     db.collection('groepen').doc(currentGroup).collection('scores').doc(currentUser).set({ [categorie]: firebase.firestore.FieldValue.increment(bedrag) }, { merge: true });
-    
-    if (actieveCoopMissie && bedrag > 0 && actieveCoopMissie.types.includes(categorie) && !actieveCoopMissie.behaald) { 
-        db.collection('groepen').doc(currentGroup).collection('coop').doc('status').update({ score: firebase.firestore.FieldValue.increment(bedrag) }); 
-    }
-    
+    if (actieveCoopMissie && bedrag > 0 && actieveCoopMissie.types.includes(categorie) && !actieveCoopMissie.behaald) { db.collection('groepen').doc(currentGroup).collection('coop').doc('status').update({ score: firebase.firestore.FieldValue.increment(bedrag) }); }
     let startBericht = `${currentUser.charAt(0).toUpperCase() + currentUser.slice(1)} ${bedrag > 0 ? 'scoort +1 bij' : 'deed een correctie bij'} ${emojiNaam}`;
-    
     if (vakantieModus && "geolocation" in navigator) {
-        navigator.geolocation.getCurrentPosition((pos) => { 
-            db.collection('groepen').doc(currentGroup).collection('locaties').add({ naam: currentUser, actie: emojiNaam, bedrag: bedrag, lat: pos.coords.latitude, lng: pos.coords.longitude, tijd: new Date().toISOString() }); 
-            stuurNaarFeed(startBericht); 
-        }, () => stuurNaarFeed(startBericht));
+        navigator.geolocation.getCurrentPosition((pos) => { db.collection('groepen').doc(currentGroup).collection('locaties').add({ naam: currentUser, actie: emojiNaam, bedrag: bedrag, lat: pos.coords.latitude, lng: pos.coords.longitude, tijd: new Date().toISOString() }); stuurNaarFeed(startBericht); }, () => stuurNaarFeed(startBericht));
     } else { stuurNaarFeed(startBericht); }
 }
 
@@ -186,20 +177,14 @@ function bouwLiveScorebord() {
         let spelersData = [];
         let somBier=0, somMix=0, somShot=0, somKiss=0, somReject=0, somRaggen=0, somKotsen=0, somSleutel=0;
 
-        // Gegevens verzamelen
         snapshot.forEach((doc) => {
             const data = doc.data(); const naam = doc.id;
-            const b = data.bier || 0; const m = data.mix || 0; const sh = data.shotje || data.doner || 0; 
-            const k = data.kiss || 0; const r = data.rejection || 0; const ra = data.raggen || data.mvp || 0; 
-            const ko = data.kotsen || 0; const sl = data.sleutel || 0;
-            
+            const b = data.bier || 0; const m = data.mix || 0; const sh = data.shotje || data.doner || 0; const k = data.kiss || 0; const r = data.rejection || 0; const ra = data.raggen || data.mvp || 0; const ko = data.kotsen || 0; const sl = data.sleutel || 0;
             const persoonTotaal = (b * 1) + (m * 2) + (sh * 2) + (k * 10) + (r * 5) + (ra * 15) + (ko * 5) + (sl * 5);
             somBier += b; somMix += m; somShot += sh; somKiss += k; somReject += r; somRaggen += ra; somKotsen += ko; somSleutel += sl;
-
             spelersData.push({ naam: naam, data: data, b: b, m: m, sh: sh, k: k, r: r, ra: ra, ko: ko, sl: sl, persoonTotaal: persoonTotaal });
         });
 
-        // Sorteer van hoog naar laag (Echte Leaderboard)
         spelersData.sort((a, b) => b.persoonTotaal - a.persoonTotaal);
 
         let html = `<tr><th style="text-align:left; padding-left:10px;">Wie</th><th>🍺</th><th>🍹</th><th>🥃</th><th>😘</th><th>💔</th><th>🚀</th><th>🤮</th><th>🔑</th><th class="totaal-kolom">Tot</th><th></th></tr>`;
@@ -208,41 +193,21 @@ function bouwLiveScorebord() {
 
         spelersData.forEach((speler, index) => {
             spelersLijst.push(speler.naam);
-            
-            if (speler.naam === currentUser) { 
-                mijnTotalePunten = speler.persoonTotaal; 
-                mijnGedraaideSpins = speler.data.spins || 0; 
-                updateCoinWeergave(); 
-                beheerMissiesEnBingo(speler.data); 
-            }
+            if (speler.naam === currentUser) { mijnTotalePunten = speler.persoonTotaal; mijnGedraaideSpins = speler.data.spins || 0; updateCoinWeergave(); beheerMissiesEnBingo(speler.data); }
 
-            if(speler.b > statMaxBier) { statMaxBier = speler.b; statMaxBierNaam = speler.naam; } 
-            if(speler.ra > statMaxRaggen) { statMaxRaggen = speler.ra; statMaxRaggenNaam = speler.naam; } 
-            if(speler.r > statMaxSjaak) { statMaxSjaak = speler.r; statMaxSjaakNaam = speler.naam; } 
-            if(speler.ko > statMaxKots) { statMaxKots = speler.ko; statMaxKotsNaam = speler.naam; }
+            if(speler.b > statMaxBier) { statMaxBier = speler.b; statMaxBierNaam = speler.naam; } if(speler.ra > statMaxRaggen) { statMaxRaggen = speler.ra; statMaxRaggenNaam = speler.naam; } if(speler.r > statMaxSjaak) { statMaxSjaak = speler.r; statMaxSjaakNaam = speler.naam; } if(speler.ko > statMaxKots) { statMaxKots = speler.ko; statMaxKotsNaam = speler.naam; }
 
             grafiekNamen.push(speler.naam.charAt(0).toUpperCase() + speler.naam.slice(1)); grafiekData.push(speler.b + speler.m + speler.sh);
             let katerKans = Math.max(0, Math.min(99, 5 + (speler.b * 4) + (speler.m * 12) + (speler.sh * 15) + (speler.ko * 30))); let kleur = katerKans >= 75 ? "#ff3b30" : katerKans >= 40 ? "#ff9500" : "#34c759";
             katerHtml += `<div class="kater-regel"><div class="kater-header"><span>${speler.naam}</span><span>${katerKans}%</span></div><div class="kater-bar-bg"><div class="kater-bar-fill" style="width: ${katerKans}%; background-color: ${kleur};"></div></div></div>`;
             
-            // Medailles & Nummers
-            let rank = (index + 1) + ".";
-            if (index === 0) rank = "🥇";
-            if (index === 1) rank = "🥈";
-            if (index === 2) rank = "🥉";
-
+            let rank = (index + 1) + "."; if (index === 0) rank = "🥇"; if (index === 1) rank = "🥈"; if (index === 2) rank = "🥉";
             html += `<tr><td class="naam-kolom"><span style="font-size:12px; margin-right:4px;">${rank}</span>${speler.naam}</td><td>${speler.b}</td><td>${speler.m}</td><td>${speler.sh}</td><td>${speler.k}</td><td>${speler.r}</td><td>${speler.ra}</td><td>${speler.ko}</td><td>${speler.sl}</td><td class="totaal-kolom">${speler.persoonTotaal}</td><td><button class="btn-verwijder" onclick="verwijderSpeler('${speler.naam}')">X</button></td></tr>`;
         });
 
-        // Totale groepsrij is verwijderd.
         document.getElementById('score-tabel').innerHTML = html; 
         document.getElementById('kater-container').innerHTML = katerHtml;
-        
-        try { 
-            document.getElementById('stats-container').innerHTML = `<div class="stat-rij"><span>🍺 Koning Pils</span> <span class="stat-naam">${statMaxBierNaam} (${statMaxBier})</span></div><div class="stat-rij"><span>🚀 Meest Geragd</span> <span class="stat-naam">${statMaxRaggenNaam} (${statMaxRaggen})</span></div><div class="stat-rij"><span>🤮 Meeste Kots</span> <span class="stat-naam">${statMaxKotsNaam} (${statMaxKots})</span></div><div class="stat-rij"><span>💔 Grootste Sjaak</span> <span class="stat-naam">${statMaxSjaakNaam} (${statMaxSjaak})</span></div>`; 
-            tekenGrafieken(somBier, somMix, somShot, somKiss, somReject, somRaggen, somKotsen, somSleutel, grafiekNamen, grafiekData); 
-        } catch (err) {}
-        
+        try { document.getElementById('stats-container').innerHTML = `<div class="stat-rij"><span>🍺 Koning Pils</span> <span class="stat-naam">${statMaxBierNaam} (${statMaxBier})</span></div><div class="stat-rij"><span>🚀 Meest Geragd</span> <span class="stat-naam">${statMaxRaggenNaam} (${statMaxRaggen})</span></div><div class="stat-rij"><span>🤮 Meeste Kots</span> <span class="stat-naam">${statMaxKotsNaam} (${statMaxKots})</span></div><div class="stat-rij"><span>💔 Grootste Sjaak</span> <span class="stat-naam">${statMaxSjaakNaam} (${statMaxSjaak})</span></div>`; tekenGrafieken(somBier, somMix, somShot, somKiss, somReject, somRaggen, somKotsen, somSleutel, grafiekNamen, grafiekData); } catch (err) {}
         laadScorritoLijsten(); 
     });
 }
@@ -257,6 +222,7 @@ function luisterNaarLiveFeed() {
         setTimeout(() => { if(ticker) ticker.style.display = 'none'; }, 5000);
     });
 }
+
 function tekenGrafieken(b, m, sh, k, r, ra, ko, sl, namen, drankjes) {
     try {
         if (typeof Chart === 'undefined') return; 
@@ -326,14 +292,7 @@ function beheerMissiesEnBingo(data) {
 }
 
 function voltooiGeheimeMissie() { if (confirm("Echt uitgevoerd? Bij liegen moet je adten!")) { pasScoreAan('raggen', 3, '🥷 Geheime Missie'); db.collection('groepen').doc(currentGroup).collection('scores').doc(currentUser).set({ geheime_missie: genereerNieuweMissie() }, { merge: true }); alert("+3 Punten verdiend!"); } }
-
-function skipGeheimeMissie() { 
-    let coins = Math.max(0, mijnTotalePunten - mijnGedraaideSpins); 
-    if (coins < 1) return alert("Je hebt minimaal 1 Coin nodig om te skippen!"); 
-    if (confirm("Wil je 1 Coin inleveren om een nieuwe missie te krijgen?")) { 
-        db.collection('groepen').doc(currentGroup).collection('scores').doc(currentUser).set({ spins: firebase.firestore.FieldValue.increment(1), geheime_missie: genereerNieuweMissie() }, { merge: true }); stuurNaarFeed(`🥷 ${currentUser.toUpperCase()} was te laf en heeft zijn missie geskipt!`); 
-    } 
-}
+function skipGeheimeMissie() { let coins = Math.max(0, mijnTotalePunten - mijnGedraaideSpins); if (coins < 1) return alert("Je hebt minimaal 1 Coin nodig om te skippen!"); if (confirm("Wil je 1 Coin inleveren om een nieuwe missie te krijgen?")) { db.collection('groepen').doc(currentGroup).collection('scores').doc(currentUser).set({ spins: firebase.firestore.FieldValue.increment(1), geheime_missie: genereerNieuweMissie() }, { merge: true }); stuurNaarFeed(`🥷 ${currentUser.toUpperCase()} was te laf en heeft zijn missie geskipt!`); } }
 
 function renderBingoGrid(isGehaald) { const grid = document.getElementById('bingo-grid'); if(!grid) return; grid.innerHTML = ""; mijnBingoKaart.forEach((taak, index) => { let div = document.createElement('div'); div.className = "bingo-cel " + (mijnBingoStatus[index] ? "voltooid" : ""); div.innerText = taak; div.onclick = () => toggleBingoCel(index, isGehaald); grid.appendChild(div); }); }
 function toggleBingoCel(index, isGehaald) {
@@ -351,11 +310,7 @@ function luisterNaarCoopMissie() {
         if (actieveCoopMissie.score >= actieveCoopMissie.doel && !actieveCoopMissie.behaald) { db.collection('groepen').doc(currentGroup).collection('coop').doc('status').update({ behaald: true }); pasScoreAan('raggen', 5, '🏆 CO-OP BEHAALD'); stuurNaarFeed("🎉 CO-OP MISSIE BEHAALD! Iedereen bedankt, +5 Punten voor de finale tik!"); }
     });
 }
-
-setInterval(() => { 
-    const nu = new Date(); const middernacht = new Date(); middernacht.setHours(24, 0, 0, 0); 
-    let diff = middernacht - nu; let h = Math.floor(diff / 3600000).toString().padStart(2, '0'); let m = Math.floor((diff % 3600000) / 60000).toString().padStart(2, '0'); let s = Math.floor((diff % 60000) / 1000).toString().padStart(2, '0'); document.querySelectorAll('.coop-timer-text').forEach(el => el.innerText = `Nog ${h}:${m}:${s} geldig vandaag`); 
-}, 1000);
+setInterval(() => { const nu = new Date(); const middernacht = new Date(); middernacht.setHours(24, 0, 0, 0); let diff = middernacht - nu; let h = Math.floor(diff / 3600000).toString().padStart(2, '0'); let m = Math.floor((diff % 3600000) / 60000).toString().padStart(2, '0'); let s = Math.floor((diff % 60000) / 1000).toString().padStart(2, '0'); document.querySelectorAll('.coop-timer-text').forEach(el => el.innerText = `Nog ${h}:${m}:${s} geldig vandaag`); }, 1000);
 
 // ==========================================
 // 7. SCORRITO & VAKANTIE ARCHIEF
@@ -364,7 +319,11 @@ function laadScorritoLijsten() {
     let htmlOpts = `<option value="">-- Kies iemand --</option>` + spelersLijst.map(x => `<option value="${x}">${x.toUpperCase()}</option>`).join('');
     ['scor-pils', 'scor-raggen', 'scor-sjaak', 'scor-kots', 'scor-kiss', 'scor-shotje', 'scor-sleutel', 'scor-out'].forEach(id => {
         let el = document.getElementById(id);
-        if(el && el.innerHTML.indexOf('<option') === -1) el.innerHTML = htmlOpts;
+        if(el && el.innerHTML.indexOf('<option') === -1) {
+            let currentVal = el.value;
+            el.innerHTML = htmlOpts;
+            if(currentVal) el.value = currentVal;
+        }
     });
 
     db.collection('groepen').doc(currentGroup).collection('scorrito').onSnapshot(snap => {

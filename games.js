@@ -84,9 +84,10 @@ function luisterNaarTijdbom() {
 // ==========================================
 // RAD VAN FORTUIN
 // ==========================================
+let radSpinning = false;
 function draaiRad() {
-    if (isSpinning) return; if ((mijnTotalePunten - mijnGedraaideSpins) <= 0) return alert("Je hebt 0 coins!");
-    isSpinning = true; if ("vibrate" in navigator) navigator.vibrate(50);
+    if (radSpinning) return; if ((mijnTotalePunten - mijnGedraaideSpins) <= 0) return alert("Je hebt 0 coins!");
+    radSpinning = true; if ("vibrate" in navigator) navigator.vibrate(50);
     db.collection('groepen').doc(currentGroup).collection('scores').doc(currentUser).set({ spins: firebase.firestore.FieldValue.increment(1) }, { merge: true });
     
     let draaiCounter = 0; const box = document.getElementById('rad-box');
@@ -100,7 +101,7 @@ function draaiRad() {
             clearInterval(interval); let andereSpelers = spelersLijst.filter(n=>n!==currentUser); let slachtoffer = andereSpelers.length > 0 ? andereSpelers[Math.floor(Math.random()*andereSpelers.length)] : "iemand"; let eind = basisRadOpties[Math.floor(Math.random() * basisRadOpties.length)].replace("[SPELER]", slachtoffer); 
             document.getElementById('rad-uitkomst').innerText = eind; 
             box.style.background = "linear-gradient(135deg, #007aff, #0056b3)"; 
-            stuurNaarFeed(`🎡 RAD: ${currentUser.toUpperCase()} draaide: "${eind}"`); isSpinning = false; 
+            stuurNaarFeed(`🎡 RAD: ${currentUser.toUpperCase()} draaide: "${eind}"`); radSpinning = false; 
         }
     }, 100);
 }
@@ -251,7 +252,7 @@ function luisterNaarQuiplash() {
 
         if (qlFase === 'antwoorden') {
             uiAntwoorden.style.display = 'block'; document.getElementById('ql-vraag-tekst').innerText = qlHuidigeVraag;
-            if (!qlSpelers.includes(currentUser)) { document.getElementById('ql-invoer-sectie').style.display = 'none'; document.getElementById('ql-ingevuld-sectie').style.display = 'block'; document.getElementById('ql-ingevuld-sectie').innerHTML = `<h2 style="color:#ff9500;">Je doet niet mee.</h2><p>Kijk mee op het scherm van the rest!</p>`; } 
+            if (!qlSpelers.includes(currentUser)) { document.getElementById('ql-invoer-sectie').style.display = 'none'; document.getElementById('ql-ingevuld-sectie').style.display = 'block'; document.getElementById('ql-ingevuld-sectie').innerHTML = `<h2 style="color:#ff9500;">Je doet niet mee.</h2><p>Kijk mee op het scherm van de rest!</p>`; } 
             else if (qlAntwoorden[currentUser]) { document.getElementById('ql-invoer-sectie').style.display = 'none'; document.getElementById('ql-ingevuld-sectie').style.display = 'block'; document.getElementById('ql-ingevuld-sectie').innerHTML = `<h2 style="color:#34c759; margin:0 0 10px 0;">✅ Antwoord Ingevuld!</h2><p style="color:#a1a1aa; margin:0;">Wachten op de trage rest...</p>`; } 
             else { document.getElementById('ql-invoer-sectie').style.display = 'block'; document.getElementById('ql-ingevuld-sectie').style.display = 'none'; document.getElementById('ql-invoer').value = ''; }
             document.getElementById('ql-status-antwoorden').innerText = `${Object.keys(qlAntwoorden).length} van de ${qlSpelers.length} antwoorden binnen.`;
@@ -287,7 +288,7 @@ function luisterNaarQuiplash() {
     });
 }
 function startQuiplashRonde() {
-    let qlSpelers = []; document.querySelectorAll('#ql-lobby-spelers .lobby-speler-badge').forEach(el => qlSpelers.push(el.innerText.toLowerCase()));
+    let qlSpelers = []; document.querySelectorAll('#quiplash-spelers-lijst .lobby-speler-badge').forEach(el => qlSpelers.push(el.innerText.toLowerCase()));
     let randomSpeler = qlSpelers.length > 0 ? qlSpelers[Math.floor(Math.random() * qlSpelers.length)] : "iemand";
     let vr = quiplashVragenArray[Math.floor(Math.random() * quiplashVragenArray.length)].replace(/\[SPELER\]/g, randomSpeler.charAt(0).toUpperCase() + randomSpeler.slice(1));
     db.collection('groepen').doc(currentGroup).collection('games').doc('quiplash').update({ fase: 'antwoorden', vraag: vr, antwoorden: {}, stemmen: {} }); stuurNaarFeed(`🤐 Quiplash is GESTART! Vul je antwoorden in!`);
