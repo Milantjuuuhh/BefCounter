@@ -126,6 +126,9 @@ function startApp() {
     setupPushNotificaties(); bouwLiveScorebord(); luisterNaarLiveFeed(); luisterNaarTijdbom(); luisterNaarCoopMissie(); luisterNaarDrinkSessie(); luisterNaarReflex(); luisterNaarQuiplash(); luisterNaarLava(); luisterNaarShake();
 }
 
+// ==========================================
+// DRINK SESSIE LOGICA (MET OVERLAY FREEZE)
+// ==========================================
 let sessieCheckInterval = null, actieveDrinkSessieTijd = 0, drinkSessieStarter = "";
 
 function toggleDrinkSessie() {
@@ -135,21 +138,33 @@ function toggleDrinkSessie() {
         if (!isActief) {
             setupPushNotificaties(false); 
             let wachttijd = Math.floor(Math.random() * (15 * 60 * 1000)) + (5 * 60 * 1000);
-            db.collection('groepen').doc(currentGroup).collection('sessie').doc('status').set({ actief: true, starter: currentUser, volgende_atje: Date.now() + wachttijd });
+            db.collection('groepen').doc(currentGroup).collection('sessie').doc('status').set({ 
+                actief: true, 
+                starter: currentUser, 
+                volgende_atje: Date.now() + wachttijd,
+                wacht_op_atje: false,
+                huidig_slachtoffer: ""
+            });
             stuurNaarFeed(`🍻 DRINK SESSIE GESTART door ${currentUser.toUpperCase()}! Tracker is nu actief.`);
             vakantieModus = true; if ("geolocation" in navigator) { navigator.geolocation.getCurrentPosition(() => {}, () => {}); }
         } else {
-            db.collection('groepen').doc(currentGroup).collection('sessie').doc('status').set({ actief: false, starter: '', volgende_atje: 0 });
+            db.collection('groepen').doc(currentGroup).collection('sessie').doc('status').set({ actief: false, starter: '', volgende_atje: 0, wacht_op_atje: false, huidig_slachtoffer: "" });
             stuurNaarFeed(`🛑 Drink Sessie is gestopt door ${currentUser.toUpperCase()}. Tracker uit.`); vakantieModus = false;
         }
     });
 }
 
 function forceerSessieAtje() {
-    let nieuweWachttijd = Math.floor(Math.random() * (15 * 60 * 1000)) + (5 * 60 * 1000);
-    db.collection('groepen').doc(currentGroup).collection('sessie').doc('status').update({ volgende_atje: Date.now() + nieuweWachttijd });
-
     let slachtoffer = spelersLijst.length > 0 ? spelersLijst[Math.floor(Math.random() * spelersLijst.length)] : currentUser;
+    let nieuweWachttijd = Math.floor(Math.random() * (15 * 60 * 1000)) + (5 * 60 * 1000);
+    
+    // UPDATE DE DATABASE MET SLACHTOFFER + WACHT OP ATJE = TRUE
+    db.collection('groepen').doc(currentGroup).collection('sessie').doc('status').update({ 
+        volgende_atje: Date.now() + nieuweWachttijd,
+        huidig_slachtoffer: slachtoffer,
+        wacht_op_atje: true
+    });
+
     let bericht = `🚨 SKIP TIMER! De Drink Sessie wijst direct aan... ${slachtoffer.toUpperCase()} moet NU een atje trekken! 🍻`;
     stuurNaarFeed(bericht); if ("vibrate" in navigator) navigator.vibrate([200, 100, 200, 100, 500, 100, 500]);
     
@@ -170,21 +185,41 @@ function luisterNaarDrinkSessie() {
         const btn = document.getElementById('btn-drink-sessie'); const timerUI = document.getElementById('drink-sessie-timer-tekst'); const btnSkip = document.getElementById('btn-skip-timer');
         if (!btn) return;
         if (doc.exists && doc.data().actief) {
-            actieveDrinkSessieTijd = doc.data().volgende_atje; drinkSessieStarter = doc.data().starter;
+            let d = doc.data();
+            actieveDrinkSessieTijd = d.volgende_atje; drinkSessieStarter = d.starter;
+            
+            // FREEZE SCHERM ALS JIJ HET SLACHTOFFER BENT
+            if (d.wacht_op_atje === true && d.huidig_slachtoffer === currentUser) {
+                document.getElementById('atje-overlay').style.display = 'block';
+                if ("vibrate" in navigator) navigator.vibrate([500, 200, 500, 200, 500]);
+            } else {
+                document.getElementById('atje-overlay').style.display = 'none';
+            }
+
             btn.innerHTML = "🛑 Stop Drink Sessie"; btn.style.backgroundColor = "#ff3b30";
             if(timerUI) timerUI.style.display = "block"; if(btnSkip) btnSkip.style.display = "block";
-            if (!vakantieModus && doc.data().starter !== currentUser) {
-                alert(`🍻 DRINK SESSIE GESTART door ${doc.data().starter.toUpperCase()}! Jouw locatie wordt nu live gedeeld (bij scoren).`);
+            if (!vakantieModus && d.starter !== currentUser) {
+                alert(`🍻 DRINK SESSIE GESTART door ${d.starter.toUpperCase()}! Jouw locatie wordt nu live gedeeld (bij scoren).`);
                 if ("geolocation" in navigator) { navigator.geolocation.getCurrentPosition(() => {}, () => {}); }
             }
             vakantieModus = true; if (!sessieCheckInterval) sessieCheckInterval = setInterval(checkDrinkSessieTijd, 5000);
         } else {
             actieveDrinkSessieTijd = 0; drinkSessieStarter = "";
+            document.getElementById('atje-overlay').style.display = 'none';
             btn.innerHTML = "🍻 Start Drink Sessie!"; btn.style.backgroundColor = "#ff9500";
             if(timerUI) timerUI.style.display = "none"; if(btnSkip) btnSkip.style.display = "none";
             vakantieModus = false; if (sessieCheckInterval) { clearInterval(sessieCheckInterval); sessieCheckInterval = null; }
         }
     });
+}
+
+function bevestigAtje() {
+    db.collection('groepen').doc(currentGroup).collection('sessie').doc('status').update({
+        wacht_op_atje: false,
+        huidig_slachtoffer: ""
+    });
+    pasScoreAan('bier', 1, '🍻 Straf Atje');
+    document.getElementById('atje-overlay').style.display = 'none';
 }
 
 setInterval(() => {
@@ -200,12 +235,16 @@ setInterval(() => {
 function checkDrinkSessieTijd() {
     if (!actieveDrinkSessieTijd || Date.now() < actieveDrinkSessieTijd) return;
     if (drinkSessieStarter !== currentUser) return;
-    actieveDrinkSessieTijd = Date.now() + 99999999; 
-    let nieuweWachttijd = Math.floor(Math.random() * (15 * 60 * 1000)) + (5 * 60 * 1000);
-    db.collection('groepen').doc(currentGroup).collection('sessie').doc('status').update({ volgende_atje: Date.now() + nieuweWachttijd });
     
-    if (spelersLijst.length === 0) return;
-    let slachtoffer = spelersLijst[Math.floor(Math.random() * spelersLijst.length)];
+    let nieuweWachttijd = Math.floor(Math.random() * (15 * 60 * 1000)) + (5 * 60 * 1000);
+    let slachtoffer = spelersLijst.length > 0 ? spelersLijst[Math.floor(Math.random() * spelersLijst.length)] : currentUser;
+    
+    db.collection('groepen').doc(currentGroup).collection('sessie').doc('status').update({ 
+        volgende_atje: Date.now() + nieuweWachttijd,
+        huidig_slachtoffer: slachtoffer,
+        wacht_op_atje: true
+    });
+    
     let bericht = `🚨 ALARM! De Drink Sessie heeft gekozen... ${slachtoffer.toUpperCase()} moet NU een atje trekken! 🍻`;
     stuurNaarFeed(bericht); if ("vibrate" in navigator) navigator.vibrate([200, 100, 200, 100, 500, 100, 500]);
     
@@ -573,6 +612,7 @@ function stopLava() {
 let shakeTimerInterval = null;
 let shakeScore = 0;
 let shakeBezig = false;
+let shakeLastX = null, shakeLastY = null, shakeLastZ = null;
 
 function startShake() {
     if(spelersLijst.length < 2) return alert("Minimaal 2 spelers nodig.");
@@ -599,6 +639,7 @@ function luisterNaarShake() {
             
             if(currentUser === d.p1 || currentUser === d.p2) {
                 shakeScore = 0;
+                shakeLastX = null; shakeLastY = null; shakeLastZ = null;
                 shakeBezig = true;
                 window.addEventListener('devicemotion', handleShake);
                 document.getElementById('shake-score').innerText = "0";
@@ -652,14 +693,27 @@ function luisterNaarShake() {
 function handleShake(e) {
     if(!shakeBezig) return;
     let acc = e.accelerationIncludingGravity || e.acceleration;
-    if(acc) {
-        let kracht = Math.abs(acc.x) + Math.abs(acc.y) + Math.abs(acc.z);
-        // Trek zwaartekracht (~10) er ongeveer vanaf, en tel op
-        if(kracht > 12) { 
-            shakeScore += (kracht - 10);
-            document.getElementById('shake-score').innerText = Math.floor(shakeScore);
-        }
+    if(!acc) return;
+    
+    // Zwaartekracht (Gravity) filter
+    if(shakeLastX === null) {
+        shakeLastX = acc.x; shakeLastY = acc.y; shakeLastZ = acc.z;
+        return;
     }
+    
+    // Delta berekening: we meten alleen de verschuiving in acceleratie (dus de schok)
+    let deltaX = Math.abs(acc.x - shakeLastX);
+    let deltaY = Math.abs(acc.y - shakeLastY);
+    let deltaZ = Math.abs(acc.z - shakeLastZ);
+    let delta = deltaX + deltaY + deltaZ;
+
+    // Drempelwaarde om te voorkomen dat kleine bewegingen tellen
+    if(delta > 15) { 
+        shakeScore += delta;
+        document.getElementById('shake-score').innerText = Math.floor(shakeScore);
+    }
+    
+    shakeLastX = acc.x; shakeLastY = acc.y; shakeLastZ = acc.z;
 }
 
 // ==========================================
@@ -742,7 +796,17 @@ function luisterNaarQuiplash() {
         } else if (qlFase === 'antwoorden') {
             document.getElementById('ql-antwoorden').style.display = 'block';
             document.getElementById('ql-vraag-tekst').innerText = qlHuidigeVraag;
-            document.getElementById('ql-invoer').value = qlAntwoorden[currentUser] || '';
+            
+            // CHECK OF DE GEBRUIKER AL HEEFT GEANTWOORD
+            if (qlAntwoorden[currentUser]) {
+                document.getElementById('ql-invoer-sectie').style.display = 'none';
+                document.getElementById('ql-ingevuld-sectie').style.display = 'block';
+            } else {
+                document.getElementById('ql-invoer-sectie').style.display = 'block';
+                document.getElementById('ql-ingevuld-sectie').style.display = 'none';
+                document.getElementById('ql-invoer').value = ''; // Leeg veld bij nieuwe ronde
+            }
+
             document.getElementById('ql-status-antwoorden').innerText = `${Object.keys(qlAntwoorden).length} van de ${spelersLijst.length} spelers hebben geantwoord.`;
             document.getElementById('btn-ql-forceer-stemmen').style.display = (data.host === currentUser) ? 'inline-block' : 'none';
         } else if (qlFase === 'stemmen') {
@@ -809,7 +873,6 @@ function verstuurQuiplashAntwoord() {
     db.collection('groepen').doc(currentGroup).collection('games').doc('quiplash').set({
         antwoorden: { [currentUser]: v }
     }, {merge: true});
-    document.getElementById('ql-invoer').value = '';
 }
 
 function startQuiplashStemmen() {
