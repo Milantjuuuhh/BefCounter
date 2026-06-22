@@ -133,14 +133,13 @@ const sjaakVragen = [
     "Wie kotst vanavond als eerste?", "Wie regelt er vannacht de minste actie?", "Wie verliest er als eerste zijn telefoon of sleutels?", "Wie is morgen de grootste jankerd met een kater?", 
     "Wie betaalt zonder zeuren de volgende ronde?", "Wie doet de domste uitspraak vanavond?", "Wie is de slechtste leugenaar van de groep?", "Wie durft er nu het minst een atje te trekken?"
 ];
-function startSjaakVraag() { 
-    // Fallback voor de oude sjaak game als die nog ergens gebruikt wordt, nu via lobby
-}
+
 function startSjaakRonde() {
     let vr = sjaakVragen[Math.floor(Math.random() * sjaakVragen.length)];
     db.collection('groepen').doc(currentGroup).collection('games').doc('sjaak').update({ fase: 'actief', vraag: vr, stemmen: {} });
     stuurNaarFeed(`👉 WIE IS DE SJAAK gestart door ${currentUser.toUpperCase()}!`);
 }
+
 function luisterNaarSjaak() {
     luisterNaarGameLobby('sjaak');
     db.collection('groepen').doc(currentGroup).collection('games').doc('sjaak').onSnapshot(doc => {
@@ -189,6 +188,7 @@ function luisterNaarSjaak() {
         }
     });
 }
+
 function eindigeSjaakRonde() {
     db.collection('groepen').doc(currentGroup).collection('games').doc('sjaak').get().then(doc => {
         let d = doc.data(); let scores = {}; let maxStemmen = 0; let winnaars = [];
@@ -207,6 +207,7 @@ function eindigeSjaakRonde() {
 // ==========================================
 let huidigeReflexRonde = 0, reflexGroenTijd = 0, reflexGeklikt = false, reflexInterval = null;
 function startReflexRonde() { let delay = Math.floor(Math.random() * 4000) + 2000; db.collection('groepen').doc(currentGroup).collection('games').doc('reflex').update({ fase: 'actief', ronde: Date.now(), groen_tijd: Date.now() + delay, scores: {} }); stuurNaarFeed(`⚡ Reflex Roulette is GESTART door ${currentUser.toUpperCase()}!`); }
+
 function luisterNaarReflex() {
     luisterNaarGameLobby('reflex');
     db.collection('groepen').doc(currentGroup).collection('games').doc('reflex').onSnapshot(doc => {
@@ -250,7 +251,7 @@ function luisterNaarQuiplash() {
 
         if (qlFase === 'antwoorden') {
             uiAntwoorden.style.display = 'block'; document.getElementById('ql-vraag-tekst').innerText = qlHuidigeVraag;
-            if (!qlSpelers.includes(currentUser)) { document.getElementById('ql-invoer-sectie').style.display = 'none'; document.getElementById('ql-ingevuld-sectie').style.display = 'block'; document.getElementById('ql-ingevuld-sectie').innerHTML = `<h2 style="color:#ff9500;">Je doet niet mee.</h2><p>Kijk mee op het scherm van de rest!</p>`; } 
+            if (!qlSpelers.includes(currentUser)) { document.getElementById('ql-invoer-sectie').style.display = 'none'; document.getElementById('ql-ingevuld-sectie').style.display = 'block'; document.getElementById('ql-ingevuld-sectie').innerHTML = `<h2 style="color:#ff9500;">Je doet niet mee.</h2><p>Kijk mee op het scherm van the rest!</p>`; } 
             else if (qlAntwoorden[currentUser]) { document.getElementById('ql-invoer-sectie').style.display = 'none'; document.getElementById('ql-ingevuld-sectie').style.display = 'block'; document.getElementById('ql-ingevuld-sectie').innerHTML = `<h2 style="color:#34c759; margin:0 0 10px 0;">✅ Antwoord Ingevuld!</h2><p style="color:#a1a1aa; margin:0;">Wachten op de trage rest...</p>`; } 
             else { document.getElementById('ql-invoer-sectie').style.display = 'block'; document.getElementById('ql-ingevuld-sectie').style.display = 'none'; document.getElementById('ql-invoer').value = ''; }
             document.getElementById('ql-status-antwoorden').innerText = `${Object.keys(qlAntwoorden).length} van de ${qlSpelers.length} antwoorden binnen.`;
