@@ -12,13 +12,16 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore();
 
-let currentUser = localStorage.getItem('bef_user');
-let currentGroup = localStorage.getItem('bef_group');
+// Gebruik var om scoping issues met games.js te voorkomen!
+var currentUser = localStorage.getItem('bef_user');
+var currentGroup = localStorage.getItem('bef_group');
+var spelersLijst = []; 
+var mijnTotalePunten = 0, mijnGedraaideSpins = 0;
+var isSpinning = false, vakantieModus = false; 
+var worldMap = null, mapMarkers = [], pieChartInstance = null, barChartInstance = null;
+var mijnBingoKaart = [], mijnBingoStatus = [];
+
 let unsubscribeScores = null, unsubscribeFeed = null;
-let mijnTotalePunten = 0, mijnGedraaideSpins = 0;
-let vakantieModus = false, spelersLijst = []; 
-let worldMap = null, mapMarkers = [], pieChartInstance = null, barChartInstance = null;
-let mijnBingoKaart = [], mijnBingoStatus = [];
 
 document.body.addEventListener('touchstart', function() { 
     const geluid = document.getElementById('notificatie-geluid'); 
@@ -58,7 +61,7 @@ function openGame(gameId) { document.getElementById(gameId).classList.add('activ
 function sluitGame(gameId) { document.getElementById(gameId).classList.remove('active'); document.body.classList.remove('modal-open'); }
 function openInstellingen() { openGame('modal-instellingen'); document.getElementById('instellingen-groepscode').innerText = currentGroup; laadArchiefLijst(); }
 
-// WACHT MET OPSTARTEN TOT GAMES.JS IS GELADEN
+// BELANGRIJK: We wachten 1 milliseconde tot games.js ook geladen is!
 window.addEventListener("DOMContentLoaded", () => {
     bepaalScherm();
 });
@@ -89,7 +92,7 @@ function startApp() {
     document.getElementById('app-scherm').style.display = 'block'; document.getElementById('bottom-nav').style.display = 'flex'; document.getElementById('header-controls').style.display = 'flex'; document.getElementById('ingelogde-naam').innerText = currentUser;
     setupPushNotificaties(); bouwLiveScorebord(); luisterNaarLiveFeed(); luisterNaarCoopMissie(); luisterNaarDrinkSessie(); laadScorritoLijsten();
 
-    // INITIEER DE GAMES
+    // INITIEER DE GAMES (Functies staan in games.js)
     if(typeof luisterNaarReflex === 'function') luisterNaarReflex();
     if(typeof luisterNaarQuiplash === 'function') luisterNaarQuiplash();
     if(typeof luisterNaarLava === 'function') luisterNaarLava();
@@ -162,7 +165,7 @@ function checkDrinkSessieTijd() {
 }
 
 // ==========================================
-// 5. SCOREBORD, SYNC & MAPS (MET MEDAILLES)
+// 5. SCOREBORD, SYNC & MAPS (ECHT LEADERBORD)
 // ==========================================
 function pasScoreAan(categorie, bedrag, emojiNaam) {
     if ("vibrate" in navigator) navigator.vibrate(50);
@@ -188,6 +191,7 @@ function bouwLiveScorebord() {
             spelersData.push({ naam: naam, data: data, b: b, m: m, sh: sh, k: k, r: r, ra: ra, ko: ko, sl: sl, persoonTotaal: persoonTotaal });
         });
 
+        // ECHT LEADERBOARD: Sorteer van hoog naar laag
         spelersData.sort((a, b) => b.persoonTotaal - a.persoonTotaal);
 
         let html = `<tr><th style="text-align:left; padding-left:10px;">Wie</th><th>🍺</th><th>🍹</th><th>🥃</th><th>😘</th><th>💔</th><th>🚀</th><th>🤮</th><th>🔑</th><th class="totaal-kolom">Tot</th><th></th></tr>`;
@@ -204,6 +208,7 @@ function bouwLiveScorebord() {
             let katerKans = Math.max(0, Math.min(99, 5 + (speler.b * 4) + (speler.m * 12) + (speler.sh * 15) + (speler.ko * 30))); let kleur = katerKans >= 75 ? "#ff3b30" : katerKans >= 40 ? "#ff9500" : "#34c759";
             katerHtml += `<div class="kater-regel"><div class="kater-header"><span>${speler.naam}</span><span>${katerKans}%</span></div><div class="kater-bar-bg"><div class="kater-bar-fill" style="width: ${katerKans}%; background-color: ${kleur};"></div></div></div>`;
             
+            // Medailles & Nummers
             let rank = (index + 1) + ".";
             if (index === 0) rank = "🥇"; else if (index === 1) rank = "🥈"; else if (index === 2) rank = "🥉";
             html += `<tr><td class="naam-kolom"><span style="font-size:12px; margin-right:4px;">${rank}</span>${speler.naam}</td><td>${speler.b}</td><td>${speler.m}</td><td>${speler.sh}</td><td>${speler.k}</td><td>${speler.r}</td><td>${speler.ra}</td><td>${speler.ko}</td><td>${speler.sl}</td><td class="totaal-kolom">${speler.persoonTotaal}</td><td><button class="btn-verwijder" onclick="verwijderSpeler('${speler.naam}')">X</button></td></tr>`;
@@ -225,7 +230,6 @@ function luisterNaarLiveFeed() {
         setTimeout(() => { if(ticker) ticker.style.display = 'none'; }, 5000);
     });
 }
-
 function tekenGrafieken(b, m, sh, k, r, ra, ko, sl, namen, drankjes) {
     try {
         if (typeof Chart === 'undefined') return; 
@@ -270,14 +274,6 @@ function initKaart() {
 // ==========================================
 // 6. MISSIES, BINGO & COOP
 // ==========================================
-const coopMissies = [{ titel: "Drink 100 Pils met de groep", doel: 100, types: ['bier'] }, { titel: "Verzamel samen 30 Kiss acties", doel: 30, types: ['kiss'] }, { titel: "Deel 50 Shotjes/Mixjes uit", doel: 50, types: ['mix', 'shotje'] }, { titel: "Incasseer 20 Rejects", doel: 20, types: ['rejection'] }, { titel: "Wordt 5x vol Geragd", doel: 5, types: ['raggen'] }, { titel: "150 Drankjes Totaal", doel: 150, types: ['bier', 'mix', 'shotje'] }];
-let actieveCoopMissie = null;
-const bingoOpdrachten = ["Neem een shot met de barman", "Regel gratis pils", "Zeg 10 min helemaal niks", "Wijs iemand af", "Trek een Atje", "Eet laat nog iets vets", "Raak iets kwijt", "Krijg een Reject", "Steel een aansteker", "Deel 3 slokken uit", "Drink een uur water", "Klim ergens op", "Laat je trakteren", "Dans battle", "Neem een dubbel shot"];
-const assassinMissies = ["Zorg dat [SPELER] een shotje neemt.", "Laat [SPELER] 'proost' zeggen en negeer hem volledig.", "Zorg dat [SPELER] pils voor je haalt.", "Steel ongemerkt de aansteker van [SPELER].", "Overtuig [SPELER] om water te drinken.", "Noem [SPELER] 15 minuten lang bij de verkeerde naam."];
-
-function genereerNieuweMissie() { let andereSpelers = spelersLijst.filter(n => n !== currentUser); let willekeurigeSpeler = andereSpelers.length > 0 ? andereSpelers[Math.floor(Math.random() * andereSpelers.length)] : "iemand"; let optie = assassinMissies[Math.floor(Math.random() * assassinMissies.length)]; return optie.replace("[SPELER]", willekeurigeSpeler.charAt(0).toUpperCase() + willekeurigeSpeler.slice(1)); }
-function genereerBingoKaart() { let shuffled = [...bingoOpdrachten].sort(() => 0.5 - Math.random()); return shuffled.slice(0, 9); }
-
 function beheerMissiesEnBingo(data) {
     try { if (!data.geheime_missie) { let nwMissie = genereerNieuweMissie(); db.collection('groepen').doc(currentGroup).collection('scores').doc(currentUser).set({ geheime_missie: nwMissie }, { merge: true }); const mt = document.getElementById('geheime-missie-tekst'); if(mt) mt.innerText = nwMissie; } else { const mt = document.getElementById('geheime-missie-tekst'); if(mt) mt.innerText = data.geheime_missie; } } catch(err) {}
     try { if (!data.bingo_kaart) { db.collection('groepen').doc(currentGroup).collection('scores').doc(currentUser).set({ bingo_kaart: genereerBingoKaart(), bingo_status: [false,false,false,false,false,false,false,false,false], bingo_gehaald: false }, { merge: true }); } else { mijnBingoKaart = data.bingo_kaart; mijnBingoStatus = data.bingo_status || [false,false,false,false,false,false,false,false,false]; renderBingoGrid(data.bingo_gehaald); } } catch(err) {}

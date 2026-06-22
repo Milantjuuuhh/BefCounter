@@ -53,6 +53,18 @@ function resetGameLobby(gameNaam) {
 }
 
 // ==========================================
+// SWASI
+// ==========================================
+let actieveSwasiTouches = {}, swasiKleuren = ['#007aff', '#34c759', '#ff9500', '#af52de', '#5856d6', '#ff2d55', '#f1c40f', '#00c7be'], swasiKleurIndex = 0, swasiTimer = null, swasiAfteller = null, swasiBezig = false;
+function startSwasi() { let swasiOverlay = document.getElementById('swasi-overlay'); swasiOverlay.style.display = 'block'; document.getElementById('swasi-instructie').style.display = 'block'; document.getElementById('swasi-instructie').innerText = "Plaats allemaal 1 vinger op het scherm..."; document.getElementById('swasi-countdown').style.display = 'none'; document.getElementById('swasi-sluit-btn').style.display = 'none'; actieveSwasiTouches = {}; swasiKleurIndex = 0; swasiBezig = true; document.body.classList.add('modal-open'); swasiOverlay.addEventListener('touchstart', handleTouchStart, {passive: false}); swasiOverlay.addEventListener('touchmove', handleTouchMove, {passive: false}); swasiOverlay.addEventListener('touchend', handleTouchEnd); swasiOverlay.addEventListener('touchcancel', handleTouchEnd); }
+function stopSwasi() { let swasiOverlay = document.getElementById('swasi-overlay'); swasiOverlay.style.display = 'none'; document.body.classList.remove('modal-open'); clearTimeout(swasiTimer); clearInterval(swasiAfteller); swasiBezig = false; Object.values(actieveSwasiTouches).forEach(c => c.remove()); actieveSwasiTouches = {}; swasiOverlay.removeEventListener('touchstart', handleTouchStart); swasiOverlay.removeEventListener('touchmove', handleTouchMove); swasiOverlay.removeEventListener('touchend', handleTouchEnd); swasiOverlay.removeEventListener('touchcancel', handleTouchEnd); }
+function handleTouchStart(e) { if (e.target.id === 'swasi-sluit-btn') return; e.preventDefault(); if (!swasiBezig) return; for (let i = 0; i < e.changedTouches.length; i++) { let t = e.changedTouches[i]; let color = swasiKleuren[swasiKleurIndex % swasiKleuren.length]; swasiKleurIndex++; let circle = document.createElement('div'); circle.className = 'swasi-circle'; circle.style.borderColor = color; circle.style.left = t.clientX + 'px'; circle.style.top = t.clientY + 'px'; document.getElementById('swasi-overlay').appendChild(circle); actieveSwasiTouches[t.identifier] = circle; } checkSwasiTimer(); }
+function handleTouchMove(e) { if (e.target.id === 'swasi-sluit-btn') return; e.preventDefault(); if (!swasiBezig) return; for (let i = 0; i < e.changedTouches.length; i++) { let t = e.changedTouches[i]; let circle = actieveSwasiTouches[t.identifier]; if (circle) { circle.style.left = t.clientX + 'px'; circle.style.top = t.clientY + 'px'; } } }
+function handleTouchEnd(e) { if (!swasiBezig) return; for (let i = 0; i < e.changedTouches.length; i++) { let id = e.changedTouches[i].identifier; let circle = actieveSwasiTouches[id]; if (circle) { circle.remove(); delete actieveSwasiTouches[id]; } } checkSwasiTimer(); }
+function checkSwasiTimer() { clearTimeout(swasiTimer); clearInterval(swasiAfteller); document.getElementById('swasi-countdown').style.display = 'none'; let keys = Object.keys(actieveSwasiTouches); if (keys.length > 1) { document.getElementById('swasi-instructie').style.display = 'none'; document.getElementById('swasi-countdown').style.display = 'block'; let count = 3; document.getElementById('swasi-countdown').innerText = count; swasiAfteller = setInterval(() => { count--; if (count > 0) { document.getElementById('swasi-countdown').innerText = count; } else { clearInterval(swasiAfteller); document.getElementById('swasi-countdown').style.display = 'none'; kiesSwasiWinnaar(keys); } }, 1000); } else if (keys.length === 1) { document.getElementById('swasi-instructie').style.display = 'block'; document.getElementById('swasi-instructie').innerText = "Wacht op meer vingers..."; } else { document.getElementById('swasi-instructie').style.display = 'block'; document.getElementById('swasi-instructie').innerText = "Plaats allemaal 1 vinger..."; swasiKleurIndex = 0; } }
+function kiesSwasiWinnaar(keys) { swasiBezig = false; if ("vibrate" in navigator) navigator.vibrate([100, 50, 100, 50, 300]); let winnerId = keys[Math.floor(Math.random() * keys.length)]; keys.forEach(id => { let circle = actieveSwasiTouches[id]; if (id == winnerId) { circle.classList.add('winner'); } else { circle.classList.add('loser'); } }); document.getElementById('swasi-sluit-btn').style.display = 'block'; }
+
+// ==========================================
 // TIJDBOM
 // ==========================================
 function startTijdbom() { if (spelersLijst.length < 2) return alert("Minimaal 2 spelers nodig."); let randomSpeler = spelersLijst[Math.floor(Math.random() * spelersLijst.length)]; let ontplofTijd = Date.now() + (Math.floor(Math.random() * 45000) + 30000); db.collection('groepen').doc(currentGroup).collection('tijdbom').doc('status').set({ actief: true, houder: randomSpeler, eindTijdUnix: ontplofTijd }); stuurNaarFeed(`💣 TIJDBOM GESTART! Hij ligt nu bij ${randomSpeler.toUpperCase()}!`); }
@@ -60,11 +72,32 @@ function gooiBomDoor() { let andereSpelers = spelersLijst.filter(n => n !== curr
 function luisterNaarTijdbom() {
     if(unsubscribeBom) unsubscribeBom();
     unsubscribeBom = db.collection('groepen').doc(currentGroup).collection('tijdbom').doc('status').onSnapshot((doc) => {
-        if (!doc.exists) return; const data = doc.data(); const card = document.getElementById('bom-card'); const statusTekst = document.getElementById('bom-status-tekst'); const btnGooi = document.getElementById('btn-gooi-door');
+        if (!doc.exists) return; const data = doc.data(); 
+        const statusTekst = document.getElementById('bom-status-tekst'); 
+        const btnGooi = document.getElementById('btn-gooi-door');
+        const modal = document.getElementById('modal-bom');
+
         if (data.actief) {
-            document.getElementById('bom-idle-ui').style.display = 'none'; document.getElementById('bom-active-ui').style.display = 'block'; statusTekst.innerText = `Bom is bij ${data.houder.toUpperCase()}!`;
-            if (data.houder === currentUser) { if(card) card.classList.add('bom-gevaar'); if(btnGooi) btnGooi.style.display = 'inline-block'; if (Date.now() >= data.eindTijdUnix) { db.collection('groepen').doc(currentGroup).collection('tijdbom').doc('status').set({ actief: false }); pasScoreAan('raggen', -3, '💥 BOM ONTPLOFT'); alert("KABOEM! -3 Punten!"); } } else { if(card) card.classList.remove('bom-gevaar'); if(btnGooi) btnGooi.style.display = 'none'; }
-        } else { document.getElementById('bom-idle-ui').style.display = 'block'; document.getElementById('bom-active-ui').style.display = 'none'; if(card) card.classList.remove('bom-gevaar'); }
+            document.getElementById('bom-idle-ui').style.display = 'none'; 
+            document.getElementById('bom-active-ui').style.display = 'block'; 
+            statusTekst.innerText = `Bom is bij ${data.houder.toUpperCase()}!`;
+            
+            if (data.houder === currentUser) { 
+                if(modal) modal.style.backgroundColor = '#ff3b30'; 
+                if(btnGooi) btnGooi.style.display = 'inline-block'; 
+                if (Date.now() >= data.eindTijdUnix) { 
+                    db.collection('groepen').doc(currentGroup).collection('tijdbom').doc('status').set({ actief: false }); 
+                    pasScoreAan('raggen', -3, '💥 BOM ONTPLOFT'); alert("KABOEM! -3 Punten!"); 
+                } 
+            } else { 
+                if(modal) modal.style.backgroundColor = '#050505'; 
+                if(btnGooi) btnGooi.style.display = 'none'; 
+            }
+        } else { 
+            document.getElementById('bom-idle-ui').style.display = 'block'; 
+            document.getElementById('bom-active-ui').style.display = 'none'; 
+            if(modal) modal.style.backgroundColor = '#050505'; 
+        }
     });
     setInterval(() => { db.collection('groepen').doc(currentGroup).collection('tijdbom').doc('status').get().then(doc => { if (doc.exists && doc.data().actief && doc.data().houder === currentUser && Date.now() >= doc.data().eindTijdUnix) { db.collection('groepen').doc(currentGroup).collection('tijdbom').doc('status').set({ actief: false }); pasScoreAan('raggen', -3, '💥 BOM ONTPLOFT'); alert("KABOEM! -3 Punten!"); } }); }, 1000);
 }
@@ -154,7 +187,7 @@ function luisterNaarSjaak() {
                     let btn = document.createElement('button');
                     btn.className = 'ql-btn-stem'; btn.style.animationDelay = (0.1 * idx) + "s";
                     btn.innerText = `👉 ${s.toUpperCase()}`;
-                    btn.onclick = () => { db.collection('groepen').doc(currentGroup).collection('games').doc('sjaak').set({ stemmen: { [currentUser]: s } }, {merge:true}); };
+                    btn.onclick = () => { db.collection('groepen').doc(currentGroup).collection('games').doc('sjaak').update({ [`stemmen.${currentUser}`]: s }); };
                     knoppenBox.appendChild(btn);
                 });
             }
@@ -235,8 +268,8 @@ function luisterNaarQuiplash() {
     db.collection('groepen').doc(currentGroup).collection('games').doc('quiplash').onSnapshot(doc => {
         if (!doc.exists) return; const data = doc.data(); qlFase = data.fase || 'wachten'; qlHuidigeVraag = data.vraag || ''; qlAntwoorden = data.antwoorden || {}; qlStemmen = data.stemmen || {}; let qlSpelers = data.spelers || [];
         
-        let uiAntwoorden = document.getElementById('ql-antwoorden'); if(!uiAntwoorden) return;
-        uiAntwoorden.style.display = 'none'; document.getElementById('ql-stemmen').style.display = 'none'; document.getElementById('ql-resultaten').style.display = 'none';
+        let uiAntwoorden = document.getElementById('quiplash-actief'); if(!uiAntwoorden) return;
+        uiAntwoorden.style.display = 'none'; document.getElementById('quiplash-stemmen').style.display = 'none'; document.getElementById('quiplash-resultaat').style.display = 'none';
 
         if (qlFase === 'antwoorden') {
             uiAntwoorden.style.display = 'block'; document.getElementById('ql-vraag-tekst').innerText = qlHuidigeVraag;
@@ -247,7 +280,7 @@ function luisterNaarQuiplash() {
             document.getElementById('btn-ql-forceer-stemmen').style.display = (data.host === currentUser) ? 'inline-block' : 'none';
             if(Object.keys(qlAntwoorden).length === qlSpelers.length && qlSpelers.length > 0 && data.host === currentUser) { startQuiplashStemmen(); }
         } else if (qlFase === 'stemmen') {
-            document.getElementById('ql-stemmen').style.display = 'block'; document.getElementById('ql-vraag-stemmen').innerText = qlHuidigeVraag;
+            document.getElementById('quiplash-stemmen').style.display = 'block'; document.getElementById('ql-vraag-stemmen').innerText = qlHuidigeVraag;
             document.getElementById('ql-status-stemmen').innerText = `${Object.keys(qlStemmen).length} van de ${qlSpelers.length} stemmen binnen.`;
             document.getElementById('btn-ql-forceer-resultaat').style.display = (data.host === currentUser) ? 'inline-block' : 'none';
 
@@ -263,7 +296,7 @@ function luisterNaarQuiplash() {
             }
             if(Object.keys(qlStemmen).length === qlSpelers.length && qlSpelers.length > 0 && data.host === currentUser) { toonQuiplashResultaten(); }
         } else if (qlFase === 'resultaat') {
-            document.getElementById('ql-resultaten').style.display = 'block'; document.getElementById('ql-vraag-resultaat').innerText = qlHuidigeVraag;
+            document.getElementById('quiplash-resultaat').style.display = 'block'; document.getElementById('ql-vraag-resultaat').innerText = qlHuidigeVraag;
             let resLijst = document.getElementById('ql-uitslag-lijst'); resLijst.innerHTML = ''; document.getElementById('btn-ql-volgende').style.display = (data.host === currentUser) ? 'inline-block' : 'none';
 
             let scores = {}; Object.values(qlStemmen).forEach(gestemdOp => { scores[gestemdOp] = (scores[gestemdOp] || 0) + 1; });
@@ -281,9 +314,9 @@ function startQuiplashRonde() {
     let vr = quiplashVragenArray[Math.floor(Math.random() * quiplashVragenArray.length)].replace(/\[SPELER\]/g, randomSpeler.charAt(0).toUpperCase() + randomSpeler.slice(1));
     db.collection('groepen').doc(currentGroup).collection('games').doc('quiplash').update({ fase: 'antwoorden', vraag: vr, antwoorden: {}, stemmen: {} }); stuurNaarFeed(`🤐 Quiplash is GESTART! Vul je antwoorden in!`);
 }
-function verstuurQuiplashAntwoord() { let v = document.getElementById('ql-invoer').value.trim(); if(!v) return alert("Vul iets in!"); db.collection('groepen').doc(currentGroup).collection('games').doc('quiplash').set({ antwoorden: { [currentUser]: v } }, {merge: true}); }
+function verstuurQuiplashAntwoord() { let v = document.getElementById('ql-invoer').value.trim(); if(!v) return alert("Vul iets in!"); db.collection('groepen').doc(currentGroup).collection('games').doc('quiplash').update({ [`antwoorden.${currentUser}`]: v }); }
 function startQuiplashStemmen() { db.collection('groepen').doc(currentGroup).collection('games').doc('quiplash').update({ fase: 'stemmen' }); }
-function stemOpQuiplash(opWie) { db.collection('groepen').doc(currentGroup).collection('games').doc('quiplash').set({ stemmen: { [currentUser]: opWie } }, {merge: true}); }
+function stemOpQuiplash(opWie) { db.collection('groepen').doc(currentGroup).collection('games').doc('quiplash').update({ [`stemmen.${currentUser}`]: opWie }); }
 function toonQuiplashResultaten() {
     let maxStemmen = 0; let winnaars = []; let scores = {};
     Object.values(qlStemmen).forEach(gestemdOp => { scores[gestemdOp] = (scores[gestemdOp] || 0) + 1; if(scores[gestemdOp] > maxStemmen) maxStemmen = scores[gestemdOp]; });
@@ -349,7 +382,7 @@ function checkLavaOrientatie(e) {
         lavaGeklikt = true; let isTeVroeg = Date.now() < lavaGroenTijd; let reactieTijd = isTeVroeg ? 'TE VROEG' : Date.now() - lavaGroenTijd;
         if(isTeVroeg) { document.getElementById('lava-wacht-ui').innerHTML = `<h1 style="font-size:40px; color:white;">TE VROEG!</h1><p style="color:white; font-size:18px;">Straf atje voor jou!</p>`; } 
         else { document.getElementById('lava-status').innerHTML = `✅ Veilig!<br>Tijd: ${(reactieTijd/1000).toFixed(2)}s`; document.getElementById('lava-status').style.color = "#34c759"; }
-        db.collection('groepen').doc(currentGroup).collection('games').doc('lava').set({ scores: { [currentUser]: reactieTijd } }, {merge:true});
+        db.collection('groepen').doc(currentGroup).collection('games').doc('lava').update({ [`scores.${currentUser}`]: reactieTijd });
         db.collection('groepen').doc(currentGroup).collection('games').doc('lava').get().then(doc => { if(Object.keys(doc.data().scores).length >= doc.data().spelers.length) { db.collection('groepen').doc(currentGroup).collection('games').doc('lava').update({fase: 'resultaat'}); } });
     }
 }
@@ -376,7 +409,7 @@ function luisterNaarShake() {
             clearInterval(shakeTimerInterval);
             shakeTimerInterval = setInterval(() => {
                 let rest = Math.max(0, Math.ceil((d.eindTijd - Date.now())/1000)); document.getElementById('shake-timer').innerText = rest;
-                if(shakeBezig) { db.collection('groepen').doc(currentGroup).collection('games').doc('shake').set({ scores: { [currentUser]: Math.floor(shakeScore) } }, {merge:true}); }
+                if(shakeBezig) { db.collection('groepen').doc(currentGroup).collection('games').doc('shake').update({ [`scores.${currentUser}`]: Math.floor(shakeScore) }); }
                 if(rest <= 0) { clearInterval(shakeTimerInterval); shakeBezig = false; window.removeEventListener('devicemotion', handleShake); document.getElementById('shake-timer').innerText = "Berekent..."; if(d.host === currentUser) { setTimeout(() => { db.collection('groepen').doc(currentGroup).collection('games').doc('shake').update({fase: 'resultaat'}); }, 1500); } }
             }, 1000);
         } else if(d.fase === 'resultaat') {
