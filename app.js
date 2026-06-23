@@ -21,6 +21,10 @@ var worldMap = null, mapMarkers = [], pieChartInstance = null, barChartInstance 
 var mijnBingoKaart = [], mijnBingoStatus = [];
 let actieveCoopMissie = null;
 
+// Bordspel variables
+let lokalePosities = null;
+let isBordspelAnimeren = false;
+
 // Globale arrays voor Live Firebase Spelmateriaal
 var sjaakVragenArray = ["Laden..."];
 var quiplashVragenArray = ["Laden..."];
@@ -55,7 +59,7 @@ function vraagSensorToestemming() { if (typeof DeviceOrientationEvent !== 'undef
 // 3. NAVIGATIE, AUTH & UI FUNCTIES
 // ==========================================
 function openGame(gameId) { document.getElementById(gameId).classList.add('active'); document.getElementById(gameId).style.display = 'block'; document.body.classList.add('modal-open'); window.scrollTo(0,0); }
-function sluitGame(gameId) { document.getElementById(gameId).classList.remove('active'); document.getElementById(gameId).style.display = 'none'; document.body.classList.remove('modal-open'); }
+function sluitGame(gameId) { document.getElementById(gameId).classList.remove('active'); document.getElementById(gameId).style.display = 'none'; document.body.classList.remove('modal-open'); if(gameId === 'modal-bordspel') lokalePosities = null; }
 function openInstellingen() { openGame('modal-instellingen'); document.getElementById('instellingen-groepscode').innerText = currentGroup; laadArchiefLijst(); }
 
 window.addEventListener("DOMContentLoaded", () => {
@@ -89,7 +93,6 @@ function startApp() {
 // 4. FIREBASE SPELMATERIAAL INLADEN
 // ==========================================
 function laadSpelmateriaalUitFirebase() {
-    // Haalt de live arrays altijd op uit Firebase (zonder ze te overschrijven!)
     db.collection('spelmateriaal').doc('sjaak').onSnapshot(doc => { if (doc.exists && doc.data().vragen) sjaakVragenArray = doc.data().vragen; });
     db.collection('spelmateriaal').doc('quiplash').onSnapshot(doc => { if (doc.exists && doc.data().vragen) quiplashVragenArray = doc.data().vragen; });
     db.collection('spelmateriaal').doc('bordspel').onSnapshot(doc => { if (doc.exists && doc.data().opdrachten) bordOpdrachtenArray = doc.data().opdrachten; });
@@ -477,12 +480,11 @@ function startSjaakRonde(isNieuwSpel = false) {
             return;
         }
 
-        // Filter vragen die al geweest zijn in dit potje
         let beschikbareVragen = sjaakVragenArray.filter(v => !gebruikteVragen.includes(v));
-        if (beschikbareVragen.length === 0) beschikbareVragen = sjaakVragenArray; // Fallback mocht de lijst leeg zijn
+        if (beschikbareVragen.length === 0) beschikbareVragen = sjaakVragenArray; 
         
         let vr = beschikbareVragen[Math.floor(Math.random() * beschikbareVragen.length)]; 
-        gebruikteVragen.push(vr); // Sla op als gebruikt
+        gebruikteVragen.push(vr); 
 
         let updateData = { fase: 'actief', vraag: vr, stemmen: {}, ronde: ronde, gebruikte_vragen: gebruikteVragen };
         if (isNieuwSpel) updateData.totaal_scores = {};
@@ -610,7 +612,6 @@ function startQuiplashRonde(isNieuwSpel = false) {
             return;
         }
 
-        // Filter vragen die al geweest zijn
         let beschikbareVragen = quiplashVragenArray.filter(v => !gebruikteVragen.includes(v));
         if (beschikbareVragen.length === 0) beschikbareVragen = quiplashVragenArray; 
         
@@ -823,7 +824,7 @@ function handleShake(e) {
     shakeLastX = acc.x; shakeLastY = acc.y; shakeLastZ = acc.z;
 }
 
-// 10H. BORDSPEL 2.0 (Spectaculair)
+// 10H. BORDSPEL 2.0 (Animatie Upgrade)
 function startBordspel() {
     db.collection('groepen').doc(currentGroup).collection('games').doc('bordspel').get().then(doc => {
         let d = doc.data(); let pos = {}; d.spelers.forEach(s => pos[s] = 0);
@@ -831,36 +832,96 @@ function startBordspel() {
         stuurNaarFeed(`🎲 HET BORDSPEL is gestart! Succes strijders.`);
     });
 }
+
 function luisterNaarBordspel() {
     luisterNaarGameLobby('bordspel');
     db.collection('groepen').doc(currentGroup).collection('games').doc('bordspel').onSnapshot(doc => {
         if(!doc.exists) return; let d = doc.data(); let spelers = d.spelers || [];
         let uiActief = document.getElementById('bordspel-actief'); if(!uiActief) return;
         
-        if (d.fase === 'wachten' || d.fase === 'lobby') { uiActief.style.display = 'none'; document.getElementById('bord-opdracht-overlay').style.display = 'none'; } 
+        let dbPosities = d.posities || {};
+
+        if (d.fase === 'wachten' || d.fase === 'lobby') { 
+            uiActief.style.display = 'none'; document.getElementById('bord-opdracht-overlay').style.display = 'none'; 
+            lokalePosities = null; isBordspelAnimeren = false;
+        } 
         else if (d.fase === 'actief') {
             uiActief.style.display = 'block';
             let huidigeSpeler = spelers[d.beurt_index % spelers.length];
             document.getElementById('bord-beurt-naam').innerText = huidigeSpeler;
             
-            if (huidigeSpeler === currentUser && !d.actieve_opdracht) { document.getElementById('bord-dobbel-sectie').style.display = 'block'; document.getElementById('bord-wacht-sectie').style.display = 'none'; } 
-            else if (!d.actieve_opdracht) { document.getElementById('bord-dobbel-sectie').style.display = 'none'; document.getElementById('bord-wacht-sectie').style.display = 'block'; } 
-            else { document.getElementById('bord-dobbel-sectie').style.display = 'none'; document.getElementById('bord-wacht-sectie').style.display = 'none'; }
+            // Verberg gooi knoppen tijdens animatie of andermans beurt
+            if (huidigeSpeler === currentUser && !d.actieve_opdracht && !isBordspelAnimeren) { 
+                document.getElementById('bord-dobbel-sectie').style.display = 'block'; document.getElementById('bord-wacht-sectie').style.display = 'none'; 
+            } else if (!d.actieve_opdracht || isBordspelAnimeren) { 
+                document.getElementById('bord-dobbel-sectie').style.display = 'none'; document.getElementById('bord-wacht-sectie').style.display = 'block'; 
+            } else { 
+                document.getElementById('bord-dobbel-sectie').style.display = 'none'; document.getElementById('bord-wacht-sectie').style.display = 'none'; 
+            }
             
-            tekenBord(d.posities || {});
+            // Eerste keer inladen
+            if (!lokalePosities) {
+                lokalePosities = {...dbPosities};
+                tekenBord(lokalePosities);
+            }
 
-            if (d.actieve_opdracht) {
-                document.getElementById('bord-opdracht-overlay').style.display = 'flex';
-                document.getElementById('bord-opdracht-speler').innerText = d.actieve_opdracht.speler;
-                document.getElementById('bord-opdracht-tekst').innerText = d.actieve_opdracht.tekst;
-                document.getElementById('bord-dobbel-uitslag').innerText = `🎲 ${d.dobbel_uitslag}`;
-                
-                if (d.actieve_opdracht.speler === currentUser || d.host === currentUser) { document.getElementById('bord-opdracht-klaar-btn').style.display = 'inline-block'; document.getElementById('bord-opdracht-wacht').style.display = 'none'; } 
-                else { document.getElementById('bord-opdracht-klaar-btn').style.display = 'none'; document.getElementById('bord-opdracht-wacht').style.display = 'block'; }
-            } else { document.getElementById('bord-opdracht-overlay').style.display = 'none'; }
+            // Check of we moeten lopen
+            let moetAnimeren = false;
+            for (let s in dbPosities) { if (lokalePosities[s] !== undefined && lokalePosities[s] < dbPosities[s]) { moetAnimeren = true; } }
+
+            if (moetAnimeren && !isBordspelAnimeren) {
+                isBordspelAnimeren = true;
+                speelBordAnimatie(dbPosities, () => {
+                    isBordspelAnimeren = false;
+                    toonBordOpdracht(d.actieve_opdracht, d.dobbel_uitslag, d.host);
+                });
+            } else if (!isBordspelAnimeren) {
+                lokalePosities = {...dbPosities};
+                tekenBord(lokalePosities);
+                toonBordOpdracht(d.actieve_opdracht, d.dobbel_uitslag, d.host);
+            }
         }
     });
 }
+
+function speelBordAnimatie(doelPosities, callback) {
+    let interval = setInterval(() => {
+        let klaar = true;
+        for (let s in doelPosities) {
+            if (lokalePosities[s] < doelPosities[s]) {
+                lokalePosities[s]++;
+                klaar = false;
+            } else if (lokalePosities[s] > doelPosities[s]) {
+                lokalePosities[s] = doelPosities[s]; // Hard reset fallback
+            }
+        }
+        tekenBord(lokalePosities);
+        if ("vibrate" in navigator && !klaar) navigator.vibrate(30);
+
+        if (klaar) {
+            clearInterval(interval);
+            setTimeout(callback, 500); 
+        }
+    }, 300); // 300ms per stapje!
+}
+
+function toonBordOpdracht(opdracht, dobbel, host) {
+    if (opdracht) {
+        document.getElementById('bord-opdracht-overlay').style.display = 'flex';
+        document.getElementById('bord-opdracht-speler').innerText = opdracht.speler;
+        document.getElementById('bord-opdracht-tekst').innerText = opdracht.tekst;
+        document.getElementById('bord-dobbel-uitslag').innerText = `🎲 ${dobbel}`;
+        
+        if (opdracht.speler === currentUser || host === currentUser) { 
+            document.getElementById('bord-opdracht-klaar-btn').style.display = 'inline-block'; document.getElementById('bord-opdracht-wacht').style.display = 'none'; 
+        } else { 
+            document.getElementById('bord-opdracht-klaar-btn').style.display = 'none'; document.getElementById('bord-opdracht-wacht').style.display = 'block'; 
+        }
+    } else { 
+        document.getElementById('bord-opdracht-overlay').style.display = 'none'; 
+    }
+}
+
 function tekenBord(posities) {
     let grid = document.getElementById('bord-grid-container'); if(!grid) return; grid.innerHTML = '';
     let kleuren = ['#ff3b30', '#34c759', '#007aff', '#ffcc00', '#af52de', '#ff2d55'];
@@ -880,22 +941,33 @@ function tekenBord(posities) {
         grid.appendChild(tegel);
     }
 }
+
 function gooiDobbelsteenBordspel() {
-    document.getElementById('bord-dobbel-sectie').style.display = 'none'; let gooi = Math.floor(Math.random() * 6) + 1;
+    document.getElementById('bord-dobbel-sectie').style.display = 'none'; 
+    let gooi = Math.floor(Math.random() * 6) + 1;
     
-    // Nieuwe spectaculaire animatie!
-    document.getElementById('bord-dobbel-uitslag').classList.add('dobbel-spectaculair');
-    setTimeout(() => { document.getElementById('bord-dobbel-uitslag').classList.remove('dobbel-spectaculair'); }, 800);
-    
-    db.collection('groepen').doc(currentGroup).collection('games').doc('bordspel').get().then(doc => {
-        let d = doc.data(); let huidigePos = d.posities[currentUser] || 0; let nieuwePos = huidigePos + gooi; if (nieuwePos >= 39) nieuwePos = 39;
-        
-        let opdrachtTekst = bordOpdrachtenArray[Math.floor(Math.random() * bordOpdrachtenArray.length)];
-        if (nieuwePos === 39) opdrachtTekst = "🏆 JE BENT GEFINISHT! Deel 10 slokken uit en trek zelf een Atje om het te vieren!";
-        
-        let nwPosities = d.posities; nwPosities[currentUser] = nieuwePos;
-        db.collection('groepen').doc(currentGroup).collection('games').doc('bordspel').update({ posities: nwPosities, dobbel_uitslag: gooi, actieve_opdracht: { speler: currentUser, tekst: opdrachtTekst } });
-        if ("vibrate" in navigator) navigator.vibrate([100, 100, 100]);
-    });
+    // Grote Dobbelsteen Animatie Overlay
+    let dobbelOverlay = document.getElementById('dobbel-animatie-overlay');
+    document.getElementById('dobbel-icoon').innerText = `🎲 ${gooi}`;
+    dobbelOverlay.style.display = 'flex';
+    document.getElementById('dobbel-icoon').classList.add('dobbel-spectaculair');
+    if ("vibrate" in navigator) navigator.vibrate([100, 100, 100]);
+
+    setTimeout(() => { 
+        document.getElementById('dobbel-icoon').classList.remove('dobbel-spectaculair');
+        dobbelOverlay.style.display = 'none';
+
+        // Pas NA de grote rol sturen we het naar Firebase, dan gaat de pion lopen.
+        db.collection('groepen').doc(currentGroup).collection('games').doc('bordspel').get().then(doc => {
+            let d = doc.data(); let huidigePos = d.posities[currentUser] || 0; let nieuwePos = huidigePos + gooi; if (nieuwePos >= 39) nieuwePos = 39;
+            
+            let opdrachtTekst = bordOpdrachtenArray[Math.floor(Math.random() * bordOpdrachtenArray.length)];
+            if (nieuwePos === 39) opdrachtTekst = "🏆 JE BENT GEFINISHT! Deel 10 slokken uit en trek zelf een Atje om het te vieren!";
+            
+            let nwPosities = d.posities; nwPosities[currentUser] = nieuwePos;
+            db.collection('groepen').doc(currentGroup).collection('games').doc('bordspel').update({ posities: nwPosities, dobbel_uitslag: gooi, actieve_opdracht: { speler: currentUser, tekst: opdrachtTekst } });
+        });
+    }, 1000);
 }
+
 function voltooiBordspelBeurt() { db.collection('groepen').doc(currentGroup).collection('games').doc('bordspel').update({ beurt_index: firebase.firestore.FieldValue.increment(1), actieve_opdracht: null }); }
