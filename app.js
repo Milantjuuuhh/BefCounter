@@ -12,18 +12,19 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore();
 
-let currentUser = localStorage.getItem('bef_user');
-let currentGroup = localStorage.getItem('bef_group');
-let unsubscribeScores = null, unsubscribeFeed = null;
-let mijnTotalePunten = 0, mijnGedraaideSpins = 0;
-let isSpinning = false, vakantieModus = false, spelersLijst = []; 
-let worldMap = null, mapMarkers = [], pieChartInstance = null, barChartInstance = null;
-let mijnBingoKaart = [], mijnBingoStatus = [];
+// Gebruik 'var' voor globale variabelen (voorkomt vastlopen)
+var currentUser = localStorage.getItem('bef_user');
+var currentGroup = localStorage.getItem('bef_group');
+var unsubscribeScores = null, unsubscribeFeed = null, unsubscribeBom = null;
+var mijnTotalePunten = 0, mijnGedraaideSpins = 0;
+var isSpinning = false, vakantieModus = false, spelersLijst = []; 
+var worldMap = null, mapMarkers = [], pieChartInstance = null, barChartInstance = null;
+var mijnBingoKaart = [], mijnBingoStatus = [];
 
-// Globale arrays voor spelmateriaal uit de Database
-let sjaakVragenArray = ["Laden..."];
-let quiplashVragenArray = ["Laden..."];
-let bordOpdrachtenArray = ["Laden..."];
+// Globale arrays voor Live Firebase Spelmateriaal
+var sjaakVragenArray = ["Laden..."];
+var quiplashVragenArray = ["Laden..."];
+var bordOpdrachtenArray = ["Laden..."];
 
 document.body.addEventListener('touchstart', function() { 
     const geluid = document.getElementById('notificatie-geluid'); 
@@ -39,9 +40,7 @@ if ('serviceWorker' in navigator) { navigator.serviceWorker.register('sw.js').th
 
 function setupPushNotificaties(toonAlert = false) {
     if (!messaging) { if(toonAlert) alert("Push notificaties worden niet ondersteund."); return; }
-    messaging.requestPermission().then(() => { 
-        return messaging.getToken({ vapidKey: "BMfkVb0XKUWAPQ8HnB_79f1bvyB05Q-DSnkgzSvzfSN9n_ADzgW1FpAFJim8ftNfTeHA5BkUTJ1B-YhKIOyDL9k" }); 
-    }).then((token) => {
+    messaging.requestPermission().then(() => { return messaging.getToken({ vapidKey: "BMfkVb0XKUWAPQ8HnB_79f1bvyB05Q-DSnkgzSvzfSN9n_ADzgW1FpAFJim8ftNfTeHA5BkUTJ1B-YhKIOyDL9k" }); }).then((token) => {
         if (token && currentUser) { db.collection('groepen').doc(currentGroup).collection('scores').doc(currentUser).set({ push_token: token }, { merge: true }); if(toonAlert) alert("✅ Meldingen staan AAN!"); }
     }).catch((err) => { if(toonAlert) alert("❌ Meldingen geweigerd."); });
 }
@@ -55,8 +54,8 @@ function vraagSensorToestemming() { if (typeof DeviceOrientationEvent !== 'undef
 function openGame(gameId) { document.getElementById(gameId).classList.add('active'); document.body.classList.add('modal-open'); window.scrollTo(0,0); }
 function sluitGame(gameId) { document.getElementById(gameId).classList.remove('active'); document.body.classList.remove('modal-open'); }
 function openInstellingen() { openGame('modal-instellingen'); document.getElementById('instellingen-groepscode').innerText = currentGroup; laadArchiefLijst(); }
-function bevestigNoodstop(gameNaam) { if(confirm("Weet je zeker dat je het spel voor iedereen wilt stoppen en resetten?")) { resetGameLobby(gameNaam); } }
 
+// Wacht totdat het scherm veilig is ingeladen!
 window.addEventListener("DOMContentLoaded", () => {
     bepaalScherm();
 });
@@ -65,7 +64,6 @@ function bepaalScherm() {
     document.getElementById('auth-container').style.display = 'block'; document.getElementById('auth-scherm').style.display = 'none'; document.getElementById('lobby-scherm').style.display = 'none'; document.getElementById('app-scherm').style.display = 'none'; document.getElementById('header-controls').style.display = 'none'; document.getElementById('bottom-nav').style.display = 'none';
     if (!currentUser) { document.getElementById('auth-scherm').style.display = 'block'; } else if (!currentGroup) { document.getElementById('lobby-gebruikersnaam').innerText = currentUser; document.getElementById('lobby-scherm').style.display = 'block'; } else { document.getElementById('auth-container').style.display = 'none'; startApp(); }
 }
-
 function wisselPagina(paginaId, navItemElement) { document.querySelectorAll('.page').forEach(page => page.classList.remove('active')); document.getElementById(paginaId).classList.add('active'); document.querySelectorAll('.nav-item').forEach(item => item.classList.remove('active')); navItemElement.classList.add('active'); if (paginaId === 'page-kaart') setTimeout(() => initKaart(), 100); window.scrollTo(0,0); }
 function registreer() { const naam = document.getElementById('auth-naam').value.trim().toLowerCase(); const ww = document.getElementById('auth-wachtwoord').value; if (!naam || !ww) return alert('Vul alles in!'); db.collection('gebruikers').doc(naam).get().then((doc) => { if (doc.exists) alert('Naam bezet!'); else { db.collection('gebruikers').doc(naam).set({ wachtwoord: ww }).then(() => { localStorage.setItem('bef_user', naam); currentUser = naam; bepaalScherm(); }); } }); }
 function login() { const naam = document.getElementById('auth-naam').value.trim().toLowerCase(); const ww = document.getElementById('auth-wachtwoord').value; db.collection('gebruikers').doc(naam).get().then((doc) => { if (!doc.exists || doc.data().wachtwoord !== ww) alert('Onjuist!'); else { localStorage.setItem('bef_user', naam); currentUser = naam; bepaalScherm(); } }); }
@@ -79,7 +77,8 @@ function verwijderSpeler(naam) { if (confirm(`Verwijder ${naam}?`)) db.collectio
 function startApp() {
     document.getElementById('app-scherm').style.display = 'block'; document.getElementById('bottom-nav').style.display = 'flex'; document.getElementById('header-controls').style.display = 'flex'; document.getElementById('ingelogde-naam').innerText = currentUser;
     
-    laadSpelmateriaal(); // Haalt vragen op uit Firebase
+    laadSpelmateriaalUitFirebase(); // Haal alle spellen op uit de cloud!
+    
     setupPushNotificaties(); bouwLiveScorebord(); luisterNaarLiveFeed(); luisterNaarCoopMissie(); luisterNaarDrinkSessie(); laadScorritoLijsten();
 
     // Start Games Listeners
@@ -87,11 +86,10 @@ function startApp() {
 }
 
 // ==========================================
-// 4. DATABASE SEEDING (SPELMATERIAAL LIVE HALEN)
+// 4. FIREBASE SPELMATERIAAL INLADEN
 // ==========================================
-function laadSpelmateriaal() {
-    // 1. DIT IS DE TIJDELIJKE SEED DATA (Zodat Firebase de mapjes eenmalig aanmaakt)
-    // Haal deze 3 `.set` regels in de volgende versie weg als je puur vanuit de Firebase database wilt werken!
+function laadSpelmateriaalUitFirebase() {
+    // 1. Zorgt dat de mapjes in Firebase eenmalig worden aangemaakt met dummy data
     const initSjaak = ["Wie kotst vanavond als eerste?", "Wie regelt er vannacht de minste actie?", "Wie is morgen de grootste jankerd met een kater?", "Wie doet de domste uitspraak vanavond?"];
     const initQuiplash = ["De echte reden waarom [SPELER] nog steeds single is, is ___.", "Wat vind je als je een blacklight schijnt op de slaapkamer van [SPELER]?", "Het allerslechtste excuus van [SPELER] om niet te adten is ___."];
     const initBordspel = ["Adt je glas helemaal leeg! 🍻", "Deel 3 slokken uit aan degene tegenover je.", "Jongens drinken 2 slokken.", "Speel Steen-Papier-Schaar met degene links van je. Verliezer drinkt 3 slokken.", "Neem 2 slokken water (Laf)."];
@@ -100,12 +98,11 @@ function laadSpelmateriaal() {
     db.collection('spelmateriaal').doc('quiplash').set({ vragen: initQuiplash }, { merge: true });
     db.collection('spelmateriaal').doc('bordspel').set({ opdrachten: initBordspel }, { merge: true });
 
-    // 2. LIVE LISTENERS (Haalt altijd de nieuwste vragenlijst op)
+    // 2. Haalt de live arrays altijd op uit Firebase!
     db.collection('spelmateriaal').doc('sjaak').onSnapshot(doc => { if (doc.exists && doc.data().vragen) sjaakVragenArray = doc.data().vragen; });
     db.collection('spelmateriaal').doc('quiplash').onSnapshot(doc => { if (doc.exists && doc.data().vragen) quiplashVragenArray = doc.data().vragen; });
     db.collection('spelmateriaal').doc('bordspel').onSnapshot(doc => { if (doc.exists && doc.data().opdrachten) bordOpdrachtenArray = doc.data().opdrachten; });
 }
-
 
 // ==========================================
 // 5. DRINK SESSIE LOGICA
@@ -139,7 +136,7 @@ function luisterNaarDrinkSessie() {
             let d = doc.data(); actieveDrinkSessieTijd = d.volgende_atje; drinkSessieStarter = d.starter;
             if (d.wacht_op_atje === true && d.huidig_slachtoffer === currentUser) { document.getElementById('atje-overlay').style.display = 'block'; if ("vibrate" in navigator) navigator.vibrate([500, 200, 500, 200, 500]); } else { document.getElementById('atje-overlay').style.display = 'none'; }
             btn.innerHTML = "🛑 Stop Drink Sessie"; btn.style.backgroundColor = "#ff3b30"; if(timerUI) timerUI.style.display = "block"; if(btnSkip) btnSkip.style.display = "block";
-            if (!vakantieModus && d.starter !== currentUser) { alert(`🍻 DRINK SESSIE GESTART door ${d.starter.toUpperCase()}! Jouw locatie wordt nu live gedeeld (bij scoren).`); if ("geolocation" in navigator) { navigator.geolocation.getCurrentPosition(() => {}, () => {}); } }
+            if (!vakantieModus && d.starter !== currentUser) { alert(`🍻 DRINK SESSIE GESTART door ${d.starter.toUpperCase()}! Jouw locatie wordt live gedeeld bij scores.`); if ("geolocation" in navigator) { navigator.geolocation.getCurrentPosition(() => {}, () => {}); } }
             vakantieModus = true; if (!sessieCheckInterval) sessieCheckInterval = setInterval(checkDrinkSessieTijd, 5000);
         } else {
             actieveDrinkSessieTijd = 0; drinkSessieStarter = ""; document.getElementById('atje-overlay').style.display = 'none'; btn.innerHTML = "🍻 Start Drink Sessie!"; btn.style.backgroundColor = "#ff9500";
@@ -190,7 +187,7 @@ function bouwLiveScorebord() {
             spelersData.push({ naam: naam, data: data, b: b, m: m, sh: sh, k: k, r: r, ra: ra, ko: ko, sl: sl, persoonTotaal: persoonTotaal });
         });
 
-        // Sorteer altijd van hoog naar laag (Leaderboard)
+        // Sorteer altijd van hoog naar laag (Echt Leaderboard)
         spelersData.sort((a, b) => b.persoonTotaal - a.persoonTotaal);
 
         let html = `<tr><th style="text-align:left; padding-left:10px;">Wie</th><th>🍺</th><th>🍹</th><th>🥃</th><th>😘</th><th>💔</th><th>🚀</th><th>🤮</th><th>🔑</th><th class="totaal-kolom">Tot</th><th></th></tr>`;
@@ -207,6 +204,7 @@ function bouwLiveScorebord() {
             let katerKans = Math.max(0, Math.min(99, 5 + (speler.b * 4) + (speler.m * 12) + (speler.sh * 15) + (speler.ko * 30))); let kleur = katerKans >= 75 ? "#ff3b30" : katerKans >= 40 ? "#ff9500" : "#34c759";
             katerHtml += `<div class="kater-regel"><div class="kater-header"><span>${speler.naam}</span><span>${katerKans}%</span></div><div class="kater-bar-bg"><div class="kater-bar-fill" style="width: ${katerKans}%; background-color: ${kleur};"></div></div></div>`;
             
+            // Medailles toevoegen
             let rank = (index + 1) + ".";
             if (index === 0) rank = "🥇"; else if (index === 1) rank = "🥈"; else if (index === 2) rank = "🥉";
             html += `<tr><td class="naam-kolom"><span style="font-size:12px; margin-right:4px;">${rank}</span>${speler.naam}</td><td>${speler.b}</td><td>${speler.m}</td><td>${speler.sh}</td><td>${speler.k}</td><td>${speler.r}</td><td>${speler.ra}</td><td>${speler.ko}</td><td>${speler.sl}</td><td class="totaal-kolom">${speler.persoonTotaal}</td><td><button class="btn-verwijder" onclick="verwijderSpeler('${speler.naam}')">X</button></td></tr>`;
@@ -469,7 +467,7 @@ function speelHogerLager(keuze) {
 }
 function gooiMexen() { let d1 = Math.floor(Math.random() * 6) + 1; let d2 = Math.floor(Math.random() * 6) + 1; document.getElementById('mex-d1').innerText = d1; document.getElementById('mex-d2').innerText = d2; let score = Math.max(d1, d2).toString() + Math.min(d1, d2).toString(); let extraText = ""; if (score === "21") { extraText = " 🚨 MEX! IEDEREEN DRINKEN!!"; if ("vibrate" in navigator) navigator.vibrate([200, 100, 200]); } else if (d1 === d2) { extraText = " (Honderden!)"; } stuurNaarFeed(`🎲 Mexen: ${currentUser.toUpperCase()} gooide ${score}${extraText}`); }
 
-// 10C. WIE IS DE SJAAK (Haalt live de vragen uit Firebase)
+// 10C. WIE IS DE SJAAK
 function startSjaakRonde() { 
     let vr = sjaakVragenArray[Math.floor(Math.random() * sjaakVragenArray.length)]; 
     db.collection('groepen').doc(currentGroup).collection('games').doc('sjaak').update({ fase: 'actief', vraag: vr, stemmen: {} }); 
@@ -556,16 +554,19 @@ function klikReflex(e) {
     db.collection('groepen').doc(currentGroup).collection('games').doc('reflex').update({ [`scores.${currentUser}`]: tijdScore }); 
 }
 
-// 10E. QUIPLASH (Haalt live de vragen uit Firebase)
-let qlHuidigeVraag = ""; let qlFase = "wachten"; let qlAntwoorden = {}; let qlStemmen = {};
-
+// 10E. QUIPLASH
 function luisterNaarQuiplash() {
     luisterNaarGameLobby('quiplash');
     db.collection('groepen').doc(currentGroup).collection('games').doc('quiplash').onSnapshot(doc => {
-        if (!doc.exists) return; const data = doc.data(); qlFase = data.fase || 'wachten'; qlHuidigeVraag = data.vraag || ''; qlAntwoorden = data.antwoorden || {}; qlStemmen = data.stemmen || {}; let qlSpelers = data.spelers || [];
+        if (!doc.exists) return; const data = doc.data(); 
+        let qlFase = data.fase || 'wachten'; 
+        let qlHuidigeVraag = data.vraag || ''; 
+        let qlAntwoorden = data.antwoorden || {}; 
+        let qlStemmen = data.stemmen || {}; 
+        let qlSpelers = data.spelers || [];
         
-        let uiAntwoorden = document.getElementById('quiplash-actief'); if(!uiAntwoorden) return;
-        uiAntwoorden.style.display = 'none'; document.getElementById('quiplash-stemmen').style.display = 'none'; document.getElementById('quiplash-resultaat').style.display = 'none';
+        let uiAntwoorden = document.getElementById('ql-antwoorden'); if(!uiAntwoorden) return;
+        uiAntwoorden.style.display = 'none'; document.getElementById('ql-stemmen').style.display = 'none'; document.getElementById('ql-resultaten').style.display = 'none';
 
         if (qlFase === 'antwoorden') {
             uiAntwoorden.style.display = 'block'; document.getElementById('ql-vraag-tekst').innerText = qlHuidigeVraag;
@@ -576,7 +577,7 @@ function luisterNaarQuiplash() {
             document.getElementById('btn-ql-forceer-stemmen').style.display = (data.host === currentUser) ? 'inline-block' : 'none';
             if(Object.keys(qlAntwoorden).length === qlSpelers.length && qlSpelers.length > 0 && data.host === currentUser) { startQuiplashStemmen(); }
         } else if (qlFase === 'stemmen') {
-            document.getElementById('quiplash-stemmen').style.display = 'block'; document.getElementById('ql-vraag-stemmen').innerText = qlHuidigeVraag;
+            document.getElementById('ql-stemmen').style.display = 'block'; document.getElementById('ql-vraag-stemmen').innerText = qlHuidigeVraag;
             document.getElementById('ql-status-stemmen').innerText = `${Object.keys(qlStemmen).length} van de ${qlSpelers.length} stemmen binnen.`;
             document.getElementById('btn-ql-forceer-resultaat').style.display = (data.host === currentUser) ? 'inline-block' : 'none';
 
@@ -592,7 +593,7 @@ function luisterNaarQuiplash() {
             }
             if(Object.keys(qlStemmen).length === qlSpelers.length && qlSpelers.length > 0 && data.host === currentUser) { toonQuiplashResultaten(); }
         } else if (qlFase === 'resultaat') {
-            document.getElementById('quiplash-resultaat').style.display = 'block'; document.getElementById('ql-vraag-resultaat').innerText = qlHuidigeVraag;
+            document.getElementById('ql-resultaten').style.display = 'block'; document.getElementById('ql-vraag-resultaat').innerText = qlHuidigeVraag;
             let resLijst = document.getElementById('ql-uitslag-lijst'); resLijst.innerHTML = ''; document.getElementById('btn-ql-volgende').style.display = (data.host === currentUser) ? 'inline-block' : 'none';
 
             let scores = {}; Object.values(qlStemmen).forEach(gestemdOp => { scores[gestemdOp] = (scores[gestemdOp] || 0) + 1; });
@@ -605,7 +606,7 @@ function luisterNaarQuiplash() {
     });
 }
 function startQuiplashRonde() {
-    let qlSpelers = []; document.querySelectorAll('#quiplash-spelers-lijst .lobby-speler-badge').forEach(el => qlSpelers.push(el.innerText.toLowerCase()));
+    let qlSpelers = []; document.querySelectorAll('#ql-spelers-lijst .lobby-speler-badge').forEach(el => qlSpelers.push(el.innerText.toLowerCase()));
     let randomSpeler = qlSpelers.length > 0 ? qlSpelers[Math.floor(Math.random() * qlSpelers.length)] : "iemand";
     let vr = quiplashVragenArray[Math.floor(Math.random() * quiplashVragenArray.length)].replace(/\[SPELER\]/g, randomSpeler.charAt(0).toUpperCase() + randomSpeler.slice(1));
     db.collection('groepen').doc(currentGroup).collection('games').doc('quiplash').update({ fase: 'antwoorden', vraag: vr, antwoorden: {}, stemmen: {} }); stuurNaarFeed(`🤐 Quiplash is GESTART! Vul je antwoorden in!`);
@@ -615,11 +616,14 @@ function startQuiplashStemmen() { db.collection('groepen').doc(currentGroup).col
 function stemOpQuiplash(opWie) { db.collection('groepen').doc(currentGroup).collection('games').doc('quiplash').update({ [`stemmen.${currentUser}`]: opWie }); }
 function toonQuiplashResultaten() {
     let maxStemmen = 0; let winnaars = []; let scores = {};
-    Object.values(qlStemmen).forEach(gestemdOp => { scores[gestemdOp] = (scores[gestemdOp] || 0) + 1; if(scores[gestemdOp] > maxStemmen) maxStemmen = scores[gestemdOp]; });
-    Object.keys(scores).forEach(naam => { if(scores[naam] === maxStemmen) winnaars.push(naam); });
-    winnaars.forEach(w => { db.collection('groepen').doc(currentGroup).collection('scores').doc(w).set({ raggen: firebase.firestore.FieldValue.increment(5) }, {merge: true}); });
-    if(winnaars.length > 0) { stuurNaarFeed(`🏆 Quiplash: ${winnaars.join(' & ').toUpperCase()} won(nen) en kregen 5 punten!`); }
-    db.collection('groepen').doc(currentGroup).collection('games').doc('quiplash').update({ fase: 'resultaat' });
+    db.collection('groepen').doc(currentGroup).collection('games').doc('quiplash').get().then(doc => {
+        let qlStemmen = doc.data().stemmen || {};
+        Object.values(qlStemmen).forEach(gestemdOp => { scores[gestemdOp] = (scores[gestemdOp] || 0) + 1; if(scores[gestemdOp] > maxStemmen) maxStemmen = scores[gestemdOp]; });
+        Object.keys(scores).forEach(naam => { if(scores[naam] === maxStemmen) winnaars.push(naam); });
+        winnaars.forEach(w => { db.collection('groepen').doc(currentGroup).collection('scores').doc(w).set({ raggen: firebase.firestore.FieldValue.increment(5) }, {merge: true}); });
+        if(winnaars.length > 0) { stuurNaarFeed(`🏆 Quiplash: ${winnaars.join(' & ').toUpperCase()} won(nen) en kregen 5 punten!`); }
+        db.collection('groepen').doc(currentGroup).collection('games').doc('quiplash').update({ fase: 'resultaat' });
+    });
 }
 
 // 10F. VLOER IS LAVA
@@ -722,7 +726,7 @@ function handleShake(e) {
     shakeLastX = acc.x; shakeLastY = acc.y; shakeLastZ = acc.z;
 }
 
-// 10H. BORDSPEL (Haalt live de opdrachten uit Firebase)
+// 10H. BORDSPEL
 function startBordspel() {
     db.collection('groepen').doc(currentGroup).collection('games').doc('bordspel').get().then(doc => {
         let d = doc.data(); let pos = {}; d.spelers.forEach(s => pos[s] = 0);

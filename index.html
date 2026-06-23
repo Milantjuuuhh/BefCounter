@@ -13,7 +13,7 @@
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     
-    <link rel="stylesheet" href="style.css?v=34">
+    <link rel="stylesheet" href="style.css?v=35">
     
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
@@ -21,7 +21,7 @@
 
     <style>
         /* SCROLL FIX */
-        body.modal-open { overflow: hidden; height: 100vh; }
+        body.modal-open { overflow: hidden; height: 100vh; position: fixed; width: 100%; }
         .game-modal { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: #f2f2f7; z-index: 2000; display: none; overflow-y: auto; padding-bottom: 50px; -webkit-overflow-scrolling: touch; }
         .btn-sluit-modal { background: rgba(255,255,255,0.9) !important; color: #007aff !important; border: none !important; padding: 12px 20px !important; border-radius: 20px !important; font-weight: bold !important; font-size: 16px !important; margin: 15px !important; cursor: pointer !important; box-shadow: 0 2px 10px rgba(0,0,0,0.1) !important; position: absolute !important; top: 15px !important; left: 15px !important; z-index: 9999 !important; display: inline-block; }
 
@@ -71,12 +71,6 @@
         <button onclick="bevestigAtje()" class="btn-primair" style="background-color:#34c759; width:80%; padding:20px; font-size:20px; margin-top:30px; border:none; border-radius:12px; color:white; font-weight:900;">ATJE VOLTOOID 🍻</button>
     </div>
 
-    <div id="swasi-overlay">
-        <h2 id="swasi-instructie" style="color: white; position: absolute; top: 15%; width: 100%; text-align: center; pointer-events: none; opacity: 0.8; font-size: 22px;">Plaats allemaal 1 vinger...</h2>
-        <div id="swasi-countdown" style="display: none;">3</div>
-        <button id="swasi-sluit-btn" class="btn-primair" onclick="stopSwasi()">Sluiten</button>
-    </div>
-
     <div class="header">
         <div id="header-controls" class="header-controls" style="display:flex; justify-content:space-between; align-items:center; width:100%;">
             <div class="coin-badge" style="margin:0; font-size:16px;">🪙 <span class="coin-weergave-class">0</span></div>
@@ -93,6 +87,7 @@
             <button class="btn-primair" onclick="login()">Inloggen</button>
             <button class="btn-secundair" onclick="registreer()">Nieuw Account</button>
         </div>
+
         <div id="lobby-scherm" class="card">
             <h2>Welkom <span id="lobby-gebruikersnaam" style="color:#007aff; text-transform:capitalize;"></span>!</h2>
             <input type="text" id="lobby-code" placeholder="Vul Groepscode in (bijv. X8R2P)" style="text-transform: uppercase;">
@@ -153,6 +148,7 @@
                     ⏩ Skip Timer
                 </button>
             </div>
+
             <div class="card" style="background: linear-gradient(135deg, #007aff, #0056b3); color: white;">
                 <h2 style="color: white; border-bottom: 1px solid rgba(255,255,255,0.2); margin-top: 0;">🛡️ Daily Co-op Missie</h2>
                 <p class="coop-titel-text" style="margin-top: 0; font-size: 15px; font-weight: bold;">Missie laden...</p>
@@ -162,6 +158,7 @@
                     <span class="coop-progress-text" style="position: absolute; width: 100%; text-align: center; top: 3px; left: 0; font-size: 13px; font-weight: bold; color: white;">0 / 0</span>
                 </div>
             </div>
+
             <div class="card" style="background: #1c1c1e; color: white;">
                 <h2 style="color: white; border-bottom: 1px solid #333; margin-top: 0;">🥷 Secret Assassin</h2>
                 <div style="background: #2c2c2e; padding: 15px; border-radius: 10px; margin-bottom: 15px; text-align: center;">
@@ -285,7 +282,7 @@
         </div>
     </div>
 
-    <div id="modal-bom" class="game-modal fullscreen-dark">
+    <div id="modal-bom" class="game-modal fullscreen-dark" style="transition: background-color 0.3s;">
         <button class="btn-sluit-modal" style="color:white; border-color:white; background:rgba(255,255,255,0.1);" onclick="sluitGame('modal-bom')">⬅ Terug</button>
         <div class="container" style="padding-top: 60px; text-align:center;">
             <div id="bom-card" style="padding:20px; border-radius:15px; background:rgba(0,0,0,0.5); transition: background-color 0.3s;">
@@ -379,7 +376,7 @@
                 <button class="ql-btn anim-delay-1" onclick="startLobby('quiplash')">Host Nieuwe Game</button>
             </div>
 
-            <div id="ql-lobby" class="lobby-box" style="display:none;">
+            <div id="ql-lobby" style="display:none;" class="lobby-box">
                 <div class="ql-titel" style="font-size:30px; margin-top:0;">LOBBY</div>
                 <p style="font-size:14px; color:#a1a1aa; margin-bottom:20px;">Wachten tot iedereen in de lobby zit...</p>
                 <button class="ql-btn anim-delay-1" id="btn-ql-join" style="border-color:#34c759; color:#34c759;" onclick="joinGame('quiplash')">Meedoen!</button>
@@ -533,6 +530,6 @@
         <div class="nav-item" onclick="wisselPagina('page-stats', this)"><span class="nav-icon">📊</span>Stats</div>
     </div>
 
-    <script src="app.js?v=34"></script>
+    <script src="app.js?v=35"></script>
 </body>
 </html>
