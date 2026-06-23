@@ -55,7 +55,6 @@ function openGame(gameId) { document.getElementById(gameId).classList.add('activ
 function sluitGame(gameId) { document.getElementById(gameId).classList.remove('active'); document.body.classList.remove('modal-open'); }
 function openInstellingen() { openGame('modal-instellingen'); document.getElementById('instellingen-groepscode').innerText = currentGroup; laadArchiefLijst(); }
 
-// Wacht totdat het scherm veilig is ingeladen!
 window.addEventListener("DOMContentLoaded", () => {
     bepaalScherm();
 });
@@ -77,11 +76,9 @@ function verwijderSpeler(naam) { if (confirm(`Verwijder ${naam}?`)) db.collectio
 function startApp() {
     document.getElementById('app-scherm').style.display = 'block'; document.getElementById('bottom-nav').style.display = 'flex'; document.getElementById('header-controls').style.display = 'flex'; document.getElementById('ingelogde-naam').innerText = currentUser;
     
-    laadSpelmateriaalUitFirebase(); // Haal alle spellen op uit de cloud!
+    laadSpelmateriaalUitFirebase(); 
     
     setupPushNotificaties(); bouwLiveScorebord(); luisterNaarLiveFeed(); luisterNaarCoopMissie(); luisterNaarDrinkSessie(); laadScorritoLijsten();
-
-    // Start Games Listeners
     luisterNaarReflex(); luisterNaarQuiplash(); luisterNaarLava(); luisterNaarShake(); luisterNaarSjaak(); luisterNaarTijdbom(); luisterNaarBordspel();
 }
 
@@ -89,7 +86,6 @@ function startApp() {
 // 4. FIREBASE SPELMATERIAAL INLADEN
 // ==========================================
 function laadSpelmateriaalUitFirebase() {
-    // 1. Zorgt dat de mapjes in Firebase eenmalig worden aangemaakt met dummy data
     const initSjaak = ["Wie kotst vanavond als eerste?", "Wie regelt er vannacht de minste actie?", "Wie is morgen de grootste jankerd met een kater?", "Wie doet de domste uitspraak vanavond?"];
     const initQuiplash = ["De echte reden waarom [SPELER] nog steeds single is, is ___.", "Wat vind je als je een blacklight schijnt op de slaapkamer van [SPELER]?", "Het allerslechtste excuus van [SPELER] om niet te adten is ___."];
     const initBordspel = ["Adt je glas helemaal leeg! 🍻", "Deel 3 slokken uit aan degene tegenover je.", "Jongens drinken 2 slokken.", "Speel Steen-Papier-Schaar met degene links van je. Verliezer drinkt 3 slokken.", "Neem 2 slokken water (Laf)."];
@@ -98,7 +94,6 @@ function laadSpelmateriaalUitFirebase() {
     db.collection('spelmateriaal').doc('quiplash').set({ vragen: initQuiplash }, { merge: true });
     db.collection('spelmateriaal').doc('bordspel').set({ opdrachten: initBordspel }, { merge: true });
 
-    // 2. Haalt de live arrays altijd op uit Firebase!
     db.collection('spelmateriaal').doc('sjaak').onSnapshot(doc => { if (doc.exists && doc.data().vragen) sjaakVragenArray = doc.data().vragen; });
     db.collection('spelmateriaal').doc('quiplash').onSnapshot(doc => { if (doc.exists && doc.data().vragen) quiplashVragenArray = doc.data().vragen; });
     db.collection('spelmateriaal').doc('bordspel').onSnapshot(doc => { if (doc.exists && doc.data().opdrachten) bordOpdrachtenArray = doc.data().opdrachten; });
@@ -136,7 +131,7 @@ function luisterNaarDrinkSessie() {
             let d = doc.data(); actieveDrinkSessieTijd = d.volgende_atje; drinkSessieStarter = d.starter;
             if (d.wacht_op_atje === true && d.huidig_slachtoffer === currentUser) { document.getElementById('atje-overlay').style.display = 'block'; if ("vibrate" in navigator) navigator.vibrate([500, 200, 500, 200, 500]); } else { document.getElementById('atje-overlay').style.display = 'none'; }
             btn.innerHTML = "🛑 Stop Drink Sessie"; btn.style.backgroundColor = "#ff3b30"; if(timerUI) timerUI.style.display = "block"; if(btnSkip) btnSkip.style.display = "block";
-            if (!vakantieModus && d.starter !== currentUser) { alert(`🍻 DRINK SESSIE GESTART door ${d.starter.toUpperCase()}! Jouw locatie wordt live gedeeld bij scores.`); if ("geolocation" in navigator) { navigator.geolocation.getCurrentPosition(() => {}, () => {}); } }
+            if (!vakantieModus && d.starter !== currentUser) { alert(`🍻 DRINK SESSIE GESTART door ${d.starter.toUpperCase()}! Jouw locatie wordt nu live gedeeld bij scores.`); if ("geolocation" in navigator) { navigator.geolocation.getCurrentPosition(() => {}, () => {}); } }
             vakantieModus = true; if (!sessieCheckInterval) sessieCheckInterval = setInterval(checkDrinkSessieTijd, 5000);
         } else {
             actieveDrinkSessieTijd = 0; drinkSessieStarter = ""; document.getElementById('atje-overlay').style.display = 'none'; btn.innerHTML = "🍻 Start Drink Sessie!"; btn.style.backgroundColor = "#ff9500";
@@ -392,9 +387,13 @@ function startLobby(gameNaam) { db.collection('groepen').doc(currentGroup).colle
 function joinGame(gameNaam) { db.collection('groepen').doc(currentGroup).collection('games').doc(gameNaam).update({ spelers: firebase.firestore.FieldValue.arrayUnion(currentUser) }); }
 function verlaatGame(gameNaam) {
     db.collection('groepen').doc(currentGroup).collection('games').doc(gameNaam).get().then(doc => {
-        if(doc.exists && doc.data().spelers) {
-            if(doc.data().host === currentUser) { db.collection('groepen').doc(currentGroup).collection('games').doc(gameNaam).update({fase: 'wachten', spelers: []}); } 
-            else { db.collection('groepen').doc(currentGroup).collection('games').doc(gameNaam).update({ spelers: firebase.firestore.FieldValue.arrayRemove(currentUser) }); }
+        if(doc.exists) {
+            // Als de host weggaat, reset dan de game compleet zodat hij ECHT afsluit!
+            if(doc.data().host === currentUser) { 
+                resetGameLobby(gameNaam); 
+            } else { 
+                db.collection('groepen').doc(currentGroup).collection('games').doc(gameNaam).update({ spelers: firebase.firestore.FieldValue.arrayRemove(currentUser) }); 
+            }
         }
     });
 }
@@ -558,15 +557,24 @@ function klikReflex(e) {
 function luisterNaarQuiplash() {
     luisterNaarGameLobby('quiplash');
     db.collection('groepen').doc(currentGroup).collection('games').doc('quiplash').onSnapshot(doc => {
-        if (!doc.exists) return; const data = doc.data(); 
+        if (!doc.exists) return; 
+        const data = doc.data(); 
         let qlFase = data.fase || 'wachten'; 
         let qlHuidigeVraag = data.vraag || ''; 
         let qlAntwoorden = data.antwoorden || {}; 
         let qlStemmen = data.stemmen || {}; 
         let qlSpelers = data.spelers || [];
         
-        let uiAntwoorden = document.getElementById('ql-antwoorden'); if(!uiAntwoorden) return;
-        uiAntwoorden.style.display = 'none'; document.getElementById('ql-stemmen').style.display = 'none'; document.getElementById('ql-resultaten').style.display = 'none';
+        let uiAntwoorden = document.getElementById('quiplash-actief'); 
+        let uiStemmen = document.getElementById('quiplash-stemmen'); 
+        let uiResultaat = document.getElementById('quiplash-resultaat'); 
+        
+        // Safety check if IDs don't exist yet
+        if(!uiAntwoorden || !uiStemmen || !uiResultaat) return;
+
+        uiAntwoorden.style.display = 'none'; 
+        uiStemmen.style.display = 'none'; 
+        uiResultaat.style.display = 'none';
 
         if (qlFase === 'antwoorden') {
             uiAntwoorden.style.display = 'block'; document.getElementById('ql-vraag-tekst').innerText = qlHuidigeVraag;
@@ -577,7 +585,7 @@ function luisterNaarQuiplash() {
             document.getElementById('btn-ql-forceer-stemmen').style.display = (data.host === currentUser) ? 'inline-block' : 'none';
             if(Object.keys(qlAntwoorden).length === qlSpelers.length && qlSpelers.length > 0 && data.host === currentUser) { startQuiplashStemmen(); }
         } else if (qlFase === 'stemmen') {
-            document.getElementById('ql-stemmen').style.display = 'block'; document.getElementById('ql-vraag-stemmen').innerText = qlHuidigeVraag;
+            uiStemmen.style.display = 'block'; document.getElementById('ql-vraag-stemmen').innerText = qlHuidigeVraag;
             document.getElementById('ql-status-stemmen').innerText = `${Object.keys(qlStemmen).length} van de ${qlSpelers.length} stemmen binnen.`;
             document.getElementById('btn-ql-forceer-resultaat').style.display = (data.host === currentUser) ? 'inline-block' : 'none';
 
@@ -593,7 +601,7 @@ function luisterNaarQuiplash() {
             }
             if(Object.keys(qlStemmen).length === qlSpelers.length && qlSpelers.length > 0 && data.host === currentUser) { toonQuiplashResultaten(); }
         } else if (qlFase === 'resultaat') {
-            document.getElementById('ql-resultaten').style.display = 'block'; document.getElementById('ql-vraag-resultaat').innerText = qlHuidigeVraag;
+            uiResultaat.style.display = 'block'; document.getElementById('ql-vraag-resultaat').innerText = qlHuidigeVraag;
             let resLijst = document.getElementById('ql-uitslag-lijst'); resLijst.innerHTML = ''; document.getElementById('btn-ql-volgende').style.display = (data.host === currentUser) ? 'inline-block' : 'none';
 
             let scores = {}; Object.values(qlStemmen).forEach(gestemdOp => { scores[gestemdOp] = (scores[gestemdOp] || 0) + 1; });
@@ -606,7 +614,7 @@ function luisterNaarQuiplash() {
     });
 }
 function startQuiplashRonde() {
-    let qlSpelers = []; document.querySelectorAll('#ql-spelers-lijst .lobby-speler-badge').forEach(el => qlSpelers.push(el.innerText.toLowerCase()));
+    let qlSpelers = []; document.querySelectorAll('#quiplash-spelers-lijst .lobby-speler-badge').forEach(el => qlSpelers.push(el.innerText.toLowerCase()));
     let randomSpeler = qlSpelers.length > 0 ? qlSpelers[Math.floor(Math.random() * qlSpelers.length)] : "iemand";
     let vr = quiplashVragenArray[Math.floor(Math.random() * quiplashVragenArray.length)].replace(/\[SPELER\]/g, randomSpeler.charAt(0).toUpperCase() + randomSpeler.slice(1));
     db.collection('groepen').doc(currentGroup).collection('games').doc('quiplash').update({ fase: 'antwoorden', vraag: vr, antwoorden: {}, stemmen: {} }); stuurNaarFeed(`🤐 Quiplash is GESTART! Vul je antwoorden in!`);
