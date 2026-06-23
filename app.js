@@ -16,18 +16,14 @@ var currentUser = localStorage.getItem('bef_user');
 var currentGroup = localStorage.getItem('bef_group');
 var unsubscribeScores = null, unsubscribeFeed = null, unsubscribeBom = null;
 var mijnTotalePunten = 0, mijnGedraaideSpins = 0;
-var isSpinning = false, isDrinkSessieActief = false, spelersLijst = []; 
+var isSpinning = false, vakantieModus = false, spelersLijst = []; 
 var worldMap = null, mapMarkers = [], pieChartInstance = null, barChartInstance = null;
 var mijnBingoKaart = [], mijnBingoStatus = [];
-let actieveCoopMissie = null;
 
 // Globale arrays voor Live Firebase Spelmateriaal
 var sjaakVragenArray = ["Laden..."];
 var quiplashVragenArray = ["Laden..."];
 var bordOpdrachtenArray = ["Laden..."];
-var assassinMissiesArray = ["Laden..."];
-var coopMissiesArray = [{ titel: "Laden...", doel: 10, types: ['bier'] }];
-const bingoOpdrachten = ["Neem een shot met de barman", "Regel gratis pils", "Zeg 10 min helemaal niks", "Wijs iemand af", "Trek een Atje", "Eet laat nog iets vets", "Raak iets kwijt", "Krijg een Reject", "Steel een aansteker", "Deel 3 slokken uit", "Drink een uur water", "Klim ergens op", "Laat je trakteren", "Dans battle", "Neem een dubbel shot"];
 
 document.body.addEventListener('touchstart', function() { 
     const geluid = document.getElementById('notificatie-geluid'); 
@@ -54,8 +50,22 @@ function vraagSensorToestemming() { if (typeof DeviceOrientationEvent !== 'undef
 // ==========================================
 // 3. NAVIGATIE, AUTH & UI FUNCTIES
 // ==========================================
-function openGame(gameId) { document.getElementById(gameId).classList.add('active'); document.body.classList.add('modal-open'); window.scrollTo(0,0); }
-function sluitGame(gameId) { document.getElementById(gameId).classList.remove('active'); document.body.classList.remove('modal-open'); }
+
+// FIX: Modals nu strak blokkeren en onzichtbaar maken!
+function openGame(gameId) { 
+    let modal = document.getElementById(gameId);
+    modal.classList.add('active'); 
+    modal.style.display = 'block'; 
+    document.body.classList.add('modal-open'); 
+    window.scrollTo(0,0); 
+}
+function sluitGame(gameId) { 
+    let modal = document.getElementById(gameId);
+    modal.classList.remove('active'); 
+    modal.style.display = 'none'; 
+    document.body.classList.remove('modal-open'); 
+}
+
 function openInstellingen() { openGame('modal-instellingen'); document.getElementById('instellingen-groepscode').innerText = currentGroup; laadArchiefLijst(); }
 
 window.addEventListener("DOMContentLoaded", () => {
@@ -80,10 +90,8 @@ function startApp() {
     document.getElementById('app-scherm').style.display = 'block'; document.getElementById('bottom-nav').style.display = 'flex'; document.getElementById('header-controls').style.display = 'flex'; document.getElementById('ingelogde-naam').innerText = currentUser;
     
     laadSpelmateriaalUitFirebase(); 
-    
     setupPushNotificaties(); bouwLiveScorebord(); luisterNaarLiveFeed(); luisterNaarCoopMissie(); luisterNaarDrinkSessie(); laadScorritoLijsten();
 
-    // Start Games Listeners
     luisterNaarReflex(); luisterNaarQuiplash(); luisterNaarLava(); luisterNaarShake(); luisterNaarSjaak(); luisterNaarTijdbom(); luisterNaarBordspel();
 }
 
@@ -91,7 +99,6 @@ function startApp() {
 // 4. FIREBASE SPELMATERIAAL INLADEN
 // ==========================================
 function laadSpelmateriaalUitFirebase() {
-    // 1. Zorgt dat de mapjes in Firebase eenmalig worden aangemaakt met dummy data
     const initSjaak = ["Wie kotst vanavond als eerste?", "Wie regelt er vannacht de minste actie?", "Wie is morgen de grootste jankerd met een kater?", "Wie doet de domste uitspraak vanavond?"];
     const initQuiplash = ["De echte reden waarom [SPELER] nog steeds single is, is ___.", "Wat vind je als je een blacklight schijnt op de slaapkamer van [SPELER]?", "Het allerslechtste excuus van [SPELER] om niet te adten is ___."];
     const initBordspel = ["Adt je glas helemaal leeg! 🍻", "Deel 3 slokken uit aan degene tegenover je.", "Jongens drinken 2 slokken.", "Speel Steen-Papier-Schaar met degene links van je. Verliezer drinkt 3 slokken.", "Neem 2 slokken water (Laf)."];
@@ -104,7 +111,6 @@ function laadSpelmateriaalUitFirebase() {
     db.collection('spelmateriaal').doc('coop').set({ missies: initCoop }, { merge: true });
     db.collection('spelmateriaal').doc('assassin').set({ missies: initAssassin }, { merge: true });
 
-    // 2. Haalt de live arrays altijd op uit Firebase!
     db.collection('spelmateriaal').doc('sjaak').onSnapshot(doc => { if (doc.exists && doc.data().vragen) sjaakVragenArray = doc.data().vragen; });
     db.collection('spelmateriaal').doc('quiplash').onSnapshot(doc => { if (doc.exists && doc.data().vragen) quiplashVragenArray = doc.data().vragen; });
     db.collection('spelmateriaal').doc('bordspel').onSnapshot(doc => { if (doc.exists && doc.data().opdrachten) bordOpdrachtenArray = doc.data().opdrachten; });
@@ -169,7 +175,7 @@ function checkDrinkSessieTijd() {
 }
 
 // ==========================================
-// 6. SCOREBORD, SYNC & MAPS (MET LEADERBOARD UPDATE)
+// 6. SCOREBORD, SYNC & MAPS
 // ==========================================
 function pasScoreAan(categorie, bedrag, emojiNaam) {
     if ("vibrate" in navigator) navigator.vibrate(50);
@@ -177,7 +183,6 @@ function pasScoreAan(categorie, bedrag, emojiNaam) {
     if (actieveCoopMissie && bedrag > 0 && actieveCoopMissie.types.includes(categorie) && !actieveCoopMissie.behaald) { db.collection('groepen').doc(currentGroup).collection('coop').doc('status').update({ score: firebase.firestore.FieldValue.increment(bedrag) }); }
     let startBericht = `${currentUser.charAt(0).toUpperCase() + currentUser.slice(1)} ${bedrag > 0 ? 'scoort +1 bij' : 'deed een correctie bij'} ${emojiNaam}`;
     
-    // Alleen pin op de map zetten als de Drink Sessie aan staat!
     if (isDrinkSessieActief && "geolocation" in navigator) {
         navigator.geolocation.getCurrentPosition((pos) => { db.collection('groepen').doc(currentGroup).collection('locaties').add({ naam: currentUser, actie: emojiNaam, bedrag: bedrag, lat: pos.coords.latitude, lng: pos.coords.longitude, tijd: new Date().toISOString() }); stuurNaarFeed(startBericht); }, () => stuurNaarFeed(startBericht));
     } else { stuurNaarFeed(startBericht); }
@@ -197,7 +202,7 @@ function bouwLiveScorebord() {
             spelersData.push({ naam: naam, data: data, b: b, m: m, sh: sh, k: k, r: r, ra: ra, ko: ko, sl: sl, persoonTotaal: persoonTotaal });
         });
 
-        // Sorteer altijd van hoog naar laag (Echt Leaderboard)
+        // Sorteer altijd van hoog naar laag (Leaderboard)
         spelersData.sort((a, b) => b.persoonTotaal - a.persoonTotaal);
 
         let html = `<tr><th style="text-align:left; padding-left:10px;">Wie</th><th>🍺</th><th>🍹</th><th>🥃</th><th>😘</th><th>💔</th><th>🚀</th><th>🤮</th><th>🔑</th><th class="totaal-kolom">Tot</th><th></th></tr>`;
@@ -214,6 +219,7 @@ function bouwLiveScorebord() {
             let katerKans = Math.max(0, Math.min(99, 5 + (speler.b * 4) + (speler.m * 12) + (speler.sh * 15) + (speler.ko * 30))); let kleur = katerKans >= 75 ? "#ff3b30" : katerKans >= 40 ? "#ff9500" : "#34c759";
             katerHtml += `<div class="kater-regel"><div class="kater-header"><span>${speler.naam}</span><span>${katerKans}%</span></div><div class="kater-bar-bg"><div class="kater-bar-fill" style="width: ${katerKans}%; background-color: ${kleur};"></div></div></div>`;
             
+            // Medailles toevoegen
             let rank = (index + 1) + ".";
             if (index === 0) rank = "🥇"; else if (index === 1) rank = "🥈"; else if (index === 2) rank = "🥉";
             html += `<tr><td class="naam-kolom"><span style="font-size:12px; margin-right:4px;">${rank}</span>${speler.naam}</td><td>${speler.b}</td><td>${speler.m}</td><td>${speler.sh}</td><td>${speler.k}</td><td>${speler.r}</td><td>${speler.ra}</td><td>${speler.ko}</td><td>${speler.sl}</td><td class="totaal-kolom">${speler.persoonTotaal}</td><td><button class="btn-verwijder" onclick="verwijderSpeler('${speler.naam}')">X</button></td></tr>`;
@@ -423,7 +429,7 @@ function luisterNaarGameLobby(gameNaam) {
             if(wachtEl) wachtEl.style.display = 'none'; if(lobbyEl) lobbyEl.style.display = 'block';
             if(lijstEl) lijstEl.innerHTML = spelers.map(s => `<span class="lobby-speler-badge">${s}</span>`).join('');
             if(joinBtn) joinBtn.style.display = spelers.includes(currentUser) ? 'none' : 'inline-block';
-            if(startBtn) startBtn.style.display = (d.host === currentUser && spelers.length > 1) ? 'inline-block' : 'none';
+            if(startBtn) startBtn.style.display = (d.host === currentUser && spelers.length >= 1) ? 'inline-block' : 'none'; // Fix: Ook singleplayer!
         } else {
             if(wachtEl) wachtEl.style.display = 'none'; if(lobbyEl) lobbyEl.style.display = 'none';
         }
@@ -431,12 +437,23 @@ function luisterNaarGameLobby(gameNaam) {
 }
 
 // ==========================================
-// 10. GAMES LOGICA
+// 10. GAMES LOGICA (ALLES IN 1 BESTAND)
 // ==========================================
 
 // 10A. TIJDBOM
-function startTijdbom() { if (spelersLijst.length < 2) return alert("Minimaal 2 spelers nodig."); let randomSpeler = spelersLijst[Math.floor(Math.random() * spelersLijst.length)]; let ontplofTijd = Date.now() + (Math.floor(Math.random() * 45000) + 30000); db.collection('groepen').doc(currentGroup).collection('tijdbom').doc('status').set({ actief: true, houder: randomSpeler, eindTijdUnix: ontplofTijd }); stuurNaarFeed(`💣 TIJDBOM GESTART! Hij ligt nu bij ${randomSpeler.toUpperCase()}!`); }
-function gooiBomDoor() { let andereSpelers = spelersLijst.filter(n => n !== currentUser); let slachtoffer = andereSpelers[Math.floor(Math.random() * andereSpelers.length)]; if ("vibrate" in navigator) navigator.vibrate(50); db.collection('groepen').doc(currentGroup).collection('tijdbom').doc('status').update({ houder: slachtoffer }); }
+function startTijdbom() { 
+    if (spelersLijst.length < 1) return alert("Geen spelers gevonden."); 
+    let randomSpeler = spelersLijst[Math.floor(Math.random() * spelersLijst.length)]; 
+    let ontplofTijd = Date.now() + (Math.floor(Math.random() * 45000) + 30000); 
+    db.collection('groepen').doc(currentGroup).collection('tijdbom').doc('status').set({ actief: true, houder: randomSpeler, eindTijdUnix: ontplofTijd }); 
+    stuurNaarFeed(`💣 TIJDBOM GESTART! Hij ligt nu bij ${randomSpeler.toUpperCase()}!`); 
+}
+function gooiBomDoor() { 
+    let andereSpelers = spelersLijst.filter(n => n !== currentUser); 
+    let slachtoffer = andereSpelers.length > 0 ? andereSpelers[Math.floor(Math.random() * andereSpelers.length)] : currentUser; // Fix: Singleplayer
+    if ("vibrate" in navigator) navigator.vibrate(50); 
+    db.collection('groepen').doc(currentGroup).collection('tijdbom').doc('status').update({ houder: slachtoffer }); 
+}
 function luisterNaarTijdbom() {
     if(unsubscribeBom) unsubscribeBom();
     unsubscribeBom = db.collection('groepen').doc(currentGroup).collection('tijdbom').doc('status').onSnapshot((doc) => {
@@ -479,7 +496,7 @@ function speelHogerLager(keuze) {
 }
 function gooiMexen() { let d1 = Math.floor(Math.random() * 6) + 1; let d2 = Math.floor(Math.random() * 6) + 1; document.getElementById('mex-d1').innerText = d1; document.getElementById('mex-d2').innerText = d2; let score = Math.max(d1, d2).toString() + Math.min(d1, d2).toString(); let extraText = ""; if (score === "21") { extraText = " 🚨 MEX! IEDEREEN DRINKEN!!"; if ("vibrate" in navigator) navigator.vibrate([200, 100, 200]); } else if (d1 === d2) { extraText = " (Honderden!)"; } stuurNaarFeed(`🎲 Mexen: ${currentUser.toUpperCase()} gooide ${score}${extraText}`); }
 
-// 10C. WIE IS DE SJAAK (Haalt live de vragen uit Firebase)
+// 10C. WIE IS DE SJAAK 
 function startSjaakRonde() { 
     let vr = sjaakVragenArray[Math.floor(Math.random() * sjaakVragenArray.length)]; 
     db.collection('groepen').doc(currentGroup).collection('games').doc('sjaak').update({ fase: 'actief', vraag: vr, stemmen: {} }); 
@@ -566,7 +583,7 @@ function klikReflex(e) {
     db.collection('groepen').doc(currentGroup).collection('games').doc('reflex').update({ [`scores.${currentUser}`]: tijdScore }); 
 }
 
-// 10E. QUIPLASH (Haalt live de vragen uit Firebase)
+// 10E. QUIPLASH (FIXED ID SELECTOR)
 function luisterNaarQuiplash() {
     luisterNaarGameLobby('quiplash');
     db.collection('groepen').doc(currentGroup).collection('games').doc('quiplash').onSnapshot(doc => {
@@ -618,7 +635,7 @@ function luisterNaarQuiplash() {
     });
 }
 function startQuiplashRonde() {
-    let qlSpelers = []; document.querySelectorAll('#ql-spelers-lijst .lobby-speler-badge').forEach(el => qlSpelers.push(el.innerText.toLowerCase()));
+    let qlSpelers = []; document.querySelectorAll('#quiplash-spelers-lijst .lobby-speler-badge').forEach(el => qlSpelers.push(el.innerText.toLowerCase()));
     let randomSpeler = qlSpelers.length > 0 ? qlSpelers[Math.floor(Math.random() * qlSpelers.length)] : "iemand";
     let vr = quiplashVragenArray[Math.floor(Math.random() * quiplashVragenArray.length)].replace(/\[SPELER\]/g, randomSpeler.charAt(0).toUpperCase() + randomSpeler.slice(1));
     db.collection('groepen').doc(currentGroup).collection('games').doc('quiplash').update({ fase: 'antwoorden', vraag: vr, antwoorden: {}, stemmen: {} }); stuurNaarFeed(`🤐 Quiplash is GESTART! Vul je antwoorden in!`);
@@ -701,8 +718,8 @@ function checkLavaOrientatie(e) {
 let shakeTimerInterval = null; let shakeScore = 0; let shakeBezig = false; let shakeLastX = null, shakeLastY = null, shakeLastZ = null;
 function startShakeRonde() {
     let spelers = []; document.querySelectorAll('#shake-spelers-lijst .lobby-speler-badge').forEach(el => spelers.push(el.innerText.toLowerCase()));
-    if(spelers.length < 2) return alert("Minimaal 2 spelers in de lobby nodig.");
-    let p1 = spelers[Math.floor(Math.random()*spelers.length)]; let over = spelers.filter(x => x !== p1); let p2 = over[Math.floor(Math.random()*over.length)];
+    if(spelers.length < 1) return alert("Geen spelers in de lobby.");
+    let p1 = spelers[Math.floor(Math.random()*spelers.length)]; let over = spelers.filter(x => x !== p1); let p2 = over.length > 0 ? over[Math.floor(Math.random()*over.length)] : p1; // Fix: Ook singleplayer
     db.collection('groepen').doc(currentGroup).collection('games').doc('shake').update({ fase: 'actief', eindTijd: Date.now() + 10000, p1: p1, p2: p2, scores: { [p1]:0, [p2]:0 } }); stuurNaarFeed(`📳 SHAKE DUEL: ${p1.toUpperCase()} VS ${p2.toUpperCase()}!`);
 }
 function luisterNaarShake() {
@@ -738,7 +755,7 @@ function handleShake(e) {
     shakeLastX = acc.x; shakeLastY = acc.y; shakeLastZ = acc.z;
 }
 
-// 10H. BORDSPEL (Haalt live de opdrachten uit Firebase)
+// 10H. BORDSPEL
 function startBordspel() {
     db.collection('groepen').doc(currentGroup).collection('games').doc('bordspel').get().then(doc => {
         let d = doc.data(); let pos = {}; d.spelers.forEach(s => pos[s] = 0);
