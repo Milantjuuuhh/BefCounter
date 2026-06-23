@@ -448,7 +448,28 @@ function draaiRad() {
     db.collection('groepen').doc(currentGroup).collection('scores').doc(currentUser).set({ spins: firebase.firestore.FieldValue.increment(1) }, { merge: true });
     let draaiCounter = 0; const box = document.getElementById('rad-box');
     const interval = setInterval(() => {
-        const basisRadOpties = ["🍻 Atje!", "🥃 Shotje!", "👉 Deel 2 slokken uit", "🎯 [SPELER] adt!", "💧 Drink water (Laf)", "🔄 Wissel drankje", "🚀 Raggen punt!", "🍻 IEDEREEN ADTEN!"];
+        const basisRadOpties = [
+            "🍻 [SPELER] trekt NU een Atje!",
+            "📱 Jij mag 1 gênant appje sturen vanaf de telefoon van [SPELER].",
+            "💃 [SPELER] doet de Macarena midden in de menigte. Weigeren = Adten!",
+            "🥃 [SPELER] haalt nú op eigen kosten een shotje voor jou.",
+            "🤫 [SPELER] mag 10 minuten niet praten. Elk woord = 1 flinke slok.",
+            "🤝 [SPELER] moet een wildvreemde om een stevige knuffel vragen.",
+            "📸 [SPELER] moet een lelijke selfie maken met een onbekende.",
+            "🍹 Jij mixt 3 dranken door elkaar. [SPELER] neemt er een grote slok van!",
+            "🐔 [SPELER] loopt 1 minuut als een tokkende kip over het terras/straat.",
+            "🗣️ [SPELER] praat een kwartier met een zwaar accent. Foutje = drinken.",
+            "🤮 Geef [SPELER] +5 Raggen strafpunten én hij/zij trekt een Atje!",
+            "👕 [SPELER] draagt de rest van het uur zijn/haar shirt binnenstebuiten.",
+            "🎤 [SPELER] zingt luidkeels een kinderliedje. Weigeren = 10 slokken.",
+            "🧊 [SPELER] stopt een ijsblokje in zijn onderbroek tot het smelt.",
+            "😘 [SPELER] geeft een keiharde, ongemakkelijke knipoog aan de ober/serveerster.",
+            "🏋️ [SPELER] doet 10 push-ups in het openbaar. Falen = Adten!",
+            "🤚 [SPELER] mag 15 min z'n glas niet met z'n handen pakken (iemand moet hem voeren).",
+            "🪑 [SPELER] mag 15 minuten lang nergens op zitten.",
+            "💸 [SPELER] betaalt het volgende drankje voor jou!",
+            "🐾 [SPELER] moet een minuut lang over straat lopen alsof hij jouw uitgelaten hondje is."
+        ];
         let temp = basisRadOpties[Math.floor(Math.random() * basisRadOpties.length)]; document.getElementById('rad-uitkomst').innerText = temp.replace("[SPELER]","iemand"); 
         box.style.background = (draaiCounter % 2 === 0) ? "linear-gradient(135deg, #34c759, #30b050)" : "linear-gradient(135deg, #ff9500, #ff2d55)";
         if (++draaiCounter > 20) { 
