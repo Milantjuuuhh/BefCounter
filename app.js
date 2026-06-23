@@ -12,6 +12,7 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore();
 
+// Gebruik 'var' voor globale variabelen (voorkomt vastlopen)
 var currentUser = localStorage.getItem('bef_user');
 var currentGroup = localStorage.getItem('bef_group');
 var unsubscribeScores = null, unsubscribeFeed = null, unsubscribeBom = null;
@@ -50,8 +51,6 @@ function vraagSensorToestemming() { if (typeof DeviceOrientationEvent !== 'undef
 // ==========================================
 // 3. NAVIGATIE, AUTH & UI FUNCTIES
 // ==========================================
-
-// FIX: Modals nu strak blokkeren en onzichtbaar maken!
 function openGame(gameId) { 
     let modal = document.getElementById(gameId);
     modal.classList.add('active'); 
@@ -65,7 +64,6 @@ function sluitGame(gameId) {
     modal.style.display = 'none'; 
     document.body.classList.remove('modal-open'); 
 }
-
 function openInstellingen() { openGame('modal-instellingen'); document.getElementById('instellingen-groepscode').innerText = currentGroup; laadArchiefLijst(); }
 
 window.addEventListener("DOMContentLoaded", () => {
@@ -129,10 +127,10 @@ function toggleDrinkSessie() {
         if (!isActief) {
             setupPushNotificaties(false); let wachttijd = Math.floor(Math.random() * (15 * 60 * 1000)) + (5 * 60 * 1000);
             db.collection('groepen').doc(currentGroup).collection('sessie').doc('status').set({ actief: true, starter: currentUser, volgende_atje: Date.now() + wachttijd, wacht_op_atje: false, huidig_slachtoffer: "" });
-            stuurNaarFeed(`🍻 DRINK SESSIE GESTART door ${currentUser.toUpperCase()}! Tracker is nu actief.`); isDrinkSessieActief = true; if ("geolocation" in navigator) { navigator.geolocation.getCurrentPosition(() => {}, () => {}); }
+            stuurNaarFeed(`🍻 DRINK SESSIE GESTART door ${currentUser.toUpperCase()}! Tracker is nu actief.`); vakantieModus = true; if ("geolocation" in navigator) { navigator.geolocation.getCurrentPosition(() => {}, () => {}); }
         } else {
             db.collection('groepen').doc(currentGroup).collection('sessie').doc('status').set({ actief: false, starter: '', volgende_atje: 0, wacht_op_atje: false, huidig_slachtoffer: "" });
-            stuurNaarFeed(`🛑 Drink Sessie is gestopt door ${currentUser.toUpperCase()}. Tracker uit.`); isDrinkSessieActief = false;
+            stuurNaarFeed(`🛑 Drink Sessie is gestopt door ${currentUser.toUpperCase()}. Tracker uit.`); vakantieModus = false;
         }
     });
 }
@@ -150,11 +148,11 @@ function luisterNaarDrinkSessie() {
             let d = doc.data(); actieveDrinkSessieTijd = d.volgende_atje; drinkSessieStarter = d.starter;
             if (d.wacht_op_atje === true && d.huidig_slachtoffer === currentUser) { document.getElementById('atje-overlay').style.display = 'block'; if ("vibrate" in navigator) navigator.vibrate([500, 200, 500, 200, 500]); } else { document.getElementById('atje-overlay').style.display = 'none'; }
             btn.innerHTML = "🛑 Stop Drink Sessie"; btn.style.backgroundColor = "#ff3b30"; if(timerUI) timerUI.style.display = "block"; if(btnSkip) btnSkip.style.display = "block";
-            if (!isDrinkSessieActief && d.starter !== currentUser) { alert(`🍻 DRINK SESSIE GESTART door ${d.starter.toUpperCase()}! Jouw locatie wordt live gedeeld bij scores.`); if ("geolocation" in navigator) { navigator.geolocation.getCurrentPosition(() => {}, () => {}); } }
-            isDrinkSessieActief = true; if (!sessieCheckInterval) sessieCheckInterval = setInterval(checkDrinkSessieTijd, 5000);
+            if (!vakantieModus && d.starter !== currentUser) { alert(`🍻 DRINK SESSIE GESTART door ${d.starter.toUpperCase()}! Jouw locatie wordt live gedeeld bij scores.`); if ("geolocation" in navigator) { navigator.geolocation.getCurrentPosition(() => {}, () => {}); } }
+            vakantieModus = true; if (!sessieCheckInterval) sessieCheckInterval = setInterval(checkDrinkSessieTijd, 5000);
         } else {
             actieveDrinkSessieTijd = 0; drinkSessieStarter = ""; document.getElementById('atje-overlay').style.display = 'none'; btn.innerHTML = "🍻 Start Drink Sessie!"; btn.style.backgroundColor = "#ff9500";
-            if(timerUI) timerUI.style.display = "none"; if(btnSkip) btnSkip.style.display = "none"; isDrinkSessieActief = false; if (sessieCheckInterval) { clearInterval(sessieCheckInterval); sessieCheckInterval = null; }
+            if(timerUI) timerUI.style.display = "none"; if(btnSkip) btnSkip.style.display = "none"; vakantieModus = false; if (sessieCheckInterval) { clearInterval(sessieCheckInterval); sessieCheckInterval = null; }
         }
     });
 }
@@ -183,7 +181,7 @@ function pasScoreAan(categorie, bedrag, emojiNaam) {
     if (actieveCoopMissie && bedrag > 0 && actieveCoopMissie.types.includes(categorie) && !actieveCoopMissie.behaald) { db.collection('groepen').doc(currentGroup).collection('coop').doc('status').update({ score: firebase.firestore.FieldValue.increment(bedrag) }); }
     let startBericht = `${currentUser.charAt(0).toUpperCase() + currentUser.slice(1)} ${bedrag > 0 ? 'scoort +1 bij' : 'deed een correctie bij'} ${emojiNaam}`;
     
-    if (isDrinkSessieActief && "geolocation" in navigator) {
+    if (vakantieModus && "geolocation" in navigator) {
         navigator.geolocation.getCurrentPosition((pos) => { db.collection('groepen').doc(currentGroup).collection('locaties').add({ naam: currentUser, actie: emojiNaam, bedrag: bedrag, lat: pos.coords.latitude, lng: pos.coords.longitude, tijd: new Date().toISOString() }); stuurNaarFeed(startBericht); }, () => stuurNaarFeed(startBericht));
     } else { stuurNaarFeed(startBericht); }
 }
@@ -202,7 +200,7 @@ function bouwLiveScorebord() {
             spelersData.push({ naam: naam, data: data, b: b, m: m, sh: sh, k: k, r: r, ra: ra, ko: ko, sl: sl, persoonTotaal: persoonTotaal });
         });
 
-        // Sorteer altijd van hoog naar laag (Leaderboard)
+        // Sorteer altijd van hoog naar laag
         spelersData.sort((a, b) => b.persoonTotaal - a.persoonTotaal);
 
         let html = `<tr><th style="text-align:left; padding-left:10px;">Wie</th><th>🍺</th><th>🍹</th><th>🥃</th><th>😘</th><th>💔</th><th>🚀</th><th>🤮</th><th>🔑</th><th class="totaal-kolom">Tot</th><th></th></tr>`;
@@ -219,7 +217,6 @@ function bouwLiveScorebord() {
             let katerKans = Math.max(0, Math.min(99, 5 + (speler.b * 4) + (speler.m * 12) + (speler.sh * 15) + (speler.ko * 30))); let kleur = katerKans >= 75 ? "#ff3b30" : katerKans >= 40 ? "#ff9500" : "#34c759";
             katerHtml += `<div class="kater-regel"><div class="kater-header"><span>${speler.naam}</span><span>${katerKans}%</span></div><div class="kater-bar-bg"><div class="kater-bar-fill" style="width: ${katerKans}%; background-color: ${kleur};"></div></div></div>`;
             
-            // Medailles toevoegen
             let rank = (index + 1) + ".";
             if (index === 0) rank = "🥇"; else if (index === 1) rank = "🥈"; else if (index === 2) rank = "🥉";
             html += `<tr><td class="naam-kolom"><span style="font-size:12px; margin-right:4px;">${rank}</span>${speler.naam}</td><td>${speler.b}</td><td>${speler.m}</td><td>${speler.sh}</td><td>${speler.k}</td><td>${speler.r}</td><td>${speler.ra}</td><td>${speler.ko}</td><td>${speler.sl}</td><td class="totaal-kolom">${speler.persoonTotaal}</td><td><button class="btn-verwijder" onclick="verwijderSpeler('${speler.naam}')">X</button></td></tr>`;
@@ -406,17 +403,17 @@ function verwijderArchief() {
 // ==========================================
 // 9. GAME LOBBY SYSTEEM (ALGEMENE FUNCTIES)
 // ==========================================
-function startLobby(gameNaam) { db.collection('groepen').doc(currentGroup).collection('games').doc(gameNaam).set({ fase: 'lobby', host: currentUser, spelers: [currentUser], actief: false, klaar: false }); }
+function startLobby(gameNaam) { db.collection('groepen').doc(currentGroup).collection('games').doc(gameNaam).set({ fase: 'lobby', host: currentUser, spelers: [currentUser], actief: false, klaar: false, ronde: 1, totaal_scores: {} }); }
 function joinGame(gameNaam) { db.collection('groepen').doc(currentGroup).collection('games').doc(gameNaam).update({ spelers: firebase.firestore.FieldValue.arrayUnion(currentUser) }); }
 function verlaatGame(gameNaam) {
     db.collection('groepen').doc(currentGroup).collection('games').doc(gameNaam).get().then(doc => {
         if(doc.exists && doc.data().spelers) {
-            if(doc.data().host === currentUser) { db.collection('groepen').doc(currentGroup).collection('games').doc(gameNaam).update({fase: 'wachten', spelers: []}); } 
+            if(doc.data().host === currentUser) { resetGameLobby(gameNaam); } 
             else { db.collection('groepen').doc(currentGroup).collection('games').doc(gameNaam).update({ spelers: firebase.firestore.FieldValue.arrayRemove(currentUser) }); }
         }
     });
 }
-function resetGameLobby(gameNaam) { db.collection('groepen').doc(currentGroup).collection('games').doc(gameNaam).set({ fase: 'wachten', host: "", spelers: [], actief: false, klaar: false }); }
+function resetGameLobby(gameNaam) { db.collection('groepen').doc(currentGroup).collection('games').doc(gameNaam).set({ fase: 'wachten', host: "", spelers: [], actief: false, klaar: false, ronde: 1, totaal_scores: {} }); }
 
 function luisterNaarGameLobby(gameNaam) {
     db.collection('groepen').doc(currentGroup).collection('games').doc(gameNaam).onSnapshot(doc => {
@@ -429,7 +426,7 @@ function luisterNaarGameLobby(gameNaam) {
             if(wachtEl) wachtEl.style.display = 'none'; if(lobbyEl) lobbyEl.style.display = 'block';
             if(lijstEl) lijstEl.innerHTML = spelers.map(s => `<span class="lobby-speler-badge">${s}</span>`).join('');
             if(joinBtn) joinBtn.style.display = spelers.includes(currentUser) ? 'none' : 'inline-block';
-            if(startBtn) startBtn.style.display = (d.host === currentUser && spelers.length >= 1) ? 'inline-block' : 'none'; // Fix: Ook singleplayer!
+            if(startBtn) startBtn.style.display = (d.host === currentUser && spelers.length >= 1) ? 'inline-block' : 'none';
         } else {
             if(wachtEl) wachtEl.style.display = 'none'; if(lobbyEl) lobbyEl.style.display = 'none';
         }
@@ -437,23 +434,12 @@ function luisterNaarGameLobby(gameNaam) {
 }
 
 // ==========================================
-// 10. GAMES LOGICA (ALLES IN 1 BESTAND)
+// 10. GAMES LOGICA 
 // ==========================================
 
 // 10A. TIJDBOM
-function startTijdbom() { 
-    if (spelersLijst.length < 1) return alert("Geen spelers gevonden."); 
-    let randomSpeler = spelersLijst[Math.floor(Math.random() * spelersLijst.length)]; 
-    let ontplofTijd = Date.now() + (Math.floor(Math.random() * 45000) + 30000); 
-    db.collection('groepen').doc(currentGroup).collection('tijdbom').doc('status').set({ actief: true, houder: randomSpeler, eindTijdUnix: ontplofTijd }); 
-    stuurNaarFeed(`💣 TIJDBOM GESTART! Hij ligt nu bij ${randomSpeler.toUpperCase()}!`); 
-}
-function gooiBomDoor() { 
-    let andereSpelers = spelersLijst.filter(n => n !== currentUser); 
-    let slachtoffer = andereSpelers.length > 0 ? andereSpelers[Math.floor(Math.random() * andereSpelers.length)] : currentUser; // Fix: Singleplayer
-    if ("vibrate" in navigator) navigator.vibrate(50); 
-    db.collection('groepen').doc(currentGroup).collection('tijdbom').doc('status').update({ houder: slachtoffer }); 
-}
+function startTijdbom() { if (spelersLijst.length < 1) return alert("Geen spelers gevonden."); let randomSpeler = spelersLijst[Math.floor(Math.random() * spelersLijst.length)]; let ontplofTijd = Date.now() + (Math.floor(Math.random() * 45000) + 30000); db.collection('groepen').doc(currentGroup).collection('tijdbom').doc('status').set({ actief: true, houder: randomSpeler, eindTijdUnix: ontplofTijd }); stuurNaarFeed(`💣 TIJDBOM GESTART! Hij ligt nu bij ${randomSpeler.toUpperCase()}!`); }
+function gooiBomDoor() { let andereSpelers = spelersLijst.filter(n => n !== currentUser); let slachtoffer = andereSpelers.length > 0 ? andereSpelers[Math.floor(Math.random() * andereSpelers.length)] : currentUser; if ("vibrate" in navigator) navigator.vibrate(50); db.collection('groepen').doc(currentGroup).collection('tijdbom').doc('status').update({ houder: slachtoffer }); }
 function luisterNaarTijdbom() {
     if(unsubscribeBom) unsubscribeBom();
     unsubscribeBom = db.collection('groepen').doc(currentGroup).collection('tijdbom').doc('status').onSnapshot((doc) => {
@@ -496,21 +482,39 @@ function speelHogerLager(keuze) {
 }
 function gooiMexen() { let d1 = Math.floor(Math.random() * 6) + 1; let d2 = Math.floor(Math.random() * 6) + 1; document.getElementById('mex-d1').innerText = d1; document.getElementById('mex-d2').innerText = d2; let score = Math.max(d1, d2).toString() + Math.min(d1, d2).toString(); let extraText = ""; if (score === "21") { extraText = " 🚨 MEX! IEDEREEN DRINKEN!!"; if ("vibrate" in navigator) navigator.vibrate([200, 100, 200]); } else if (d1 === d2) { extraText = " (Honderden!)"; } stuurNaarFeed(`🎲 Mexen: ${currentUser.toUpperCase()} gooide ${score}${extraText}`); }
 
-// 10C. WIE IS DE SJAAK 
-function startSjaakRonde() { 
-    let vr = sjaakVragenArray[Math.floor(Math.random() * sjaakVragenArray.length)]; 
-    db.collection('groepen').doc(currentGroup).collection('games').doc('sjaak').update({ fase: 'actief', vraag: vr, stemmen: {} }); 
-    stuurNaarFeed(`👉 WIE IS DE SJAAK gestart door ${currentUser.toUpperCase()}!`); 
+// 10C. WIE IS DE SJAAK (15 Rondes)
+function startSjaakRonde(isNieuwSpel = false) { 
+    db.collection('groepen').doc(currentGroup).collection('games').doc('sjaak').get().then(doc => {
+        let d = doc.data() || {};
+        let ronde = isNieuwSpel ? 1 : (d.ronde || 1) + 1;
+        
+        if (ronde > 15) {
+            db.collection('groepen').doc(currentGroup).collection('games').doc('sjaak').update({ fase: 'eindstand' });
+            return;
+        }
+
+        let vr = sjaakVragenArray[Math.floor(Math.random() * sjaakVragenArray.length)]; 
+        let updateData = { fase: 'actief', vraag: vr, stemmen: {}, ronde: ronde };
+        if (isNieuwSpel) updateData.totaal_scores = {};
+
+        db.collection('groepen').doc(currentGroup).collection('games').doc('sjaak').update(updateData); 
+        if (isNieuwSpel) stuurNaarFeed(`👉 WIE IS DE SJAAK gestart door ${currentUser.toUpperCase()}! (15 Rondes)`); 
+    });
 }
+
 function luisterNaarSjaak() {
     luisterNaarGameLobby('sjaak');
     db.collection('groepen').doc(currentGroup).collection('games').doc('sjaak').onSnapshot(doc => {
         if(!doc.exists) return; let d = doc.data(); let spelers = d.spelers || [];
-        let uiActief = document.getElementById('sjaak-actief'); let uiResultaat = document.getElementById('sjaak-resultaat'); if(!uiActief) return;
+        let uiActief = document.getElementById('sjaak-actief'); let uiResultaat = document.getElementById('sjaak-resultaat'); let uiEindstand = document.getElementById('sjaak-eindstand');
+        if(!uiActief) return;
         
-        if (d.fase === 'wachten' || d.fase === 'lobby') { uiActief.style.display = 'none'; uiResultaat.style.display = 'none'; } 
+        if (d.fase === 'wachten' || d.fase === 'lobby') { 
+            uiActief.style.display = 'none'; uiResultaat.style.display = 'none'; uiEindstand.style.display = 'none'; 
+        } 
         else if (d.fase === 'actief') {
-            uiActief.style.display = 'block'; uiResultaat.style.display = 'none';
+            uiActief.style.display = 'block'; uiResultaat.style.display = 'none'; uiEindstand.style.display = 'none';
+            document.getElementById('sjaak-ronde-tekst').innerText = `Ronde ${d.ronde || 1} van 15`;
             document.getElementById('sjaak-vraag-tekst').innerText = d.vraag;
             document.getElementById('sjaak-status').innerText = `${Object.keys(d.stemmen || {}).length} van de ${spelers.length} stemmen binnen.`;
             document.getElementById('btn-sjaak-forceer').style.display = (d.host === currentUser) ? 'inline-block' : 'none';
@@ -527,7 +531,8 @@ function luisterNaarSjaak() {
             }
             if(Object.keys(d.stemmen || {}).length === spelers.length && spelers.length > 0 && d.host === currentUser) { eindigeSjaakRonde(); }
         } else if (d.fase === 'resultaat') {
-            uiActief.style.display = 'none'; uiResultaat.style.display = 'block';
+            uiActief.style.display = 'none'; uiResultaat.style.display = 'block'; uiEindstand.style.display = 'none';
+            document.getElementById('sjaak-res-ronde-tekst').innerText = `Ronde ${d.ronde || 1} van 15`;
             document.getElementById('sjaak-resultaat-vraag').innerText = d.vraag;
             document.getElementById('btn-sjaak-volgende').style.display = (d.host === currentUser) ? 'inline-block' : 'none';
 
@@ -535,6 +540,18 @@ function luisterNaarSjaak() {
             let resLijst = document.getElementById('sjaak-uitslag-lijst'); resLijst.innerHTML = '';
             let resArr = Object.entries(scores).map(([naam, stemmen]) => ({naam, stemmen})); resArr.sort((a, b) => b.stemmen - a.stemmen);
             resArr.forEach((item, index) => { let p = document.createElement('div'); p.className = "ql-result-item"; p.style.animationDelay = (0.2 * index) + "s"; p.innerHTML = `<b style="color:#ff3b30;">${item.naam.toUpperCase()}</b>: ${item.stemmen} stem(men) ${index===0?'🎯':''}`; resLijst.appendChild(p); });
+        } else if (d.fase === 'eindstand') {
+            uiActief.style.display = 'none'; uiResultaat.style.display = 'none'; uiEindstand.style.display = 'block';
+            let resLijst = document.getElementById('sjaak-eind-lijst'); resLijst.innerHTML = '';
+            let tScores = d.totaal_scores || {};
+            let arr = Object.entries(tScores).map(([naam, score]) => ({naam, score})).sort((a,b) => b.score - a.score);
+            if(arr.length === 0) resLijst.innerHTML = "<p>Niemand heeft strafpunten gescoord!</p>";
+            arr.forEach((item, index) => { 
+                let p = document.createElement('div'); p.className = "ql-result-item"; p.style.animationDelay = (0.2 * index) + "s"; 
+                let trofee = index === 0 ? '🏆 Grootste Sjaak!' : '';
+                p.innerHTML = `<b style="color:#ff3b30;">${item.naam.toUpperCase()}</b>: ${item.score} keer de Sjaak ${trofee}`; 
+                resLijst.appendChild(p); 
+            });
         }
     });
 }
@@ -543,9 +560,15 @@ function eindigeSjaakRonde() {
         let d = doc.data(); let scores = {}; let maxStemmen = 0; let winnaars = [];
         Object.values(d.stemmen || {}).forEach(gestemdOp => { scores[gestemdOp] = (scores[gestemdOp] || 0) + 1; if(scores[gestemdOp] > maxStemmen) maxStemmen = scores[gestemdOp]; });
         Object.keys(scores).forEach(naam => { if(scores[naam] === maxStemmen) winnaars.push(naam); });
-        winnaars.forEach(w => { db.collection('groepen').doc(currentGroup).collection('scores').doc(w).set({ rejection: firebase.firestore.FieldValue.increment(1) }, {merge: true}); });
-        if(winnaars.length > 0) stuurNaarFeed(`👉 SJAAK: ${winnaars.join(' & ').toUpperCase()} is de sjaak en krijgt +1 Reject! Drinken!`);
-        db.collection('groepen').doc(currentGroup).collection('games').doc('sjaak').update({ fase: 'resultaat' });
+        
+        let actueleTotaalScores = d.totaal_scores || {};
+        winnaars.forEach(w => { 
+            actueleTotaalScores[w] = (actueleTotaalScores[w] || 0) + 1;
+            db.collection('groepen').doc(currentGroup).collection('scores').doc(w).set({ rejection: firebase.firestore.FieldValue.increment(1) }, {merge: true}); 
+        });
+        
+        if(winnaars.length > 0) stuurNaarFeed(`👉 SJAAK (Ronde ${d.ronde || 1}/15): ${winnaars.join(' & ').toUpperCase()} is de sjaak en krijgt +1 Reject! Drinken!`);
+        db.collection('groepen').doc(currentGroup).collection('games').doc('sjaak').update({ fase: 'resultaat', totaal_scores: actueleTotaalScores });
     });
 }
 
@@ -583,7 +606,29 @@ function klikReflex(e) {
     db.collection('groepen').doc(currentGroup).collection('games').doc('reflex').update({ [`scores.${currentUser}`]: tijdScore }); 
 }
 
-// 10E. QUIPLASH (FIXED ID SELECTOR)
+// 10E. QUIPLASH (15 Rondes)
+function startQuiplashRonde(isNieuwSpel = false) {
+    db.collection('groepen').doc(currentGroup).collection('games').doc('quiplash').get().then(doc => {
+        let d = doc.data() || {};
+        let qlSpelers = []; document.querySelectorAll('#quiplash-spelers-lijst .lobby-speler-badge').forEach(el => qlSpelers.push(el.innerText.toLowerCase()));
+        
+        let ronde = isNieuwSpel ? 1 : (d.ronde || 1) + 1;
+        if (ronde > 15) {
+            db.collection('groepen').doc(currentGroup).collection('games').doc('quiplash').update({ fase: 'eindstand' });
+            return;
+        }
+
+        let randomSpeler = qlSpelers.length > 0 ? qlSpelers[Math.floor(Math.random() * qlSpelers.length)] : "iemand";
+        let vr = quiplashVragenArray[Math.floor(Math.random() * quiplashVragenArray.length)].replace(/\[SPELER\]/g, randomSpeler.charAt(0).toUpperCase() + randomSpeler.slice(1));
+        
+        let updateData = { fase: 'antwoorden', vraag: vr, antwoorden: {}, stemmen: {}, ronde: ronde };
+        if (isNieuwSpel) updateData.totaal_scores = {};
+
+        db.collection('groepen').doc(currentGroup).collection('games').doc('quiplash').update(updateData); 
+        if(isNieuwSpel) stuurNaarFeed(`🤐 Quiplash is GESTART! (15 Rondes) Vul je antwoorden in!`);
+    });
+}
+
 function luisterNaarQuiplash() {
     luisterNaarGameLobby('quiplash');
     db.collection('groepen').doc(currentGroup).collection('games').doc('quiplash').onSnapshot(doc => {
@@ -594,19 +639,28 @@ function luisterNaarQuiplash() {
         let qlStemmen = data.stemmen || {}; 
         let qlSpelers = data.spelers || [];
         
-        let uiAntwoorden = document.getElementById('ql-antwoorden'); if(!uiAntwoorden) return;
-        uiAntwoorden.style.display = 'none'; document.getElementById('ql-stemmen').style.display = 'none'; document.getElementById('ql-resultaten').style.display = 'none';
+        let uiAntwoorden = document.getElementById('ql-antwoorden'); 
+        let uiStemmen = document.getElementById('ql-stemmen'); 
+        let uiResultaten = document.getElementById('ql-resultaten'); 
+        let uiEindstand = document.getElementById('ql-eindstand');
+        if(!uiAntwoorden) return;
 
-        if (qlFase === 'antwoorden') {
-            uiAntwoorden.style.display = 'block'; document.getElementById('ql-vraag-tekst').innerText = qlHuidigeVraag;
+        if (qlFase === 'wachten' || qlFase === 'lobby') {
+            uiAntwoorden.style.display = 'none'; uiStemmen.style.display = 'none'; uiResultaten.style.display = 'none'; uiEindstand.style.display = 'none';
+        } else if (qlFase === 'antwoorden') {
+            uiAntwoorden.style.display = 'block'; uiStemmen.style.display = 'none'; uiResultaten.style.display = 'none'; uiEindstand.style.display = 'none';
+            document.getElementById('ql-ronde-tekst').innerText = `Ronde ${data.ronde || 1} van 15`;
+            document.getElementById('ql-vraag-tekst').innerText = qlHuidigeVraag;
             if (!qlSpelers.includes(currentUser)) { document.getElementById('ql-invoer-sectie').style.display = 'none'; document.getElementById('ql-ingevuld-sectie').style.display = 'block'; document.getElementById('ql-ingevuld-sectie').innerHTML = `<h2 style="color:#ff9500;">Je doet niet mee.</h2><p>Kijk mee op het scherm van de rest!</p>`; } 
-            else if (qlAntwoorden[currentUser]) { document.getElementById('ql-invoer-sectie').style.display = 'none'; document.getElementById('ql-ingevuld-sectie').style.display = 'block'; document.getElementById('ql-ingevuld-sectie').innerHTML = `<h2 style="color:#34c759; margin:0 0 10px 0;">✅ Antwoord Ingevuld!</h2><p style="color:#a1a1aa; margin:0;">Wachten op de trage rest...</p>`; } 
+            else if (qlAntwoorden[currentUser]) { document.getElementById('ql-invoer-sectie').style.display = 'none'; document.getElementById('ql-ingevuld-sectie').style.display = 'block'; document.getElementById('ql-ingevuld-sectie').innerHTML = `<h2 style="color:#34c759; margin:0 0 10px 0;">✅ Antwoord Ingevuld!</h2><p style="color:#a1a1aa; margin:0;">Wachten op de rest...</p>`; } 
             else { document.getElementById('ql-invoer-sectie').style.display = 'block'; document.getElementById('ql-ingevuld-sectie').style.display = 'none'; document.getElementById('ql-invoer').value = ''; }
             document.getElementById('ql-status-antwoorden').innerText = `${Object.keys(qlAntwoorden).length} van de ${qlSpelers.length} antwoorden binnen.`;
             document.getElementById('btn-ql-forceer-stemmen').style.display = (data.host === currentUser) ? 'inline-block' : 'none';
             if(Object.keys(qlAntwoorden).length === qlSpelers.length && qlSpelers.length > 0 && data.host === currentUser) { startQuiplashStemmen(); }
         } else if (qlFase === 'stemmen') {
-            document.getElementById('ql-stemmen').style.display = 'block'; document.getElementById('ql-vraag-stemmen').innerText = qlHuidigeVraag;
+            uiAntwoorden.style.display = 'none'; uiStemmen.style.display = 'block'; uiResultaten.style.display = 'none'; uiEindstand.style.display = 'none';
+            document.getElementById('ql-stem-ronde-tekst').innerText = `Ronde ${data.ronde || 1} van 15`;
+            document.getElementById('ql-vraag-stemmen').innerText = qlHuidigeVraag;
             document.getElementById('ql-status-stemmen').innerText = `${Object.keys(qlStemmen).length} van de ${qlSpelers.length} stemmen binnen.`;
             document.getElementById('btn-ql-forceer-resultaat').style.display = (data.host === currentUser) ? 'inline-block' : 'none';
 
@@ -622,7 +676,9 @@ function luisterNaarQuiplash() {
             }
             if(Object.keys(qlStemmen).length === qlSpelers.length && qlSpelers.length > 0 && data.host === currentUser) { toonQuiplashResultaten(); }
         } else if (qlFase === 'resultaat') {
-            document.getElementById('ql-resultaten').style.display = 'block'; document.getElementById('ql-vraag-resultaat').innerText = qlHuidigeVraag;
+            uiAntwoorden.style.display = 'none'; uiStemmen.style.display = 'none'; uiResultaten.style.display = 'block'; uiEindstand.style.display = 'none';
+            document.getElementById('ql-res-ronde-tekst').innerText = `Ronde ${data.ronde || 1} van 15`;
+            document.getElementById('ql-vraag-resultaat').innerText = qlHuidigeVraag;
             let resLijst = document.getElementById('ql-uitslag-lijst'); resLijst.innerHTML = ''; document.getElementById('btn-ql-volgende').style.display = (data.host === currentUser) ? 'inline-block' : 'none';
 
             let scores = {}; Object.values(qlStemmen).forEach(gestemdOp => { scores[gestemdOp] = (scores[gestemdOp] || 0) + 1; });
@@ -631,14 +687,20 @@ function luisterNaarQuiplash() {
                 let p = document.createElement('div'); p.className = "ql-result-item"; p.style.animationDelay = (0.2 * index) + "s";
                 p.innerHTML = `<b style="color:#af52de; font-size:18px;">${item.naam.toUpperCase()}</b> <span style="color:#34c759; font-weight:bold;">(${item.stemmen} stemmen)</span><br><span style="color:#fff; font-size:20px; line-height:1.5;">"${item.antw}"</span>`; resLijst.appendChild(p);
             });
+        } else if (qlFase === 'eindstand') {
+            uiAntwoorden.style.display = 'none'; uiStemmen.style.display = 'none'; uiResultaten.style.display = 'none'; uiEindstand.style.display = 'block';
+            let resLijst = document.getElementById('ql-eind-lijst'); resLijst.innerHTML = '';
+            let tScores = data.totaal_scores || {};
+            let arr = Object.entries(tScores).map(([naam, score]) => ({naam, score})).sort((a,b) => b.score - a.score);
+            if(arr.length === 0) resLijst.innerHTML = "<p>Niemand heeft punten gescoord!</p>";
+            arr.forEach((item, index) => {
+                let p = document.createElement('div'); p.className = "ql-result-item"; p.style.animationDelay = (0.2 * index) + "s";
+                let trofee = index === 0 ? '🏆 WINNAAR!' : '';
+                p.innerHTML = `<b style="color:#ffcc00;">${item.naam.toUpperCase()}</b>: ${item.score} Punten ${trofee}`;
+                resLijst.appendChild(p);
+            });
         }
     });
-}
-function startQuiplashRonde() {
-    let qlSpelers = []; document.querySelectorAll('#quiplash-spelers-lijst .lobby-speler-badge').forEach(el => qlSpelers.push(el.innerText.toLowerCase()));
-    let randomSpeler = qlSpelers.length > 0 ? qlSpelers[Math.floor(Math.random() * qlSpelers.length)] : "iemand";
-    let vr = quiplashVragenArray[Math.floor(Math.random() * quiplashVragenArray.length)].replace(/\[SPELER\]/g, randomSpeler.charAt(0).toUpperCase() + randomSpeler.slice(1));
-    db.collection('groepen').doc(currentGroup).collection('games').doc('quiplash').update({ fase: 'antwoorden', vraag: vr, antwoorden: {}, stemmen: {} }); stuurNaarFeed(`🤐 Quiplash is GESTART! Vul je antwoorden in!`);
 }
 function verstuurQuiplashAntwoord() { let v = document.getElementById('ql-invoer').value.trim(); if(!v) return alert("Vul iets in!"); db.collection('groepen').doc(currentGroup).collection('games').doc('quiplash').update({ [`antwoorden.${currentUser}`]: v }); }
 function startQuiplashStemmen() { db.collection('groepen').doc(currentGroup).collection('games').doc('quiplash').update({ fase: 'stemmen' }); }
@@ -646,12 +708,19 @@ function stemOpQuiplash(opWie) { db.collection('groepen').doc(currentGroup).coll
 function toonQuiplashResultaten() {
     let maxStemmen = 0; let winnaars = []; let scores = {};
     db.collection('groepen').doc(currentGroup).collection('games').doc('quiplash').get().then(doc => {
-        let qlStemmen = doc.data().stemmen || {};
+        let d = doc.data();
+        let qlStemmen = d.stemmen || {};
         Object.values(qlStemmen).forEach(gestemdOp => { scores[gestemdOp] = (scores[gestemdOp] || 0) + 1; if(scores[gestemdOp] > maxStemmen) maxStemmen = scores[gestemdOp]; });
         Object.keys(scores).forEach(naam => { if(scores[naam] === maxStemmen) winnaars.push(naam); });
-        winnaars.forEach(w => { db.collection('groepen').doc(currentGroup).collection('scores').doc(w).set({ raggen: firebase.firestore.FieldValue.increment(5) }, {merge: true}); });
-        if(winnaars.length > 0) { stuurNaarFeed(`🏆 Quiplash: ${winnaars.join(' & ').toUpperCase()} won(nen) en kregen 5 punten!`); }
-        db.collection('groepen').doc(currentGroup).collection('games').doc('quiplash').update({ fase: 'resultaat' });
+        
+        let actueleTotaalScores = d.totaal_scores || {};
+        winnaars.forEach(w => { 
+            actueleTotaalScores[w] = (actueleTotaalScores[w] || 0) + 5;
+            db.collection('groepen').doc(currentGroup).collection('scores').doc(w).set({ raggen: firebase.firestore.FieldValue.increment(5) }, {merge: true}); 
+        });
+        
+        if(winnaars.length > 0) { stuurNaarFeed(`🏆 Quiplash (Ronde ${d.ronde || 1}/15): ${winnaars.join(' & ').toUpperCase()} kregen 5 punten!`); }
+        db.collection('groepen').doc(currentGroup).collection('games').doc('quiplash').update({ fase: 'resultaat', totaal_scores: actueleTotaalScores });
     });
 }
 
@@ -719,7 +788,7 @@ let shakeTimerInterval = null; let shakeScore = 0; let shakeBezig = false; let s
 function startShakeRonde() {
     let spelers = []; document.querySelectorAll('#shake-spelers-lijst .lobby-speler-badge').forEach(el => spelers.push(el.innerText.toLowerCase()));
     if(spelers.length < 1) return alert("Geen spelers in de lobby.");
-    let p1 = spelers[Math.floor(Math.random()*spelers.length)]; let over = spelers.filter(x => x !== p1); let p2 = over.length > 0 ? over[Math.floor(Math.random()*over.length)] : p1; // Fix: Ook singleplayer
+    let p1 = spelers[Math.floor(Math.random()*spelers.length)]; let over = spelers.filter(x => x !== p1); let p2 = over.length > 0 ? over[Math.floor(Math.random()*over.length)] : p1;
     db.collection('groepen').doc(currentGroup).collection('games').doc('shake').update({ fase: 'actief', eindTijd: Date.now() + 10000, p1: p1, p2: p2, scores: { [p1]:0, [p2]:0 } }); stuurNaarFeed(`📳 SHAKE DUEL: ${p1.toUpperCase()} VS ${p2.toUpperCase()}!`);
 }
 function luisterNaarShake() {
