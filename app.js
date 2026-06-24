@@ -56,13 +56,27 @@ function vraagLocatieToestemming() { if ("geolocation" in navigator) { navigator
 function vraagSensorToestemming() { if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') { DeviceOrientationEvent.requestPermission().then(response => { if (response === 'granted') { alert("✅ Sensoren geactiveerd!"); } else { alert("❌ Sensor toegang geweigerd."); } }).catch(console.error); } else { alert("✅ Sensoren werken automatisch."); } }
 
 // ==========================================
-// 3. NAVIGATIE, AUTH & UI FUNCTIES
+// 3. NAVIGATIE, AUTH, UI & DARK MODE
 // ==========================================
+let isDarkMode = localStorage.getItem('bef_darkmode') === 'true';
+
+function pasThemaToe() {
+    if(isDarkMode) { document.body.classList.add('dark-theme'); } 
+    else { document.body.classList.remove('dark-theme'); }
+}
+
+function toggleDarkMode() {
+    isDarkMode = !isDarkMode;
+    localStorage.setItem('bef_darkmode', isDarkMode);
+    pasThemaToe();
+}
+
 function openGame(gameId) { document.getElementById(gameId).classList.add('active'); document.getElementById(gameId).style.display = 'block'; document.body.classList.add('modal-open'); window.scrollTo(0,0); }
 function sluitGame(gameId) { document.getElementById(gameId).classList.remove('active'); document.getElementById(gameId).style.display = 'none'; document.body.classList.remove('modal-open'); if(gameId === 'modal-bordspel') lokalePosities = null; }
 function openInstellingen() { openGame('modal-instellingen'); document.getElementById('instellingen-groepscode').innerText = currentGroup; laadArchiefLijst(); }
 
 window.addEventListener("DOMContentLoaded", () => {
+    pasThemaToe();
     bepaalScherm();
 });
 
@@ -850,7 +864,6 @@ function luisterNaarBordspel() {
             let huidigeSpeler = spelers[d.beurt_index % spelers.length];
             document.getElementById('bord-beurt-naam').innerText = huidigeSpeler;
             
-            // Verberg gooi knoppen tijdens animatie of andermans beurt
             if (huidigeSpeler === currentUser && !d.actieve_opdracht && !isBordspelAnimeren) { 
                 document.getElementById('bord-dobbel-sectie').style.display = 'block'; document.getElementById('bord-wacht-sectie').style.display = 'none'; 
             } else if (!d.actieve_opdracht || isBordspelAnimeren) { 
@@ -859,13 +872,11 @@ function luisterNaarBordspel() {
                 document.getElementById('bord-dobbel-sectie').style.display = 'none'; document.getElementById('bord-wacht-sectie').style.display = 'none'; 
             }
             
-            // Eerste keer inladen
             if (!lokalePosities) {
                 lokalePosities = {...dbPosities};
                 tekenBord(lokalePosities);
             }
 
-            // Check of we moeten lopen
             let moetAnimeren = false;
             for (let s in dbPosities) { if (lokalePosities[s] !== undefined && lokalePosities[s] < dbPosities[s]) { moetAnimeren = true; } }
 
@@ -892,7 +903,7 @@ function speelBordAnimatie(doelPosities, callback) {
                 lokalePosities[s]++;
                 klaar = false;
             } else if (lokalePosities[s] > doelPosities[s]) {
-                lokalePosities[s] = doelPosities[s]; // Hard reset fallback
+                lokalePosities[s] = doelPosities[s]; 
             }
         }
         tekenBord(lokalePosities);
@@ -902,7 +913,7 @@ function speelBordAnimatie(doelPosities, callback) {
             clearInterval(interval);
             setTimeout(callback, 500); 
         }
-    }, 300); // 300ms per stapje!
+    }, 300); 
 }
 
 function toonBordOpdracht(opdracht, dobbel, host) {
@@ -946,7 +957,6 @@ function gooiDobbelsteenBordspel() {
     document.getElementById('bord-dobbel-sectie').style.display = 'none'; 
     let gooi = Math.floor(Math.random() * 6) + 1;
     
-    // Grote Dobbelsteen Animatie Overlay
     let dobbelOverlay = document.getElementById('dobbel-animatie-overlay');
     document.getElementById('dobbel-icoon').innerText = `🎲 ${gooi}`;
     dobbelOverlay.style.display = 'flex';
@@ -957,7 +967,6 @@ function gooiDobbelsteenBordspel() {
         document.getElementById('dobbel-icoon').classList.remove('dobbel-spectaculair');
         dobbelOverlay.style.display = 'none';
 
-        // Pas NA de grote rol sturen we het naar Firebase, dan gaat de pion lopen.
         db.collection('groepen').doc(currentGroup).collection('games').doc('bordspel').get().then(doc => {
             let d = doc.data(); let huidigePos = d.posities[currentUser] || 0; let nieuwePos = huidigePos + gooi; if (nieuwePos >= 39) nieuwePos = 39;
             
