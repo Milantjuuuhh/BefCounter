@@ -21,15 +21,23 @@ var worldMap = null, mapMarkers = [], pieChartInstance = null, barChartInstance 
 var mijnBingoKaart = [], mijnBingoStatus = [];
 let actieveCoopMissie = null;
 
+// Bordspel variables
 let lokalePosities = null;
 let isBordspelAnimeren = false;
 
+// Globale arrays voor Live Firebase Spelmateriaal
 var sjaakVragenArray = ["Laden..."];
 var quiplashVragenArray = ["Laden..."];
 var bordOpdrachtenArray = ["Laden..."];
 var assassinMissiesArray = ["Laden..."];
 var coopMissiesArray = [{ titel: "Laden...", doel: 10, types: ['bier'] }];
 const bingoOpdrachten = ["Neem een shot met de barman", "Regel gratis pils", "Zeg 10 min helemaal niks", "Wijs iemand af", "Trek een Atje", "Eet laat nog iets vets", "Raak iets kwijt", "Krijg een Reject", "Steel een aansteker", "Deel 3 slokken uit", "Drink een uur water", "Klim ergens op", "Laat je trakteren", "Dans battle", "Neem een dubbel shot"];
+
+// Rad van Fortuin Logic (Lokaal, onthoudt welke er al geweest zijn)
+let alleRadOpties = [
+    "🍻 [SPELER] trekt NU een Atje!", "📱 Jij mag 1 gênant appje sturen vanaf de telefoon van [SPELER].", "💃 [SPELER] doet de Macarena midden in de menigte. Weigeren = Adten!", "🥃 [SPELER] haalt nú op eigen kosten een shotje voor jou.", "🤫 [SPELER] mag 10 minuten niet praten. Elk woord = 1 flinke slok.", "🤝 [SPELER] moet een wildvreemde om een stevige knuffel vragen.", "📸 [SPELER] moet een lelijke selfie maken met een onbekende.", "🍹 Jij mixt 3 dranken door elkaar. [SPELER] neemt er een grote slok van!", "🐔 [SPELER] loopt 1 minuut als een tokkende kip over het terras/straat.", "🗣️ [SPELER] praat een kwartier met een zwaar accent. Foutje = drinken.", "🤮 Geef [SPELER] +5 Raggen strafpunten én hij/zij trekt een Atje!", "👕 [SPELER] draagt de rest van het uur zijn/haar shirt binnenstebuiten.", "🎤 [SPELER] zingt luidkeels een kinderliedje. Weigeren = 10 slokken.", "🧊 [SPELER] stopt een ijsblokje in zijn onderbroek tot het smelt.", "😘 [SPELER] geeft een keiharde, ongemakkelijke knipoog aan de ober/serveerster.", "🏋️ [SPELER] doet 10 push-ups in het openbaar. Falen = Adten!", "🤚 [SPELER] mag 15 min z'n glas niet met z'n handen pakken.", "🪑 [SPELER] mag 15 minuten lang nergens op zitten.", "💸 [SPELER] betaalt het volgende drankje voor jou!", "🐾 [SPELER] moet een minuut lang over straat lopen alsof hij jouw uitgelaten hondje is."
+];
+let ongebruikteRadOpties = [...alleRadOpties];
 
 document.body.addEventListener('touchstart', function() { 
     const geluid = document.getElementById('notificatie-geluid'); 
@@ -133,7 +141,7 @@ function toggleDrinkSessie() {
 function forceerSessieAtje() {
     let nieuweWachttijd = Math.floor(Math.random() * (15 * 60 * 1000)) + (5 * 60 * 1000); let slachtoffer = spelersLijst.length > 0 ? spelersLijst[Math.floor(Math.random() * spelersLijst.length)] : currentUser;
     db.collection('groepen').doc(currentGroup).collection('sessie').doc('status').update({ volgende_atje: Date.now() + nieuweWachttijd, huidig_slachtoffer: slachtoffer, wacht_op_atje: true });
-    let bericht = `🚨 SKIP TIMER! De Drink Sessie wijst direct aan... ${slachtoffer.toUpperCase()} moet NU een atje trekken! 🍻`; stuurNaarFeed(bericht); if ("vibrate" in navigator) navigator.vibrate([200, 100, 200, 100, 500, 100, 500]);
+    let bericht = `🚨 ${slachtoffer.toUpperCase()} moet NU een atje trekken! 🍻`; stuurNaarFeed(bericht); if ("vibrate" in navigator) navigator.vibrate([200, 100, 200, 100, 500, 100, 500]);
     const MAKE_WEBHOOK_URL = "https://hook.eu1.make.com/iydcsfjwnlx3147b29w38texvyhgrr62";
     db.collection('groepen').doc(currentGroup).collection('scores').get().then(snap => { let tokensGevonden = 0; snap.forEach(doc => { if (doc.data().push_token) { tokensGevonden++; fetch(MAKE_WEBHOOK_URL, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ token: doc.data().push_token, titel: "🍻 ATJE TREKKEN!", bericht: bericht }) }).catch(e => console.log(e)); } }); });
 }
@@ -447,25 +455,44 @@ function luisterNaarTijdbom() {
     setInterval(() => { db.collection('groepen').doc(currentGroup).collection('tijdbom').doc('status').get().then(doc => { if (doc.exists && doc.data().actief && doc.data().houder === currentUser && Date.now() >= doc.data().eindTijdUnix) { db.collection('groepen').doc(currentGroup).collection('tijdbom').doc('status').set({ actief: false }); pasScoreAan('raggen', -3, '💥 BOM ONTPLOFT'); alert("KABOEM! -3 Punten!"); } }); }, 1000);
 }
 
-// 10B. RAD VAN FORTUIN, HOGER LAGER, MEXEN
+// 10B. RAD VAN FORTUIN
 let radSpinning = false;
 function draaiRad() {
-    if (radSpinning) return; if ((mijnTotalePunten - mijnGedraaideSpins) <= 0) return alert("Je hebt 0 coins!");
+    if (radSpinning) return; 
+    let coins = Math.max(0, mijnTotalePunten - mijnGedraaideSpins);
+    if (coins < 10) return alert("Je hebt minimaal 10 coins nodig!"); // 10 COINS GECHECKED!
+    
     radSpinning = true; if ("vibrate" in navigator) navigator.vibrate(50);
-    db.collection('groepen').doc(currentGroup).collection('scores').doc(currentUser).set({ spins: firebase.firestore.FieldValue.increment(1) }, { merge: true });
+    db.collection('groepen').doc(currentGroup).collection('scores').doc(currentUser).set({ spins: firebase.firestore.FieldValue.increment(10) }, { merge: true }); // BETAAL 10 COINS
+    
     let draaiCounter = 0; const box = document.getElementById('rad-box');
     const interval = setInterval(() => {
-        const basisRadOpties = [
-            "🍻 [SPELER] trekt NU een Atje!", "📱 Jij mag 1 gênant appje sturen vanaf de telefoon van [SPELER].", "💃 [SPELER] doet de Macarena midden in de menigte. Weigeren = Adten!", "🥃 [SPELER] haalt nú op eigen kosten een shotje voor jou.", "🤫 [SPELER] mag 10 minuten niet praten. Elk woord = 1 flinke slok.", "🤝 [SPELER] moet een wildvreemde om een stevige knuffel vragen.", "📸 [SPELER] moet een lelijke selfie maken met een onbekende.", "🍹 Jij mixt 3 dranken door elkaar. [SPELER] neemt er een grote slok van!", "🐔 [SPELER] loopt 1 minuut als een tokkende kip over het terras/straat.", "🗣️ [SPELER] praat een kwartier met een zwaar accent. Foutje = drinken.", "🤮 Geef [SPELER] +5 Raggen strafpunten én hij/zij trekt een Atje!", "👕 [SPELER] draagt de rest van het uur zijn/haar shirt binnenstebuiten.", "🎤 [SPELER] zingt luidkeels een kinderliedje. Weigeren = 10 slokken.", "🧊 [SPELER] stopt een ijsblokje in zijn onderbroek tot het smelt.", "😘 [SPELER] geeft een keiharde, ongemakkelijke knipoog aan de ober/serveerster.", "🏋️ [SPELER] doet 10 push-ups in het openbaar. Falen = Adten!", "🤚 [SPELER] mag 15 min z'n glas niet met z'n handen pakken.", "🪑 [SPELER] mag 15 minuten lang nergens op zitten.", "💸 [SPELER] betaalt het volgende drankje voor jou!", "🐾 [SPELER] moet een minuut lang over straat lopen alsof hij jouw uitgelaten hondje is."
-        ];
-        let temp = basisRadOpties[Math.floor(Math.random() * basisRadOpties.length)]; document.getElementById('rad-uitkomst').innerText = temp.replace("[SPELER]","iemand"); 
+        let temp = alleRadOpties[Math.floor(Math.random() * alleRadOpties.length)]; 
+        document.getElementById('rad-uitkomst').innerText = temp.replace("[SPELER]","iemand"); 
         box.style.background = (draaiCounter % 2 === 0) ? "linear-gradient(135deg, #34c759, #30b050)" : "linear-gradient(135deg, #ff9500, #ff2d55)";
+        
         if (++draaiCounter > 20) { 
-            clearInterval(interval); let andereSpelers = spelersLijst.filter(n=>n!==currentUser); let slachtoffer = andereSpelers.length > 0 ? andereSpelers[Math.floor(Math.random()*andereSpelers.length)] : "iemand"; let eind = basisRadOpties[Math.floor(Math.random() * basisRadOpties.length)].replace(/\[SPELER\]/g, slachtoffer.toUpperCase()); 
-            document.getElementById('rad-uitkomst').innerText = eind; box.style.background = "linear-gradient(135deg, #007aff, #0056b3)"; stuurNaarFeed(`🎡 RAD: ${currentUser.toUpperCase()} draaide: "${eind}"`); radSpinning = false; 
+            clearInterval(interval); 
+            let andereSpelers = spelersLijst.filter(n=>n!==currentUser); 
+            let slachtoffer = andereSpelers.length > 0 ? andereSpelers[Math.floor(Math.random()*andereSpelers.length)] : "iemand"; 
+            
+            // Unieke vragen reset logica!
+            if (ongebruikteRadOpties.length === 0) {
+                ongebruikteRadOpties = [...alleRadOpties];
+            }
+            
+            let randomIndex = Math.floor(Math.random() * ongebruikteRadOpties.length);
+            let gekozenOptie = ongebruikteRadOpties.splice(randomIndex, 1)[0];
+            let eind = gekozenOptie.replace(/\[SPELER\]/g, slachtoffer.toUpperCase()); 
+            
+            document.getElementById('rad-uitkomst').innerText = eind; 
+            box.style.background = "linear-gradient(135deg, #007aff, #0056b3)"; 
+            stuurNaarFeed(`🎡 RAD: ${currentUser.toUpperCase()} draaide: "${eind}"`); 
+            radSpinning = false; 
         }
     }, 100);
 }
+
 let hlHuidig = 5;
 function initHogerLager() { hlHuidig = Math.floor(Math.random() * 10) + 1; document.getElementById('hl-getal').innerText = hlHuidig; }
 function speelHogerLager(keuze) {
@@ -479,7 +506,7 @@ function speelHogerLager(keuze) {
 }
 function gooiMexen() { let d1 = Math.floor(Math.random() * 6) + 1; let d2 = Math.floor(Math.random() * 6) + 1; document.getElementById('mex-d1').innerText = d1; document.getElementById('mex-d2').innerText = d2; let score = Math.max(d1, d2).toString() + Math.min(d1, d2).toString(); let extraText = ""; if (score === "21") { extraText = " 🚨 MEX! IEDEREEN DRINKEN!!"; if ("vibrate" in navigator) navigator.vibrate([200, 100, 200]); } else if (d1 === d2) { extraText = " (Honderden!)"; } stuurNaarFeed(`🎲 Mexen: ${currentUser.toUpperCase()} gooide ${score}${extraText}`); }
 
-// 10C. WIE IS DE SJAAK 
+// 10C. WIE IS DE SJAAK (15 Unieke Rondes)
 function startSjaakRonde(isNieuwSpel = false) { 
     db.collection('groepen').doc(currentGroup).collection('games').doc('sjaak').get().then(doc => {
         let d = doc.data() || {};
@@ -835,7 +862,7 @@ function handleShake(e) {
     shakeLastX = acc.x; shakeLastY = acc.y; shakeLastZ = acc.z;
 }
 
-// 10H. BORDSPEL 2.0 (Animatie Upgrade)
+// 10H. BORDSPEL 2.0
 function startBordspel() {
     db.collection('groepen').doc(currentGroup).collection('games').doc('bordspel').get().then(doc => {
         let d = doc.data(); let pos = {}; d.spelers.forEach(s => pos[s] = 0);
