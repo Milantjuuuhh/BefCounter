@@ -1017,7 +1017,6 @@ function startRadar() {
     document.getElementById('radar-ui').style.display = 'none';
     document.getElementById('radar-status').innerText = "Locatie zoeken...";
     
-    // GPS tracking starten
     if ("geolocation" in navigator) {
         radarWatchId = navigator.geolocation.watchPosition((pos) => {
             mijnLat = pos.coords.latitude;
@@ -1033,7 +1032,6 @@ function startRadar() {
         document.getElementById('radar-status').innerText = "GPS niet ondersteund.";
     }
 
-    // Live luisteren naar groepsleden
     liveLocatiesUnsubscribe = db.collection('groepen').doc(currentGroup).collection('live_locaties').onSnapshot(snap => {
         let select = document.getElementById('radar-kies-vriend');
         let huidigeSelectie = select.value;
@@ -1044,7 +1042,6 @@ function startRadar() {
         snap.forEach(doc => {
             if (doc.id !== currentUser) {
                 let data = doc.data();
-                // FIX: Filter spelers die langer dan 3 minuten (180000 ms) inactief zijn volledig eruit
                 let isActief = (nuUnix - data.tijd) < 180000; 
                 
                 if (isActief) {
@@ -1054,7 +1051,6 @@ function startRadar() {
             }
         });
         
-        // Behoud de selectie als die speler nog steeds online/actief is
         if (radarSpelersData[huidigeSelectie]) {
             select.value = huidigeSelectie;
         } else {
@@ -1065,7 +1061,6 @@ function startRadar() {
         veranderRadarDoel();
     });
 
-    // Sensoren aanzetten
     if ('ondeviceorientationabsolute' in window) {
         window.addEventListener('deviceorientationabsolute', handleRadarCompassAbsolute);
     } else {
@@ -1074,23 +1069,19 @@ function startRadar() {
 }
 
 function stopRadar() {
-    // 1. Stop GPS tracking direct
     if (radarWatchId) {
         navigator.geolocation.clearWatch(radarWatchId);
         radarWatchId = null;
     }
     
-    // 2. Unsubscribe van de live database feed
     if (typeof liveLocatiesUnsubscribe === 'function') {
         liveLocatiesUnsubscribe();
         liveLocatiesUnsubscribe = null;
     }
     
-    // 3. Verwijder sensor listeners
     window.removeEventListener('deviceorientationabsolute', handleRadarCompassAbsolute);
     window.removeEventListener('deviceorientation', handleRadarCompass);
     
-    // 4. Knal je eigen locatie direct uit de database zodat je voor anderen meteen uit de lijst bent
     if (currentGroup && currentUser) {
         db.collection('groepen').doc(currentGroup).collection('live_locaties').doc(currentUser).delete()
         .then(() => { console.log("Locatie succesvol verwijderd uit lobby."); })
@@ -1131,7 +1122,6 @@ function handleRadarCompass(e) {
 function updateRadarPijl() {
     if (!radarDoel || !mijnLat || !doelLat) return;
 
-    // Afstand berekenen
     let R = 6371e3; 
     let p1 = mijnLat * Math.PI/180;
     let p2 = doelLat * Math.PI/180;
@@ -1143,14 +1133,12 @@ function updateRadarPijl() {
 
     document.getElementById('radar-afstand').innerText = afstand > 1000 ? (afstand/1000).toFixed(1) + " km" : afstand + " meter";
 
-    // Richting berekenen
     let dLon = (doelLng - mijnLng) * Math.PI / 180;
     let y = Math.sin(dLon) * Math.cos(p2);
     let x = Math.cos(p1) * Math.sin(p2) - Math.sin(p1) * Math.cos(p2) * Math.cos(dLon);
     let bearing = Math.atan2(y, x) * 180 / Math.PI;
     bearing = (bearing + 360) % 360;
 
-    // Rotatie van de pijl
     let rotatie = bearing - kompasHeading;
     document.getElementById('radar-pijl').style.transform = `rotate(${rotatie}deg)`;
 }
