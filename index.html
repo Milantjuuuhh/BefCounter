@@ -323,7 +323,49 @@
             </div>
         </div>
     </div>
+<!-- MODAL SLOTTA'S BORDSPEL -->
+    <div id="modal-bordspel" class="game-modal fullscreen-dark" style="background-color: #1c1c1e;">
+        <button class="btn-sluit-modal" style="color:white; border-color:white; background:rgba(255,255,255,0.1);" onclick="verlaatGame('bordspel'); sluitGame('modal-bordspel')">⬅ Terug</button>
+        
+        <div class="container" style="text-align: center; padding-top:80px;">
+            <div class="ql-titel" style="color:#34c759; font-size:35px; animation:none; margin-top:0;">🎲 Slotta's Bordspel</div>
 
+            <div id="bordspel-wachten">
+                <p style="font-size:16px; color:#a1a1aa; margin-bottom:30px;">Gooi de dobbelsteen en voer de opdrachten uit om de finish te halen!</p>
+                <button class="ql-btn" style="border-color:#34c759; color:#34c759;" onclick="startLobby('bordspel')">Host Nieuw Spel</button>
+            </div>
+
+            <div id="bordspel-lobby" class="lobby-box" style="display:none;">
+                <p>Wie doet er mee met deze ronde?</p>
+                <button class="ql-btn" id="btn-bordspel-join" style="border-color:#34c759; color:#34c759;" onclick="joinGame('bordspel')">Meedoen</button>
+                <div class="lobby-spelers" id="bordspel-spelers-lijst"></div>
+                <button class="ql-btn" id="btn-bordspel-start" style="display:none; border-color:#ff9500; color:#ff9500; margin-top:20px;" onclick="startBordspel()">Start Spel ⏩</button>
+            </div>
+
+            <div id="bordspel-actief" style="display:none; margin-top:20px;">
+                <div id="bord-dobbel-sectie" style="display:none; margin-bottom: 20px;">
+                    <h3 style="color:white; margin:0 0 10px 0;">Jij bent aan de beurt, <span id="bord-beurt-naam" style="text-transform:capitalize; color:#34c759;"></span>!</h3>
+                    <button class="btn-primair" style="background-color:#ff9500; font-size: 24px; padding: 15px; box-shadow: 0 4px 15px rgba(255,149,0,0.4);" onclick="gooiDobbelsteenBordspel()">🎲 GOOIEN!</button>
+                </div>
+                
+                <div id="bord-wacht-sectie" style="display:none; margin-bottom: 20px;">
+                    <h3 style="color:#a1a1aa; margin:0;">Wachten op beurt van: <span id="bord-beurt-naam" style="text-transform:capitalize; color:#34c759;"></span>...</h3>
+                </div>
+
+                <div id="bord-grid-container" class="bord-grid"></div>
+            </div>
+        </div>
+
+        <!-- Opdracht Overlay (Verschijnt over het bord als er gegooid is) -->
+        <div id="bord-opdracht-overlay" style="display:none; position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(0,0,0,0.95); z-index:30000; flex-direction:column; align-items:center; justify-content:center; padding: 20px; box-sizing: border-box; text-align:center;">
+            <div id="bord-dobbel-uitslag" style="font-size: 80px; margin-bottom: 20px; filter: drop-shadow(0 0 20px rgba(255,255,255,0.5));">🎲 ?</div>
+            <h2 id="bord-opdracht-speler" style="color:#34c759; font-size: 40px; text-transform: uppercase; margin:0 0 10px 0;">SPELER</h2>
+            <p id="bord-opdracht-tekst" style="color:white; font-size: 24px; line-height: 1.5; margin-bottom: 40px; font-weight: bold;"></p>
+            
+            <button id="bord-opdracht-klaar-btn" class="ql-btn" style="border-color:#34c759; color:#34c759; display:none; max-width: 80%; background: #1c1c1e;" onclick="voltooiBordspelBeurt()">Opdracht Voltooid ✅</button>
+            <p id="bord-opdracht-wacht" style="color:#a1a1aa; font-size: 18px; display:none; font-style: italic;">Wachten tot speler de opdracht heeft voltooid...</p>
+        </div>
+    </div>
     <div id="modal-bom" class="game-modal fullscreen-dark">
         <button class="btn-sluit-modal" style="color:white; border-color:white; background:rgba(255,255,255,0.1);" onclick="verlaatGame('tijdbom'); sluitGame('modal-bom')">⬅ Terug</button>
         <div class="container" style="padding-top: 100px; text-align:center;">
