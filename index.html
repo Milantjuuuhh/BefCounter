@@ -539,28 +539,43 @@
         </div>
     </div>
 
-    <div id="modal-radar" class="game-modal fullscreen-dark" style="background-color: #050505 !important;">
+    <div id="modal-radar" class="game-modal fullscreen-dark" style="background: radial-gradient(circle at center, #0c1b1e 0%, #050505 100%) !important;">
         <button class="btn-sluit-modal" style="color:white; border-color:white; background:rgba(255,255,255,0.1);" onclick="stopRadar(); sluitGame('modal-radar')">⬅ Terug</button>
+        
         <div class="container" style="text-align: center; padding-top:100px;">
-            <div class="ql-titel" style="color:#00c7be; font-size:35px; animation:none; margin-top:0;">🧭 Radar</div>
-            <p style="color:#a1a1aa; font-size:14px; margin-bottom:20px;">Kies een vriend om te zoeken. (Sensor-toegang en GPS vereist!)</p>
+            <div class="ql-titel" style="color:#00c7be; font-size:35px; animation:none; margin-top:0; text-shadow: 0 0 15px rgba(0,199,190,0.6);">🧭 Vrienden Radar</div>
+            <p style="color:#a1a1aa; font-size:14px; margin-bottom:25px;">Kies een vriend om te traceren op basis van GPS en kompas.</p>
             
-            <select id="radar-kies-vriend" class="ql-input" style="color:black; background:#f2f2f7; border-color:#00c7be; margin-bottom:20px; font-weight:bold; font-size:18px;" onchange="veranderRadarDoel()">
-                <option value="">-- Zoek iemand --</option>
+            <select id="radar-kies-vriend" class="ql-input" style="color:white; background:#1c1c1e; border-color:#00c7be; margin-bottom:20px; font-weight:bold; font-size:18px; text-align-last: center;" onchange="veranderRadarDoel()">
+                <option value="" style="color: #fff;">-- Zoek iemand --</option>
             </select>
 
-            <div id="radar-ui" style="display:none; margin-top:30px;">
-                <h2 id="radar-naam" style="color:#fff; font-size:28px; text-transform:capitalize;">...</h2>
-                <h3 id="radar-afstand" style="color:#00c7be; font-size:22px; margin-bottom:40px;">0 meter</h3>
+            <div id="radar-ui" style="display:none; margin-top:20px;">
+                <h2 id="radar-naam" style="color:#fff; font-size:32px; text-transform:capitalize; margin-bottom: 5px; font-weight: 900; letter-spacing: 1px;">...</h2>
+                <h3 id="radar-afstand" style="color:#00c7be; font-size:24px; margin-top:0; margin-bottom:30px; font-weight: bold; text-shadow: 0 0 10px rgba(0,199,190,0.4);">0 meter</h3>
                 
-                <div style="position:relative; width:250px; height:250px; margin:0 auto; background:rgba(0,199,190,0.1); border-radius:50%; border:2px dashed #00c7be; display:flex; align-items:center; justify-content:center; box-shadow: 0 0 20px rgba(0,199,190,0.3);">
-                    <div id="radar-pijl" style="font-size:80px; transform: rotate(0deg); transition: transform 0.2s ease-out; filter: drop-shadow(0 0 15px #00c7be);">⬆️</div>
+                <div style="position:relative; width:260px; height:260px; margin:0 auto; background:rgba(0,199,190,0.03); border-radius:50%; border:2px solid rgba(0,199,190,0.2); display:flex; align-items:center; justify-content:center; box-shadow: inset 0 0 30px rgba(0,199,190,0.1), 0 0 20px rgba(0,0,0,0.6);">
+                    
+                    <div style="position:absolute; width:180px; height:180px; border:1px dashed rgba(0,199,190,0.15); border-radius:50%;"></div>
+                    <div style="position:absolute; width:100px; height:100px; border:1px solid rgba(0,199,190,0.1); border-radius:50%;"></div>
+                    
+                    <div style="position:absolute; top:0; left:0; right:0; bottom:0; border-radius:50%; background: conic-gradient(from 0deg, rgba(0,199,190,0.12) 0deg, transparent 90deg); animation: sonarScan 2.5s linear infinite; pointer-events: none;"></div>
+                    
+                    <div id="radar-pijl" style="font-size:85px; transform: rotate(0deg); transition: transform 0.1s ease-out; filter: drop-shadow(0 0 15px #00c7be); z-index: 10;">⬆️</div>
                 </div>
-                <p style="color:#666; font-size:12px; margin-top:30px;">Draai je telefoon om je vriend te vinden.</p>
+                
+                <p style="color:#666; font-size:12px; margin-top:35px; font-style: italic;">Leg je telefoon plat op je hand en draai rond om te zoeken.</p>
             </div>
             
-            <p id="radar-status" style="color:#ff3b30; font-weight:bold; margin-top:20px;"></p>
+            <p id="radar-status" style="color:#ff3b30; font-weight:bold; margin-top:20px; text-shadow: 0 0 10px rgba(255,59,48,0.3);"></p>
         </div>
+
+        <style>
+            @keyframes sonarScan {
+                from { transform: rotate(0deg); }
+                to { transform: rotate(360deg); }
+            }
+        </style>
     </div>
 
     <div class="bottom-nav" id="bottom-nav">

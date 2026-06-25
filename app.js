@@ -1057,9 +1057,26 @@ function startRadar() {
 }
 
 function stopRadar() {
+    // Stop met het tracken van je GPS positie
     if (radarWatchId) navigator.geolocation.clearWatch(radarWatchId);
+    
+    // Stop de live database-luisteraar naar je vrienden
     if (liveLocatiesUnsubscribe) liveLocatiesUnsubscribe();
+    
+    // Verwijder de kompas sensoren
+    window.removeEventListener('deviceorientationabsolute', handleRadarCompassAbsolute);
     window.removeEventListener('deviceorientation', handleRadarCompass);
+    
+    // VERBETERING: Verwijder jouw document direct uit de live_locaties collectie
+    if (currentGroup && currentUser) {
+        db.collection('groepen').doc(currentGroup).collection('live_locaties').doc(currentUser).delete()
+        .then(() => {
+            console.log("Live locatie succesvol gestopt en opgeruimd.");
+        })
+        .catch((error) => {
+            console.error("Fout bij opruimen live locatie: ", error);
+        });
+    }
 }
 
 function veranderRadarDoel() {
