@@ -21,11 +21,9 @@ var worldMap = null, mapMarkers = [], pieChartInstance = null, barChartInstance 
 var mijnBingoKaart = [], mijnBingoStatus = [];
 let actieveCoopMissie = null;
 
-// Bordspel variables
 let lokalePosities = null;
 let isBordspelAnimeren = false;
 
-// Globale arrays voor Live Firebase Spelmateriaal
 var sjaakVragenArray = ["Laden..."];
 var quiplashVragenArray = ["Laden..."];
 var bordOpdrachtenArray = ["Laden..."];
@@ -165,7 +163,7 @@ function checkDrinkSessieTijd() {
     if (!actieveDrinkSessieTijd || Date.now() < actieveDrinkSessieTijd) return; if (drinkSessieStarter !== currentUser) return;
     let nieuweWachttijd = Math.floor(Math.random() * (15 * 60 * 1000)) + (5 * 60 * 1000); let slachtoffer = spelersLijst.length > 0 ? spelersLijst[Math.floor(Math.random() * spelersLijst.length)] : currentUser;
     db.collection('groepen').doc(currentGroup).collection('sessie').doc('status').update({ volgende_atje: Date.now() + nieuweWachttijd, huidig_slachtoffer: slachtoffer, wacht_op_atje: true });
-    let bericht = `🚨 ALARM! De Drink Sessie heeft gekozen... ${slachtoffer.toUpperCase()} moet NU een atje trekken! 🍻`; stuurNaarFeed(bericht); if ("vibrate" in navigator) navigator.vibrate([200, 100, 200, 100, 500, 100, 500]);
+    let bericht = `🚨 ${slachtoffer.toUpperCase()} moet NU een atje trekken! 🍻`; stuurNaarFeed(bericht); if ("vibrate" in navigator) navigator.vibrate([200, 100, 200, 100, 500, 100, 500]);
     const MAKE_WEBHOOK_URL = "https://hook.eu1.make.com/iydcsfjwnlx3147b29w38texvyhgrr62";
     db.collection('groepen').doc(currentGroup).collection('scores').get().then(snap => { snap.forEach(doc => { if (doc.data().push_token) { fetch(MAKE_WEBHOOK_URL, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ token: doc.data().push_token, titel: "🍻 ATJE TREKKEN!", bericht: bericht }) }).catch(e => console.log(e)); } }); });
 }
@@ -198,7 +196,6 @@ function bouwLiveScorebord() {
             spelersData.push({ naam: naam, data: data, b: b, m: m, sh: sh, k: k, r: r, ra: ra, ko: ko, sl: sl, persoonTotaal: persoonTotaal });
         });
 
-        // Sorteer altijd van hoog naar laag
         spelersData.sort((a, b) => b.persoonTotaal - a.persoonTotaal);
 
         let html = `<tr><th style="text-align:left; padding-left:10px;">Wie</th><th>🍺</th><th>🍹</th><th>🥃</th><th>😘</th><th>💔</th><th>🚀</th><th>🤮</th><th>🔑</th><th class="totaal-kolom">Tot</th><th></th></tr>`;
@@ -320,7 +317,7 @@ function laadScorritoLijsten() {
         let overzicht = "";
         snap.forEach(doc => {
             let d = doc.data();
-            overzicht += `<div style="background:#f2f2f7; padding:15px; border-radius:12px; margin-bottom:10px; border-left:4px solid #af52de;">
+            overzicht += `<div class="scorrito-item">
                 <b style="color:#007aff; text-transform:capitalize; font-size:16px;">${doc.id}</b> voorspelt:<br>
                 <div style="display:grid; grid-template-columns:1fr 1fr; gap:5px; margin-top:5px;">
                     <div>🍺 Pils: <b>${d.pils||'-'}</b></div><div>🚀 Raggen: <b>${d.raggen||'-'}</b></div>
@@ -482,7 +479,7 @@ function speelHogerLager(keuze) {
 }
 function gooiMexen() { let d1 = Math.floor(Math.random() * 6) + 1; let d2 = Math.floor(Math.random() * 6) + 1; document.getElementById('mex-d1').innerText = d1; document.getElementById('mex-d2').innerText = d2; let score = Math.max(d1, d2).toString() + Math.min(d1, d2).toString(); let extraText = ""; if (score === "21") { extraText = " 🚨 MEX! IEDEREEN DRINKEN!!"; if ("vibrate" in navigator) navigator.vibrate([200, 100, 200]); } else if (d1 === d2) { extraText = " (Honderden!)"; } stuurNaarFeed(`🎲 Mexen: ${currentUser.toUpperCase()} gooide ${score}${extraText}`); }
 
-// 10C. WIE IS DE SJAAK (15 Unieke Rondes)
+// 10C. WIE IS DE SJAAK 
 function startSjaakRonde(isNieuwSpel = false) { 
     db.collection('groepen').doc(currentGroup).collection('games').doc('sjaak').get().then(doc => {
         let d = doc.data() || {};
