@@ -33,7 +33,7 @@ const bingoOpdrachten = ["Neem een shot met de barman", "Regel gratis pils", "Ze
 
 // Rad van Fortuin Logic
 let alleRadOpties = [
-    "🍻 [SPELER] trekt NU een Atje!", "📱 Jij mag 1 gênant appje sturen vanaf de telefoon van [SPELER].", "💃 [SPELER] doet de Macarena midden in de menigte. Weigeren = Adten!", "🥃 [SPELER] haalt nú op eigen kosten een shotje voor jou.", "🤫 [SPELER] mag 10 minuten niet praten. Elk woord = 1 flinke slok.", "🤝 [SPELER] moet een wildvreemde om een stevige knuffel vragen.", "📸 [SPELER] moet een lelijke selfie maken met een onbekende.", "🍹 Jij mixt 3 dranken door elkaar. [SPELER] neemt er een grote slok van!", "🐔 [SPELER] loopt 1 minuut als een tokkende kip over het terras/straat.", "🗣️ [SPELER] praat een kwartier met een zwaar accent. Foutje = drinken.", "🤮 Geef [SPELER] +5 Raggen strafpunten én hij/zij trekt een Atje!", "👕 [SPELER] draagt de rest van het uur zijn/haar shirt binnenstebuiten.", "🎤 [SPELER] zingt luidkeels een kinderliedje. Weigeren = 10 slokken.", "🧊 [SPELER] stopt een ijsblokje in zijn onderbroek tot het smelt.", "😘 [SPELER] geeft een keiharde, ongemakkelijke knipoog aan de ober/serveerster.", "🏋️ [SPELER] doet 10 push-ups in het openbaar. Falen = Adten!", "🤚 [SPELER] mag 15 min z'n glas niet met z'n handen pakken.", "🪑 [SPELER] mag 15 minuten lang nergens op zitten.", "💸 [SPELER] betaalt het volgende drankje voor jou!", "🐾 [SPELER] moet een minuut lang over straat lopen alsof hij jouw uitgelaten hondje is."
+    "🍻 [SPELER] trekt NU een Atje!", "📱 Jij mag 1 gênant appje sturen vanaf de telefoon van [SPELER].", "💃 [SPELER] doet de Macarena midden in de menigte. Weigeren = Adten!", "🥃 [SPELER] haalt nú op eigen kosten een shotje voor jou.", "🤫 [SPELER] mag 10 minuten niet praten. Elk woord = 1 flinke slok.", "🤝 [SPELER] moet een wildvreemde om een stevige knuffel vragen.", "📸 [SPELER] moet een lelijke selfie maken met een onbekende.", "🍹 Jij mixt 3 dranken door elkaar. [SPELER] neemt er een grote slok van!", "🐔 [SPELER] loopt 1 minuut als een tokkende kip over het terras/straat.", "🗣️ [SPELER] praat een kwartier met een zwaar accent. Foutje = drinken.", "🤮 Geef [SPELER] +5 Raggen strafpunten én hij/zij trekt een Atje!", "👕 [SPELER] draagt de rest van het uur zijn/haar shirt binnenstebuiten.", "🎤 [SPELER] zingt luidkeels een kinderliedje. Weigeren = 10 slokken.", "🧊 [SPELER] stopt een ijsblokje in zijn onderbroek till het smelt.", "😘 [SPELER] geeft een keiharde, ongemakkelijke knipoog aan de ober/serveerster.", "🏋️ [SPELER] doet 10 push-ups in het openbaar. Falen = Adten!", "🤚 [SPELER] mag 15 min z'n glas niet met z'n handen pakken.", "🪑 [SPELER] mag 15 minuten lang nergens op zitten.", "💸 [SPELER] betaalt het volgende drankje voor jou!", "🐾 [SPELER] moet een minuut lang over straat lopen alsof hij jouw uitgelaten hondje is."
 ];
 let ongebruikteRadOpties = [...alleRadOpties];
 
@@ -202,7 +202,6 @@ function bouwLiveScorebord() {
             spelersData.push({ naam: naam, data: data, b: b, m: m, sh: sh, k: k, r: r, ra: ra, ko: ko, sl: sl, persoonTotaal: persoonTotaal });
         });
 
-        // Sorteer altijd van hoog naar laag
         spelersData.sort((a, b) => b.persoonTotaal - a.persoonTotaal);
 
         let html = `<tr><th style="text-align:left; padding-left:10px;">Wie</th><th>🍺</th><th>🍹</th><th>🥃</th><th>😘</th><th>💔</th><th>🚀</th><th>🤮</th><th>🔑</th><th class="totaal-kolom">Tot</th><th></th></tr>`;
@@ -235,7 +234,7 @@ function luisterNaarLiveFeed() {
     if (unsubscribeFeed) unsubscribeFeed(); let laatsteMelding = "";
     unsubscribeFeed = db.collection('groepen').doc(currentGroup).collection('feed').doc('laatste').onSnapshot((doc) => {
         if (!doc.exists || doc.data().bericht === laatsteMelding) return; laatsteMelding = doc.data().bericht;
-        const ticker = document.getElementById('live-ticker'); if(ticker) { ticker.innerText = laatsteMelding; ticker.style.display = 'block'; }
+        const ticker = document.getElementById('live-ticker'); if(ticker) { ticker.style.display = 'block'; ticker.innerText = laatsteMelding; }
         if ("vibrate" in navigator) navigator.vibrate([200,100,200]); const geluid = document.getElementById('notificatie-geluid'); if (geluid) { geluid.currentTime = 0; geluid.play().catch(e => {}); }
         setTimeout(() => { if(ticker) ticker.style.display = 'none'; }, 5000);
     });
@@ -773,7 +772,7 @@ function luisterNaarLava() {
         if(!doc.exists) return; let d = doc.data(); let ronde = d.ronde || 0; let lavaTijd = d.lava_tijd || 0; let spelers = d.spelers || [];
         let uiWacht = document.getElementById('lava-wacht-ui'); if(!uiWacht) return;
 
-        if(d.fase === 'lobby' || d.fase === 'wachten') { uiWacht.style.display = 'none'; document.getElementById('lava-actief-ui').style.display = 'none'; document.getElementById('lava-resultaat-ui').style.display = 'none'; document.getElementById('modal-lava').style.backgroundColor = '#1c1c1e'; lavaBezig = false; } 
+        if(d.fase === 'lobby' || d.fase === 'wachten') { uiWacht.style.display = 'none'; document.getElementById('lava-actief-ui').style.display = 'none'; document.getElementById('lava-resultaat-ui').style.display = 'none'; document.getElementById('modal-lava').style.backgroundColor = '#1c1c1e'; lavaBezig = false; clearInterval(lavaInterval); } 
         else if (d.fase === 'actief') {
             if(ronde !== lavaRonde) {
                 lavaRonde = ronde; lavaGroenTijd = lavaTijd; lavaGeklikt = false;
@@ -1040,7 +1039,7 @@ function startRadar() {
         let huidigeSelectie = select.value;
         select.innerHTML = '<option value="">-- Zoek iemand --</option>';
         
-        let nu Unix = Date.now();
+        let nuUnix = Date.now();
         
         snap.forEach(doc => {
             if (doc.id !== currentUser) {
@@ -1055,7 +1054,7 @@ function startRadar() {
             }
         });
         
-        // Behoud de selectie als die speler nog steeds in de lobby zit
+        // Behoud de selectie als die speler nog steeds online/actief is
         if (radarSpelersData[huidigeSelectie]) {
             select.value = huidigeSelectie;
         } else {
@@ -1099,6 +1098,20 @@ function stopRadar() {
     }
 }
 
+function veranderRadarDoel() {
+    radarDoel = document.getElementById('radar-kies-vriend').value;
+    if (radarDoel && radarSpelersData[radarDoel]) {
+        document.getElementById('radar-ui').style.display = 'block';
+        document.getElementById('radar-naam').innerText = radarDoel;
+        document.getElementById('radar-status').innerText = "";
+        doelLat = radarSpelersData[radarDoel].lat;
+        doelLng = radarSpelersData[radarDoel].lng;
+        updateRadarPijl();
+    } else {
+        document.getElementById('radar-ui').style.display = 'none';
+    }
+}
+
 function handleRadarCompassAbsolute(e) {
     if (e.alpha !== null) {
         kompasHeading = 360 - e.alpha;
@@ -1115,34 +1128,11 @@ function handleRadarCompass(e) {
     updateRadarPijl();
 }
 
-function veranderRadarDoel() {
-    radarDoel = document.getElementById('radar-kies-vriend').value;
-    if (radarDoel && radarSpelersData[radarDoel]) {
-        document.getElementById('radar-ui').style.display = 'block';
-        document.getElementById('radar-naam').innerText = radarDoel;
-        document.getElementById('radar-status').innerText = "";
-        doelLat = radarSpelersData[radarDoel].lat;
-        doelLng = radarSpelersData[radarDoel].lng;
-        updateRadarPijl();
-    } else {
-        document.getElementById('radar-ui').style.display = 'none';
-    }
-}
-
-function handleRadarCompass(e) {
-    if (e.webkitCompassHeading) { // iOS
-        kompasHeading = e.webkitCompassHeading;
-    } else if (e.alpha !== null) { // Android fallback
-        kompasHeading = Math.abs(e.alpha - 360);
-    }
-    updateRadarPijl();
-}
-
 function updateRadarPijl() {
     if (!radarDoel || !mijnLat || !doelLat) return;
 
-    // Afstand berekenen (Haversine formule)
-    let R = 6371e3; // aarde radius in meters
+    // Afstand berekenen
+    let R = 6371e3; 
     let p1 = mijnLat * Math.PI/180;
     let p2 = doelLat * Math.PI/180;
     let dp = (doelLat-mijnLat) * Math.PI/180;
@@ -1153,14 +1143,14 @@ function updateRadarPijl() {
 
     document.getElementById('radar-afstand').innerText = afstand > 1000 ? (afstand/1000).toFixed(1) + " km" : afstand + " meter";
 
-    // Richting berekenen (Bearing)
+    // Richting berekenen
     let dLon = (doelLng - mijnLng) * Math.PI / 180;
     let y = Math.sin(dLon) * Math.cos(p2);
     let x = Math.cos(p1) * Math.sin(p2) - Math.sin(p1) * Math.cos(p2) * Math.cos(dLon);
     let bearing = Math.atan2(y, x) * 180 / Math.PI;
     bearing = (bearing + 360) % 360;
 
-    // Relatieve rotatie bepalen ten opzichte van telefoon
+    // Rotatie van de pijl
     let rotatie = bearing - kompasHeading;
     document.getElementById('radar-pijl').style.transform = `rotate(${rotatie}deg)`;
 }
