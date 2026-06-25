@@ -540,7 +540,7 @@
     </div>
 
     <div id="modal-radar" class="game-modal fullscreen-dark" style="background: radial-gradient(circle at center, #0c1b1e 0%, #050505 100%) !important;">
-        <button class="btn-sluit-modal" style="color:white; border-color:white; background:rgba(255,255,255,0.1);" onclick="stopRadar(); sluitGame('modal-radar')">⬅ Terug</button>
+        <button class="btn-sluit-modal" style="color:white; border-color:white; background:rgba(255,255,255,0.1);" onclick="try { stopRadar(); } catch(e) { console.error(e); } sluitGame('modal-radar')">⬅ Terug</button>
         
         <div class="container" style="text-align: center; padding-top:100px;">
             <div class="ql-titel" style="color:#00c7be; font-size:35px; animation:none; margin-top:0; text-shadow: 0 0 15px rgba(0,199,190,0.6);">🧭 Vrienden Radar</div>

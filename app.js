@@ -1018,7 +1018,7 @@ function startRadar() {
     document.getElementById('radar-ui').style.display = 'none';
     document.getElementById('radar-status').innerText = "Locatie zoeken...";
     
-    // Constant GPS updaten naar database als radar open is
+    // GPS tracking starten
     if ("geolocation" in navigator) {
         radarWatchId = navigator.geolocation.watchPosition((pos) => {
             mijnLat = pos.coords.latitude;
@@ -1034,49 +1034,85 @@ function startRadar() {
         document.getElementById('radar-status').innerText = "GPS niet ondersteund.";
     }
 
-    // Luister live naar locaties van vrienden
+    // Live luisteren naar groepsleden
     liveLocatiesUnsubscribe = db.collection('groepen').doc(currentGroup).collection('live_locaties').onSnapshot(snap => {
         let select = document.getElementById('radar-kies-vriend');
         let huidigeSelectie = select.value;
-        select.innerHTML = '<option value="">-- Kies een vriend --</option>';
+        select.innerHTML = '<option value="">-- Zoek iemand --</option>';
+        
+        let nu Unix = Date.now();
         
         snap.forEach(doc => {
             if (doc.id !== currentUser) {
-                radarSpelersData[doc.id] = doc.data();
-                let isOud = (Date.now() - doc.data().tijd) > 600000; // Ouder dan 10 min
-                let actueelTekst = isOud ? " (Verouderd)" : " 🟢 (Live)";
-                select.innerHTML += `<option value="${doc.id}">${doc.id.toUpperCase()}${actueelTekst}</option>`;
+                let data = doc.data();
+                // FIX: Filter spelers die langer dan 3 minuten (180000 ms) inactief zijn volledig eruit
+                let isActief = (nuUnix - data.tijd) < 180000; 
+                
+                if (isActief) {
+                    radarSpelersData[doc.id] = data;
+                    select.innerHTML += `<option value="${doc.id}">${doc.id.toUpperCase()} 🟢</option>`;
+                }
             }
         });
-        select.value = huidigeSelectie; 
+        
+        // Behoud de selectie als die speler nog steeds in de lobby zit
+        if (radarSpelersData[huidigeSelectie]) {
+            select.value = huidigeSelectie;
+        } else {
+            select.value = "";
+            document.getElementById('radar-ui').style.display = 'none';
+        }
+        
         veranderRadarDoel();
     });
 
-    // Gyroscoop activeren (compass)
-    window.addEventListener('deviceorientation', handleRadarCompass);
+    // Sensoren aanzetten
+    if ('ondeviceorientationabsolute' in window) {
+        window.addEventListener('deviceorientationabsolute', handleRadarCompassAbsolute);
+    } else {
+        window.addEventListener('deviceorientation', handleRadarCompass);
+    }
 }
 
 function stopRadar() {
-    // Stop met het tracken van je GPS positie
-    if (radarWatchId) navigator.geolocation.clearWatch(radarWatchId);
+    // 1. Stop GPS tracking direct
+    if (radarWatchId) {
+        navigator.geolocation.clearWatch(radarWatchId);
+        radarWatchId = null;
+    }
     
-    // Stop de live database-luisteraar naar je vrienden
-    if (liveLocatiesUnsubscribe) liveLocatiesUnsubscribe();
+    // 2. Unsubscribe van de live database feed
+    if (typeof liveLocatiesUnsubscribe === 'function') {
+        liveLocatiesUnsubscribe();
+        liveLocatiesUnsubscribe = null;
+    }
     
-    // Verwijder de kompas sensoren
+    // 3. Verwijder sensor listeners
     window.removeEventListener('deviceorientationabsolute', handleRadarCompassAbsolute);
     window.removeEventListener('deviceorientation', handleRadarCompass);
     
-    // VERBETERING: Verwijder jouw document direct uit de live_locaties collectie
+    // 4. Knal je eigen locatie direct uit de database zodat je voor anderen meteen uit de lijst bent
     if (currentGroup && currentUser) {
         db.collection('groepen').doc(currentGroup).collection('live_locaties').doc(currentUser).delete()
-        .then(() => {
-            console.log("Live locatie succesvol gestopt en opgeruimd.");
-        })
-        .catch((error) => {
-            console.error("Fout bij opruimen live locatie: ", error);
-        });
+        .then(() => { console.log("Locatie succesvol verwijderd uit lobby."); })
+        .catch((e) => { console.error("Fout bij opschonen database:", e); });
     }
+}
+
+function handleRadarCompassAbsolute(e) {
+    if (e.alpha !== null) {
+        kompasHeading = 360 - e.alpha;
+        updateRadarPijl();
+    }
+}
+
+function handleRadarCompass(e) {
+    if (e.webkitCompassHeading) { 
+        kompasHeading = e.webkitCompassHeading;
+    } else if (e.alpha !== null) { 
+        kompasHeading = 360 - e.alpha;
+    }
+    updateRadarPijl();
 }
 
 function veranderRadarDoel() {
